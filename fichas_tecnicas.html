@@ -34,7 +34,8 @@
   .ficha-btn{ display:block; text-align:center; font-size:11.5px; font-weight:700; padding:7px 6px; border-radius:8px; border:none; cursor:pointer; text-decoration:none; }
   .ficha-btn.ver{ background:var(--negro); color:#fff; }
   .ficha-btn.compartir{ background:var(--gris-fondo); color:var(--negro); border:1px solid var(--gris-claro); }
-  .ficha-toast{ position:fixed; bottom:80px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--negro); color:#fff; padding:10px 18px; border-radius:20px; font-size:12.5px; font-weight:600; opacity:0; pointer-events:none; transition:opacity .2s ease, transform .2s ease; z-index:999998; }
+  .ficha-btn.compartir:disabled{ opacity:0.6; cursor:default; }
+  .ficha-toast{ position:fixed; bottom:80px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--negro); color:#fff; padding:10px 18px; border-radius:20px; font-size:12.5px; font-weight:600; opacity:0; pointer-events:none; transition:opacity .2s ease, transform .2s ease; z-index:999998; max-width:88%; text-align:center; }
   .ficha-toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
 </style>
 </head>
@@ -166,18 +167,60 @@
 <script>
 (function(){
   var toast = document.getElementById('fichaToast');
-  function showToast(msg){ toast.textContent = msg; toast.classList.add('show'); setTimeout(function(){ toast.classList.remove('show'); }, 2200); }
+  function showToast(msg){ toast.textContent = msg; toast.classList.add('show'); setTimeout(function(){ toast.classList.remove('show'); }, 2600); }
+
+  // Descarga el PDF como Blob y lo envuelve en un File — así el share sheet
+  // nativo (WhatsApp, Mail, etc.) puede adjuntar el archivo real en vez de
+  // mandar un link. Si el navegador no soporta compartir archivos (algunos
+  // Android viejos / desktop sin apps de share), cae a una descarga directa
+  // del PDF para que el vendedor lo reenvíe a mano.
+  function compartirFicha(btn, nombre, url){
+    var textoOriginal = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Preparando…';
+
+    fetch(url)
+      .then(function(r){
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.blob();
+      })
+      .then(function(blob){
+        var nombreArchivo = url.split('/').pop() || (nombre.replace(/[^a-z0-9]+/gi, '_') + '.pdf');
+        var file;
+        try{ file = new File([blob], nombreArchivo, { type: 'application/pdf' }); }catch(e){ file = null; }
+
+        btn.disabled = false;
+        btn.textContent = textoOriginal;
+
+        if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+          navigator.share({
+            files: [file],
+            title: 'Ficha técnica ' + nombre,
+            text: 'Ficha técnica ' + nombre + ' - BYD Yacopini'
+          }).catch(function(){ /* el usuario canceló el share, no hacemos nada */ });
+        } else {
+          var a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = nombreArchivo;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(function(){ URL.revokeObjectURL(a.href); }, 4000);
+          showToast('Este navegador no permite compartir el archivo directo — se descargó el PDF para compartirlo a mano.');
+        }
+      })
+      .catch(function(){
+        btn.disabled = false;
+        btn.textContent = textoOriginal;
+        showToast('No se pudo preparar el PDF. Probá de nuevo.');
+      });
+  }
+
   document.querySelectorAll('.ficha-btn.compartir').forEach(function(btn){
     btn.addEventListener('click', function(){
       var nombre = btn.dataset.nombre;
       var url = new URL(btn.dataset.url, window.location.href).href;
-      if (navigator.share) {
-        navigator.share({ title: 'Ficha t\u00e9cnica ' + nombre, text: 'Ficha t\u00e9cnica ' + nombre + ' - BYD Yacopini', url: url }).catch(function(){});
-      } else if (navigator.clipboard) {
-        navigator.clipboard.writeText(url).then(function(){ showToast('Link copiado'); }).catch(function(){ showToast(url); });
-      } else {
-        showToast(url);
-      }
+      compartirFicha(btn, nombre, url);
     });
   });
 })();
