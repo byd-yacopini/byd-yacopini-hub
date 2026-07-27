@@ -144,6 +144,7 @@
   .badge-aging{ display:inline-block; font-size:10px; font-weight:700; padding:2px 7px; border-radius:10px; background:rgba(192,57,43,.1); color:var(--rojo); margin-left:6px; }
   .note{ font-size:11.5px; color:var(--gris-medio); margin-top:10px; line-height:1.5; }
   .snapshot-banner{ background:#FFF7E6; border:1px solid #F0D48A; color:#7A5A00; font-size:11.5px; border-radius:10px; padding:10px 12px; margin-bottom:16px; line-height:1.5; }
+  .snapshot-banner.live{ background:#E9F7EF; border:1px solid #A8DFC0; color:#1E6B3C; }
   .preview-banner{ background:#E9F2FF; border:1px solid #A9C7F2; color:#0E4AA8; font-size:11.5px; border-radius:10px; padding:10px 12px; margin-bottom:16px; line-height:1.5; }
 
   .pend-row{ display:flex; justify-content:space-between; gap:10px; padding:9px 0; border-bottom:1px solid var(--gris-fondo); font-size:12.5px; }
@@ -210,10 +211,6 @@
     <option value="herramientas">Herramientas</option>
   </select>
 </div>
-<div class="tabs sub-tabs" id="subTabs">
-  <button class="tab-btn active" data-tab="resumen">Mi Resumen</button>
-  <button class="tab-btn" data-tab="stock">Stock</button>
-</div>
 
 <div class="wrap">
 
@@ -225,7 +222,7 @@
   <!-- ============ VISTA: MI TABLERO ============ -->
   <div class="mainview active" id="view-tablero">
 
-    <div class="snapshot-banner">Datos de Tablero: foto fija al 16/07/2026. Todavía no está conectado en vivo para el panel de ventas.</div>
+    <div class="snapshot-banner" id="dataBanner">Cargando datos…</div>
     <div class="preview-banner" id="previewBanner" style="display:none;">
       Vista previa de gerencia. Elegí un vendedor para ver su resumen:
       <div class="vendor-select-wrap" style="margin-top:8px;">
@@ -267,44 +264,6 @@
       </div>
     </div>
 
-    <!-- ---- STOCK (compartido, sin filtrar) ---- -->
-    <div class="section" id="tab-stock">
-      <div class="kpi-grid">
-        <div class="kpi"><div class="n" id="kpiStockTotal2">–</div><div class="l">Unidades en stock</div></div>
-        <div class="kpi"><div class="n" id="kpiDeudasCount">–</div><div class="l">Deudas (sin VIN)</div></div>
-      </div>
-
-      <div class="tcard">
-        <h2>Stock por modelo</h2>
-        <div id="stockModelo"></div>
-        <p class="note" id="stockNote"></p>
-      </div>
-
-      <div class="tcard">
-        <h2>Autos llegados al concesionario</h2>
-        <div id="stockLlegados"></div>
-        <p class="note" id="stockLlegadosNote"></p>
-      </div>
-
-      <div class="tcard">
-        <h2>Autos pagados, esperando que lleguen</h2>
-        <div id="stockEsperando"></div>
-        <p class="note" id="stockEsperandoNote"></p>
-      </div>
-
-      <div class="tcard">
-        <h2>Autos todavía sin pagar</h2>
-        <div id="stockSinPagar"></div>
-        <p class="note" id="stockSinPagarNote"></p>
-      </div>
-
-      <div class="tcard">
-        <h2>Deudas — vehículos por modelo y color (mes)</h2>
-        <div id="deudasPorModeloColor"></div>
-        <p class="note">Son operaciones ya cerradas este mes que todavía no tienen VIN asignado del stock físico.</p>
-      </div>
-    </div>
-
   </div>
 
   <!-- ============ VISTA: HERRAMIENTAS ============ -->
@@ -339,29 +298,11 @@
       <div class="chev">›</div>
     </a>
 
-    <a class="card" href="./remitos_test_drive.html">
-      <div class="icon remitos"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 3h9l5 5v13a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><path d="M14 3v5h5" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><path d="M8 13h8M8 17h5" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></div>
-      <div class="card-body">
-        <p class="t">Remitos Test Drive</p>
-        <p class="d">Generá el remito de salida del vehículo desde el celular</p>
-      </div>
-      <div class="chev">›</div>
-    </a>
-
     <a class="card" href="./fichas_tecnicas.html">
       <div class="icon fichas"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 4h9l5 5v11a1 1 0 01-1 1H6a1 1 0 01-1-1V5a1 1 0 011-1z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><path d="M9 12h6M9 16h4" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></div>
       <div class="card-body">
         <p class="t">Fichas Técnicas de Modelos</p>
         <p class="d">Consultá y compartí la ficha técnica de cada modelo</p>
-      </div>
-      <div class="chev">›</div>
-    </a>
-
-    <a class="card" href="./horas_extras.html">
-      <div class="icon horas"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" stroke="#fff" stroke-width="2"/><path d="M12 7v5l3.5 2" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-      <div class="card-body">
-        <p class="t">Horas Extras</p>
-        <p class="d">Registrá solicitudes y devoluciones, y mirá tu acumulado</p>
       </div>
       <div class="chev">›</div>
     </a>
@@ -541,17 +482,6 @@
         {f:'01/07', m:'Song Pro DM-i 1.5L FWD 100km', v:'Mateo Petry', cl:'Oscar Mario Martinez', e:'31/07', usd:37200}
       ],
       deudasCount: 10,
-      stockTotal: 89,
-      stockModeloDetalle: [
-        { modelo:'Yuan Pro EV 380km (ADAS)', total:27, variantes:[{color:'Time Grey', colorInterior:'BLACK', c:20},{color:'Skiing White', colorInterior:'BLACK', c:7}] },
-        { modelo:'Song Pro DM-i 1.5L FWD 71km', total:24, variantes:[{color:'Time Grey', colorInterior:'BLACK', c:14},{color:'Snow White', colorInterior:'BLACK', c:10}] },
-        { modelo:'Dolphin Mini EV GS', total:11, variantes:[{color:'Obsidian Black', colorInterior:'Black and Gray dual color', c:6},{color:'Sprout Green', colorInterior:'Black and Gray dual color', c:5}] }
-      ],
-      stockDiasProm: 59.5, stockDiasMin: 20, stockDiasMax: 136, stockMas90: 3,
-      deudasPorModeloColor: [
-        { n:'Dolphin Mini EV GS — Glacier Blue', c:1 }, { n:'Seal U DM-i 1.5T GS — Time Grey', c:1 },
-        { n:'Shark DMO GS — Urdu Cream Gray Green', c:1 }, { n:'Atto 2 DM-i — Time Grey', c:1 }
-      ],
       pruebasDetalle: [
         { v:'Altamirano Perrone Gabriel', m:'Dolphin Mini EV GS' }, { v:'Altamirano Perrone Gabriel', m:'Song Pro DM-i 1.5L FWD 100km' },
         { v:'Mateo Petry', m:'Seal U DM-i 1.5T GS' }, { v:'Paula Gisel Garcia Ferrer', m:'Yuan Pro EV 380km (ADAS)' }
@@ -566,42 +496,6 @@
         { d:'16/07', v:'Jonathan Chirione', m:'Dolphin Mini EV GS', suc:'San Juan' },
         { d:'03/07', v:'Martinez Mario', m:'Atto 2 DM-i', suc:'San Rafael' }
       ]
-    };
-
-    var STOCK_COLOR_SNAPSHOT = {
-      fecha: '19/07/2026',
-      llegados: {
-        total: 55,
-        detalle: [
-          { modelo:'Dolphin Mini EV GS', total:23, variantes:[{color:'Apricity White', c:21},{color:'Obsidian Black', c:2}] },
-          { modelo:'Atto 2 DM-i GS', total:8, variantes:[{color:'Time Grey', c:3},{color:'Skiing White', c:2},{color:'Malachite Darkcyan', c:2},{color:'Obsidian Black', c:1}] },
-          { modelo:'Shark DMO GS', total:8, variantes:[{color:'Black', c:6},{color:'Obsidian Black', c:2}] },
-          { modelo:'Song Pro DM-i GS', total:8, variantes:[{color:'Snow White', c:4},{color:'Atlantis Blue', c:2},{color:'Time Grey', c:1},{color:'Obsidian Black', c:1}] },
-          { modelo:'Seal U', total:4, variantes:[{color:'Obsidian Black', c:2},{color:'Time Grey', c:1},{color:'Smoke Gray', c:1}] },
-          { modelo:'Song Pro DM-i GL', total:2, variantes:[{color:'Atlantis Blue', c:1},{color:'Snow White', c:1}] },
-          { modelo:'Yuan Pro EVGS C/ADAS', total:1, variantes:[{color:'Obsidian Black', c:1}] },
-          { modelo:'Dolphin Mini 4 Seats EU', total:1, variantes:[{color:'Sprout Green', c:1}] }
-        ]
-      },
-      esperando: {
-        total: 7,
-        detalle: [
-          { modelo:'Song Pro DM-i GS', total:4, variantes:[{color:'Snow White', c:3},{color:'Time Grey', c:1}] },
-          { modelo:'Atto 2 DM-i GS', total:3, variantes:[{color:'Time Grey', c:3}] }
-        ]
-      },
-      sinPagar: {
-        total: 149,
-        detalle: [
-          { modelo:'Dolphin Mini EV GS', total:30, variantes:[{color:'Obsidian Black', c:13},{color:'Apricity White', c:9},{color:'Sprout Green', c:8}] },
-          { modelo:'Yuan Pro EVGS C/ADAS', total:26, variantes:[{color:'Time Grey', c:14},{color:'Skiing White', c:8},{color:'Malachite Darkcyan', c:4}] },
-          { modelo:'Song Pro DM-i GL', total:25, variantes:[{color:'Time Grey', c:14},{color:'Snow White', c:8},{color:'Atlantis Blue', c:2},{color:'Obsidian Black', c:1}] },
-          { modelo:'Song Pro DM-i GS', total:24, variantes:[{color:'Time Grey', c:18},{color:'Snow White', c:5},{color:'Obsidian Black', c:1}] },
-          { modelo:'Shark DMO GS', total:22, variantes:[{color:'Pallas White', c:8},{color:'Black', c:7},{color:'Obsidian Black', c:7}] },
-          { modelo:'Sin modelo cargado', total:15, variantes:[{color:'Sin color cargado', c:15}] },
-          { modelo:'Dolphin Mini EV GL', total:7, variantes:[{color:'Apricity White', c:5},{color:'Obsidian Black', c:2}] }
-        ]
-      }
     };
 
     var MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -625,68 +519,22 @@
       }).join('');
     }
 
-    function renderStockModeloDetalle(arr){
-      if (!arr || !arr.length) return '<p class="note">Sin datos.</p>';
-      var max = Math.max.apply(null, arr.map(function(x){ return x.total; }));
-      return arr.map(function(m){
-        var pct = Math.max(4, Math.round((m.total / max) * 100));
-        var variantesHtml = (m.variantes || []).map(function(v){
-          return '<div class="variant-row"><span class="vname">' + fixCaps(v.color) + ' · interior ' + fixCaps(v.colorInterior) + '</span><span class="vcount">' + v.c + '</span></div>';
-        }).join('');
-        return '<div class="model-group">' +
-          '<div class="bar-row"><div class="top"><span class="name">' + fixCaps(m.modelo) + '</span><span class="count">' + m.total + '</span></div>' +
-          '<div class="bar-track"><div class="bar-fill ambar" style="width:' + pct + '%"></div></div></div>' +
-          '<div class="stock-variantes">' + variantesHtml + '</div>' +
-          '</div>';
-      }).join('');
-    }
-
-    function renderStockColorModelDetalle(arr, colorClass){
-      if (!arr || !arr.length) return '<p class="note">Sin datos.</p>';
-      var max = Math.max.apply(null, arr.map(function(x){ return x.total; }));
-      return arr.map(function(m){
-        var pct = Math.max(4, Math.round((m.total / max) * 100));
-        var variantesHtml = (m.variantes || []).map(function(v){
-          return '<div class="variant-row"><span class="vname">' + fixCaps(v.color) + '</span><span class="vcount">' + v.c + '</span></div>';
-        }).join('');
-        return '<div class="model-group">' +
-          '<div class="bar-row"><div class="top"><span class="name">' + fixCaps(m.modelo) + '</span><span class="count">' + m.total + '</span></div>' +
-          '<div class="bar-track"><div class="bar-fill ' + (colorClass||'') + '" style="width:' + pct + '%"></div></div></div>' +
-          '<div class="stock-variantes">' + variantesHtml + '</div>' +
-          '</div>';
-      }).join('');
-    }
-
-    function renderStockColorBlock(elId, noteElId, bloque, colorClass, etiqueta){
-      document.getElementById(elId).innerHTML = renderStockColorModelDetalle(bloque.detalle, colorClass);
-      document.getElementById(noteElId).innerHTML =
-        'Total: <strong>' + bloque.total + '</strong> unidades. ' + etiqueta +
-        ' Foto manual de la planilla de Stock al ' + STOCK_COLOR_SNAPSHOT.fecha + ' — no se actualiza sola todavía.';
-    }
-
     function fmtUSD(n){ return 'USD ' + Number(n || 0).toLocaleString('es-AR'); }
 
-    function renderStockCompartido(d){
-      document.getElementById('kpiStockTotal2').textContent = d.stockTotal;
-      document.getElementById('kpiDeudasCount').textContent = d.deudasCount;
-      document.getElementById('stockModelo').innerHTML = renderStockModeloDetalle(d.stockModeloDetalle || []);
-      document.getElementById('stockNote').innerHTML =
-        'Días en stock — promedio ' + d.stockDiasProm + ' días · mínimo ' + d.stockDiasMin + ' · máximo ' + d.stockDiasMax +
-        '<span class="badge-aging">+90 días: revisar (' + d.stockMas90 + ' unidades)</span>';
-      document.getElementById('deudasPorModeloColor').innerHTML = (d.deudasPorModeloColor && d.deudasPorModeloColor.length) ?
-        barList(d.deudasPorModeloColor.map(function(x){ return { n: fixCaps(x.n), c: x.c }; }), 'rojo') :
-        '<p class="note">Sin deudas este mes.</p>';
-      renderStockColorBlock('stockLlegados', 'stockLlegadosNote', STOCK_COLOR_SNAPSHOT.llegados, '', 'Ya están en el concesionario.');
-      renderStockColorBlock('stockEsperando', 'stockEsperandoNote', STOCK_COLOR_SNAPSHOT.esperando, 'ambar', 'Ya se pagaron, todavía no llegaron.');
-      renderStockColorBlock('stockSinPagar', 'stockSinPagarNote', STOCK_COLOR_SNAPSHOT.sinPagar, 'gris', 'Todavía no se pagaron.');
+    function countMisLeads(nombre, d){
+      var norm = normalize(nombre);
+      if (Array.isArray(d.leadsDetalle) && d.leadsDetalle.length){
+        return d.leadsDetalle.filter(function(x){ return normalize(x.v) === norm; }).length;
+      }
+      var row = (d.leadsVendedor || []).find(function(x){ return normalize(x.n) === norm; });
+      return row ? row.c : 0;
     }
 
     function renderMiResumen(nombre, d){
       var norm = normalize(nombre);
       document.getElementById('mesLabel').textContent = MESES[new Date().getMonth()] + ' ' + new Date().getFullYear();
 
-      var leadRow = (d.leadsVendedor || []).find(function(x){ return normalize(x.n) === norm; });
-      document.getElementById('kpiMisLeads').textContent = leadRow ? leadRow.c : 0;
+      document.getElementById('kpiMisLeads').textContent = countMisLeads(nombre, d);
 
       var solRow = (d.solicitudesVendedor || []).find(function(x){ return normalize(x.n) === norm; });
       document.getElementById('kpiMisSolicitudes').textContent = solRow ? solRow.c : 0;
@@ -743,48 +591,81 @@
         })(), 'verde') : '<p class="note">Sin test drives este mes en la foto actual.</p>';
     }
 
-    // ---- Identidad: vendedor logueado, o preview de gerencia ----
-    var nombreActivo = sessionStorage.getItem('bydVendorNombre');
+    // ---- Datos en vivo del Tablero (mismo endpoint que gerencia) ----
+    var TABLERO_API_URL = 'https://script.google.com/macros/s/AKfycbzTYBoM56BBMj2B-8hUG_MIuOh7r5qG4qq2sGlTRM-y6QyFm0XHqgE6XUG5OQB022iy/exec';
+    var TABLERO_API_KEY = 'i4uH92SO1sFyNYi8PJ2dsGb9LDM-Xoq3';
 
-    if (!nombreActivo && gerenciaOk){
-      document.getElementById('previewBanner').style.display = 'block';
-      var nombres = {};
-      (FALLBACK_DATA.leadsVendedor||[]).forEach(function(x){ if (x.n.indexOf('Otros') === -1) nombres[x.n] = true; });
-      (FALLBACK_DATA.objetivos||[]).forEach(function(x){ nombres[x.v] = true; });
-      (FALLBACK_DATA.solicitudesVendedor||[]).forEach(function(x){ nombres[x.n] = true; });
-      var lista = Object.keys(nombres).sort(function(a,b){ return a.localeCompare(b, 'es'); });
-      var sel = document.getElementById('previewVendorSelect');
-      sel.innerHTML = lista.map(function(n){ return '<option value="' + n.replace(/"/g,'&quot;') + '">' + n + '</option>'; }).join('');
-      nombreActivo = lista[0] || 'Vendedor Demo';
-      sel.value = nombreActivo;
-      sel.addEventListener('change', function(){
-        nombreActivo = sel.value;
-        document.getElementById('greeting').textContent = 'Hola, ' + nombreActivo;
-        renderMiResumen(nombreActivo, FALLBACK_DATA);
-      });
+    function setBanner(isLive, generatedAt){
+      var b = document.getElementById('dataBanner');
+      if (isLive){
+        b.classList.add('live');
+        var fechaTxt = '';
+        if (generatedAt){
+          var f = new Date(generatedAt);
+          if (!isNaN(f.getTime())){
+            fechaTxt = f.toLocaleString('es-AR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
+          }
+        }
+        b.textContent = 'Datos en vivo del Tablero' + (fechaTxt ? ' · actualizado ' + fechaTxt : '') + '.';
+      } else {
+        b.classList.remove('live');
+        b.textContent = 'No se pudo conectar con el Tablero en vivo. Mostrando una foto de respaldo (16/07/2026).';
+      }
     }
 
-    document.getElementById('greeting').textContent = nombreActivo ? ('Hola, ' + nombreActivo) : 'Hola';
+    var EXCLUDE_NOMBRES = ['gerencia', 'san juan', 'san rafael'];
+    function esNombreValido(n){
+      var norm = normalize(n);
+      if (!norm) return false;
+      if (EXCLUDE_NOMBRES.indexOf(norm) !== -1) return false;
+      if (norm.indexOf('otros') === 0) return false;
+      return true;
+    }
 
-    renderMiResumen(nombreActivo || '', FALLBACK_DATA);
-    renderStockCompartido(FALLBACK_DATA);
+    function buildVendorList(d){
+      var nombres = {};
+      (d.leadsDetalle||[]).forEach(function(x){ if (esNombreValido(x.v)) nombres[x.v] = true; });
+      (d.leadsVendedor||[]).forEach(function(x){ if (esNombreValido(x.n)) nombres[x.n] = true; });
+      (d.objetivos||[]).forEach(function(x){ if (esNombreValido(x.v)) nombres[x.v] = true; });
+      (d.solicitudesVendedor||[]).forEach(function(x){ if (esNombreValido(x.n)) nombres[x.n] = true; });
+      (d.entregasDetalle||[]).forEach(function(x){ if (esNombreValido(x.v)) nombres[x.v] = true; });
+      (d.deudas||[]).forEach(function(x){ if (esNombreValido(x.v)) nombres[x.v] = true; });
+      (d.pruebasDetalle||[]).forEach(function(x){ if (esNombreValido(x.v)) nombres[x.v] = true; });
+      (d.tasacionesDetalle||[]).forEach(function(x){ if (esNombreValido(x.v)) nombres[x.v] = true; });
+      return Object.keys(nombres).sort(function(a,b){ return a.localeCompare(b, 'es'); });
+    }
 
-    // ---- Navegación: vista principal + sub-tabs ----
+    function iniciar(d){
+      var nombreActivo = sessionStorage.getItem('bydVendorNombre');
+
+      if (!nombreActivo && gerenciaOk){
+        document.getElementById('previewBanner').style.display = 'block';
+        var lista = buildVendorList(d);
+        var sel = document.getElementById('previewVendorSelect');
+        sel.innerHTML = lista.map(function(n){ return '<option value="' + n.replace(/"/g,'&quot;') + '">' + n + '</option>'; }).join('');
+        nombreActivo = lista[0] || 'Vendedor Demo';
+        sel.value = nombreActivo;
+        sel.addEventListener('change', function(){
+          nombreActivo = sel.value;
+          document.getElementById('greeting').textContent = 'Hola, ' + nombreActivo;
+          renderMiResumen(nombreActivo, d);
+        });
+      }
+
+      document.getElementById('greeting').textContent = nombreActivo ? ('Hola, ' + nombreActivo) : 'Hola';
+      renderMiResumen(nombreActivo || '', d);
+    }
+
+    fetch(TABLERO_API_URL + '?key=' + encodeURIComponent(TABLERO_API_KEY))
+      .then(function(r){ if (!r.ok) throw new Error('bad-status'); return r.json(); })
+      .then(function(liveData){ setBanner(true, liveData.generatedAt); iniciar(liveData); })
+      .catch(function(){ setBanner(false); iniciar(FALLBACK_DATA); });
+
+    // ---- Navegación: vista principal ----
     var mainSelect = document.getElementById('mainViewSelect');
-    var subTabs = document.getElementById('subTabs');
     mainSelect.addEventListener('change', function(){
       document.querySelectorAll('.mainview').forEach(function(v){ v.classList.remove('active'); });
       document.getElementById('view-' + mainSelect.value).classList.add('active');
-      subTabs.classList.toggle('hidden', mainSelect.value !== 'tablero');
-    });
-
-    subTabs.querySelectorAll('.tab-btn').forEach(function(btn){
-      btn.addEventListener('click', function(){
-        subTabs.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
-        btn.classList.add('active');
-        document.querySelectorAll('#view-tablero .section').forEach(function(s){ s.classList.remove('active'); });
-        document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
-      });
     });
 
     // ---- Instalar como app ----
