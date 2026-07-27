@@ -1866,7 +1866,7 @@
         // Ocultar la toolbar de edición de BBDD (importar/exportar/agregar/generar)
         // sin destruir los botones, para que los listeners del script no fallen.
         // Se agrega un título informativo propio para la vista de solo lectura.
-        const bbddToolbar = clon.querySelector('.bbdd-toolbar');
+        const bbddToolbar = clon.querySelector('#view-bbdd .bbdd-toolbar');
         if(bbddToolbar){
             bbddToolbar.style.display = 'none';
             const infoHeader = clon.ownerDocument.createElement('div');
@@ -2827,7 +2827,7 @@
         var tabBbdd = document.querySelector('.tab-btn[data-view="bbdd"]');
         if(tabBbdd) tabBbdd.textContent = 'Tasas Vigentes';
 
-        var bbddToolbar = document.querySelector('.bbdd-toolbar');
+        var bbddToolbar = document.querySelector('#view-bbdd .bbdd-toolbar');
         if(bbddToolbar){
             bbddToolbar.style.display = 'none';
             var infoHeader = document.createElement('div');
