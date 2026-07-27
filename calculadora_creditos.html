@@ -927,7 +927,7 @@
   var HASH = "a734aecec77bc8826bec68f0264b70228ab419e52a8fcdf05016ebee0465f257";
   var body = document.body;
   function unlock(){ var g=document.getElementById('bydGate'); if(g){ g.classList.add('fadeOut'); setTimeout(function(){ body.classList.remove('gate-locked'); g.remove(); }, 220); } else { body.classList.remove('gate-locked'); } }
-  if (sessionStorage.getItem('bydGateOk') === '1') { unlock(); }
+  if (sessionStorage.getItem('bydGateOk') === '1' || sessionStorage.getItem('bydVendorOk') === '1') { unlock(); }
   else {
     document.getElementById('bydGateForm').addEventListener('submit', function(e){
       e.preventDefault();
@@ -2928,5 +2928,11 @@
   width:44px;height:44px;border-radius:50%;background:#0A0A0A;color:#fff;display:flex;
   align-items:center;justify-content:center;text-decoration:none;font-family:Arial,sans-serif;
   font-size:20px;box-shadow:0 2px 8px rgba(0,0,0,0.35);" aria-label="Volver al inicio">&#8592;</a>
+<script>
+(function(){
+  var b=document.getElementById('hubBackBtn');
+  if(b && sessionStorage.getItem('bydVendorOk')==='1' && sessionStorage.getItem('bydGateOk')!=='1'){ b.href='./panel_ventas.html'; }
+})();
+</script>
 </body>
 </html>
