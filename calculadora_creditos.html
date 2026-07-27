@@ -1115,7 +1115,7 @@
             <div class="bbdd-toolbar">
                 <div>
                     <h2>¿Qué crédito me conviene?</h2>
-                    <p>Ingresá cuánto necesita financiar el cliente y cuánto le gustaría pagar de cuota — te mostramos sólo los créditos cuya cuota quede dentro de <strong>&plusmn; $60.000</strong> de ese valor, ordenados del que más se acerca.</p>
+                    <p>Ingresá cuánto necesita financiar el cliente y cuánto le gustaría pagar de cuota — te mostramos sólo los créditos cuya cuota quede dentro de <strong>&plusmn; $60.000</strong> de ese valor, ordenados del que más se acerca. Para los créditos con quebranto evaluamos las dos formas de pagarlo (contado o autofinanciado), para los clientes que ya no tienen más efectivo para poner en la operación.</p>
                 </div>
             </div>
 
@@ -1140,7 +1140,7 @@
                                 <th>Modalidad</th>
                                 <th>Plazo</th>
                                 <th>TNA %</th>
-                                <th>Quebranto</th>
+                                <th>Quebranto / Forma de pago</th>
                                 <th style="text-align:right;">Cuota estimada (mes 1)</th>
                                 <th>Estado</th>
                                 <th style="width:40px"></th>
@@ -1156,7 +1156,7 @@
             </div>
 
             <div class="calc-hint-box" style="margin-top:14px;">
-                El quebranto (si el crédito tiene) se considera "a pagar al contado" para esta búsqueda — no se suma al monto a financiar. Al tocar "Usar" se carga el crédito en la pestaña Calculadora, donde podés ajustar eso y emitir el datero.
+                Cuando un crédito tiene quebranto, esta búsqueda evalúa ambas formas de pagarlo y las muestra como filas separadas: <strong>Contado</strong> (el cliente paga el quebranto aparte, en efectivo, y financia sólo el monto pedido) y <strong>Autofinanciado</strong> (el quebranto se suma al capital financiado, subiendo la cuota, para el cliente que ya no tiene más efectivo para poner). Al tocar "Usar" se carga el crédito en la pestaña Calculadora con esa misma forma de pago ya seleccionada, lista para emitir el datero.
             </div>
 
         </div>
@@ -2339,13 +2339,27 @@
             return;
         }
 
-        // Asumimos pago de quebranto "al contado" (no se suma al monto a
-        // financiar) — es la misma convención que usa la Calculadora por
-        // defecto. Si el vendedor quiere autofinanciarlo, lo ajusta al
-        // pasar el crédito elegido a la pestaña Calculadora.
-        const evaluados = creditos.map(c=>{
-            const cuota = cuotaMes1ConIVA(monto, c.tna, c.plazo);
-            return { credito: c, cuota: cuota, diff: cuota - cuotaObjetivo };
+        // Para cada crédito evaluamos su/s forma/s de pago del quebranto:
+        // - Si NO tiene quebranto (bonificado), una sola opción.
+        // - Si SÍ tiene quebranto, evaluamos las DOS formas posibles:
+        //   "Contado" (el monto a financiar es el que pidió el cliente, y el
+        //   quebranto se paga aparte en efectivo) y "Autofinanciado" (el
+        //   quebranto se suma al capital financiado — montoAFinanciar =
+        //   monto / (1 - quebranto/100) — para el cliente que no tiene más
+        //   efectivo para poner en la operación). Cada forma de pago tiene
+        //   su propia cuota, y ambas compiten por el margen igual que
+        //   cualquier otro candidato.
+        const evaluados = [];
+        creditos.forEach(c=>{
+            const tieneQuebranto = c.quebranto && c.quebranto > 0;
+            const formas = tieneQuebranto ? ['Contado', 'Autofinanciacion'] : ['Contado'];
+            formas.forEach(forma=>{
+                const montoAFinanciar = (tieneQuebranto && forma === 'Autofinanciacion')
+                    ? monto / (1 - c.quebranto/100)
+                    : monto;
+                const cuota = cuotaMes1ConIVA(montoAFinanciar, c.tna, c.plazo);
+                evaluados.push({ credito: c, cuota: cuota, diff: cuota - cuotaObjetivo, pagoQuebranto: forma, montoAFinanciar: montoAFinanciar });
+            });
         });
 
         // Sólo mostramos alternativas cuya cuota quede dentro del margen de
@@ -2364,17 +2378,25 @@
         });
 
         if(candidatos.length === 0){
-            invTbody.innerHTML = '<tr><td colspan="9"><div class="empty-bbdd"><strong>No hay créditos dentro del margen</strong><span>Ningún crédito ofrece una cuota a menos de ' + fmtMoney(MARGEN_CUOTA) + ' de lo que el cliente quiere pagar. Probá con otro monto a financiar o cuota.</span></div></td></tr>';
-            invCount.textContent = '0 de ' + evaluados.length + ' créditos dentro del margen de ' + fmtMoney(MARGEN_CUOTA);
+            invTbody.innerHTML = '<tr><td colspan="9"><div class="empty-bbdd"><strong>No hay créditos dentro del margen</strong><span>Ningún crédito ofrece una cuota a menos de ' + fmtMoney(MARGEN_CUOTA) + ' de lo que el cliente quiere pagar, ni pagando el quebranto al contado ni autofinanciándolo. Probá con otro monto a financiar o cuota.</span></div></td></tr>';
+            invCount.textContent = '0 de ' + evaluados.length + ' alternativas dentro del margen de ' + fmtMoney(MARGEN_CUOTA);
             return;
         }
 
-        invTbody.innerHTML = candidatos.map(({credito:c, cuota, diff})=>{
+        invTbody.innerHTML = candidatos.map(({credito:c, cuota, diff, pagoQuebranto, montoAFinanciar})=>{
             const dentro = diff <= 0;
             const badge = dentro
                 ? '<span style="color:var(--verde-dm);font-weight:800;">&#10003; Dentro del presupuesto</span>'
                 : '<span style="color:#B8860B;font-weight:800;">+' + fmtMoney(diff) + ' sobre lo pedido</span>';
-            const quebrantoTxt = (c.quebranto && c.quebranto > 0) ? c.quebranto.toFixed(2) + '%' : 'Bonificado';
+            const tieneQuebranto = c.quebranto && c.quebranto > 0;
+            let quebrantoTxt;
+            if(!tieneQuebranto){
+                quebrantoTxt = 'Bonificado';
+            } else if(pagoQuebranto === 'Autofinanciacion'){
+                quebrantoTxt = c.quebranto.toFixed(2) + '% — <strong>Autofinanciado</strong><br><span style="font-size:11px;color:var(--gris-medio);">financia ' + fmtMoney(montoAFinanciar) + '</span>';
+            } else {
+                quebrantoTxt = c.quebranto.toFixed(2) + '% — Contado<br><span style="font-size:11px;color:var(--gris-medio);">paga ' + fmtMoney(montoAFinanciar * (c.quebranto/100)) + ' aparte</span>';
+            }
             return '<tr>' +
                 '<td>' + escapeHtml(c.banco) + '</td>' +
                 '<td>' + escapeHtml(c.linea||'') + '</td>' +
@@ -2384,24 +2406,24 @@
                 '<td>' + quebrantoTxt + '</td>' +
                 '<td style="text-align:right;font-weight:800;">' + fmtMoney(cuota) + '</td>' +
                 '<td>' + badge + '</td>' +
-                '<td><button type="button" class="btn btn-sm inv-usar" data-banco="' + escapeHtml(c.banco) + '" data-linea="' + escapeHtml(c.linea||'') + '" data-modalidad="' + c.modalidad + '" data-plazo="' + c.plazo + '">Usar</button></td>' +
+                '<td><button type="button" class="btn btn-sm inv-usar" data-banco="' + escapeHtml(c.banco) + '" data-linea="' + escapeHtml(c.linea||'') + '" data-modalidad="' + c.modalidad + '" data-plazo="' + c.plazo + '" data-pago-quebranto="' + pagoQuebranto + '">Usar</button></td>' +
                 '</tr>';
         }).join('');
 
-        invCount.textContent = candidatos.length + ' de ' + evaluados.length + ' créditos dentro del margen de ' + fmtMoney(MARGEN_CUOTA);
+        invCount.textContent = candidatos.length + ' de ' + evaluados.length + ' alternativas dentro del margen de ' + fmtMoney(MARGEN_CUOTA);
 
         invTbody.querySelectorAll('.inv-usar').forEach(btn=>{
             btn.addEventListener('click', ()=>{
-                aplicarCreditoDesdeInverso(btn.dataset.banco, btn.dataset.linea, btn.dataset.modalidad, parseInt(btn.dataset.plazo,10), monto);
+                aplicarCreditoDesdeInverso(btn.dataset.banco, btn.dataset.linea, btn.dataset.modalidad, parseInt(btn.dataset.plazo,10), monto, btn.dataset.pagoQuebranto);
             });
         });
     }
 
     // Lleva al vendedor a la pestaña Calculadora con el crédito elegido ya
-    // cargado (banco, línea, modalidad, plazo y monto), para que pueda
-    // ajustar el pago de quebranto y emitir el datero desde ahí sin tener
-    // que volver a elegir todo a mano.
-    function aplicarCreditoDesdeInverso(banco, linea, modalidad, plazo, monto){
+    // cargado (banco, línea, modalidad, plazo, monto y forma de pago del
+    // quebranto), para que pueda revisar el detalle y emitir el datero
+    // desde ahí sin tener que volver a elegir todo a mano.
+    function aplicarCreditoDesdeInverso(banco, linea, modalidad, plazo, monto, pagoQuebranto){
         document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
         document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
         document.querySelector('.tab-btn[data-view="calc"]').classList.add('active');
@@ -2419,8 +2441,9 @@
         onModalidadChange(modalidad);
 
         estado.plazo = plazo;
-        estado.pagoQuebranto = 'Contado';
-        qContado.checked = true;
+        estado.pagoQuebranto = (pagoQuebranto === 'Autofinanciacion') ? 'Autofinanciacion' : 'Contado';
+        qContado.checked = (estado.pagoQuebranto === 'Contado');
+        qAutofinanciacion.checked = (estado.pagoQuebranto === 'Autofinanciacion');
         document.querySelectorAll('.plazo-pill').forEach(p=>{
             p.classList.toggle('active', parseInt(p.dataset.plazo,10) === plazo);
         });
@@ -2431,7 +2454,7 @@
         inpMonto.value = monto ? monto.toLocaleString('es-AR') : '';
         renderResult();
         window.scrollTo(0,0);
-        showToast('Crédito cargado en la Calculadora');
+        showToast(estado.pagoQuebranto === 'Autofinanciacion' ? 'Crédito cargado con el quebranto autofinanciado' : 'Crédito cargado en la Calculadora');
     }
 
     // ============ DATERO (formulario + PDF) ============
