@@ -1115,7 +1115,7 @@
             <div class="bbdd-toolbar">
                 <div>
                     <h2>¿Qué crédito me conviene?</h2>
-                    <p>Ingresá cuánto necesita financiar el cliente y cuánto le gustaría pagar de cuota — te mostramos qué créditos se ajustan mejor, ordenados del que más se acerca a tu presupuesto.</p>
+                    <p>Ingresá cuánto necesita financiar el cliente y cuánto le gustaría pagar de cuota — te mostramos sólo los créditos cuya cuota quede dentro de <strong>&plusmn; $60.000</strong> de ese valor, ordenados del que más se acerca.</p>
                 </div>
             </div>
 
@@ -2302,6 +2302,12 @@
     const invTbody = document.getElementById('inv-tbody');
     const invCount = document.getElementById('inv-count');
 
+    // Margen de tolerancia sobre la cuota deseada: sólo mostramos créditos
+    // cuya cuota caiga dentro de +/- este monto respecto de lo que el
+    // cliente dijo que le gustaría pagar. Así evitamos listar opciones
+    // que en la práctica no le sirven al vendedor.
+    const MARGEN_CUOTA = 60000;
+
     function wireMontoInput(input, onChange){
         input.addEventListener('input', ()=>{
             const cursorAtEnd = input.selectionStart === input.value.length;
@@ -2337,24 +2343,37 @@
         // financiar) — es la misma convención que usa la Calculadora por
         // defecto. Si el vendedor quiere autofinanciarlo, lo ajusta al
         // pasar el crédito elegido a la pestaña Calculadora.
-        const candidatos = creditos.map(c=>{
+        const evaluados = creditos.map(c=>{
             const cuota = cuotaMes1ConIVA(monto, c.tna, c.plazo);
             return { credito: c, cuota: cuota, diff: cuota - cuotaObjetivo };
         });
 
+        // Sólo mostramos alternativas cuya cuota quede dentro del margen de
+        // tolerancia (+/- MARGEN_CUOTA) respecto de lo que el cliente dijo
+        // que le gustaría pagar. El resto no se lista: no le sirven al
+        // vendedor aunque matemáticamente existan.
+        const candidatos = evaluados.filter(x => Math.abs(x.diff) <= MARGEN_CUOTA);
+
+        // Dentro del margen, ordenamos por cercanía real a la cuota deseada
+        // (la que más se acerca primero), priorizando levemente las que
+        // quedan por debajo del objetivo ante un empate en distancia.
         candidatos.sort((a,b)=>{
-            const aOk = a.diff <= 0, bOk = b.diff <= 0;
-            if(aOk && bOk) return b.cuota - a.cuota;   // dentro del presupuesto: la cuota más alta primero (mejor aprovecha el presupuesto)
-            if(aOk && !bOk) return -1;
-            if(!aOk && bOk) return 1;
-            return a.cuota - b.cuota;                   // fuera de presupuesto: la más cercana primero
+            const da = Math.abs(a.diff), db = Math.abs(b.diff);
+            if(da !== db) return da - db;
+            return a.diff - b.diff;
         });
+
+        if(candidatos.length === 0){
+            invTbody.innerHTML = '<tr><td colspan="9"><div class="empty-bbdd"><strong>No hay créditos dentro del margen</strong><span>Ningún crédito ofrece una cuota a menos de ' + fmtMoney(MARGEN_CUOTA) + ' de lo que el cliente quiere pagar. Probá con otro monto a financiar o cuota.</span></div></td></tr>';
+            invCount.textContent = '0 de ' + evaluados.length + ' créditos dentro del margen de ' + fmtMoney(MARGEN_CUOTA);
+            return;
+        }
 
         invTbody.innerHTML = candidatos.map(({credito:c, cuota, diff})=>{
             const dentro = diff <= 0;
             const badge = dentro
                 ? '<span style="color:var(--verde-dm);font-weight:800;">&#10003; Dentro del presupuesto</span>'
-                : '<span style="color:#C62828;font-weight:800;">+' + fmtMoney(diff) + '</span>';
+                : '<span style="color:#B8860B;font-weight:800;">+' + fmtMoney(diff) + ' sobre lo pedido</span>';
             const quebrantoTxt = (c.quebranto && c.quebranto > 0) ? c.quebranto.toFixed(2) + '%' : 'Bonificado';
             return '<tr>' +
                 '<td>' + escapeHtml(c.banco) + '</td>' +
@@ -2369,8 +2388,7 @@
                 '</tr>';
         }).join('');
 
-        const dentroCount = candidatos.filter(x=>x.diff<=0).length;
-        invCount.textContent = candidatos.length + ' créditos evaluados · ' + dentroCount + ' dentro del presupuesto';
+        invCount.textContent = candidatos.length + ' de ' + evaluados.length + ' créditos dentro del margen de ' + fmtMoney(MARGEN_CUOTA);
 
         invTbody.querySelectorAll('.inv-usar').forEach(btn=>{
             btn.addEventListener('click', ()=>{
