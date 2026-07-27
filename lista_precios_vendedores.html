@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BYD Yacopini &middot; Lista de Precios (Vendedores)</title>
+<style>
+  :root{
+    --negro:#0A0A0A;
+    --carbon:#2A2A2A;
+    --gris-oscuro:#4A4A4A;
+    --gris-medio:#8C8C8C;
+    --gris-claro:#D4D4D4;
+    --gris-fondo:#F2F2F2;
+    --blanco:#FFFFFF;
+    --azul-ev:#1565D8;
+    --verde-dm:#388E3C;
+    --rojo-piso:#C62828;
+    --rojo-fondo:#FDECEA;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0;
+    background:var(--gris-fondo);
+    color:var(--negro);
+    font-family:'Segoe UI', Arial, Helvetica, sans-serif;
+  }
+  .app{ max-width:640px; margin:0 auto; padding:0 0 90px; }
+  .app-topbar{
+    background:var(--negro);
+    padding:20px 20px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .app-topbar svg{ height:32px; width:auto; display:block; }
+  .vig{ text-align:right; color:#A8A8A8; font-size:10.5px; }
+  .vig b{ display:block; color:#fff; font-size:13px; font-weight:700; margin-top:2px; }
+  .title-block{ padding:20px 20px 6px; }
+  .title-block h1{ font-size:21px; font-weight:800; margin:0 0 4px; color:var(--negro); }
+  .title-block p{ font-size:12.5px; color:var(--gris-oscuro); margin:0; line-height:1.5; }
+  .confidential-banner{
+    background:var(--carbon); color:#fff; text-align:center;
+    font-size:10.5px; font-weight:700; letter-spacing:0.6px; text-transform:uppercase;
+    padding:9px 16px; margin:14px 0 0;
+  }
+  .legend{ display:flex; flex-wrap:wrap; gap:10px 14px; padding:12px 20px; font-size:10.5px; color:var(--gris-oscuro); background:var(--blanco); border-bottom:1px solid var(--gris-claro); }
+  .legend .item{ display:flex; align-items:center; gap:5px; }
+  .legend .dot{ width:8px;height:8px;border-radius:2px; flex-shrink:0; }
+  .cat-block{ padding:18px 20px 4px; }
+  .cat-head{ display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+  .cat-pill{ font-size:10px; font-weight:800; letter-spacing:1px; padding:4px 10px; border-radius:20px; color:#fff; }
+  .cat-pill.ev{ background:var(--azul-ev); }
+  .cat-pill.dm{ background:var(--verde-dm); }
+  .cat-title{ font-size:12px; color:var(--gris-medio); }
+  .model-card{
+    background:var(--blanco); border-radius:12px; border:1px solid var(--gris-claro);
+    padding:14px 16px; margin-bottom:10px; border-left:4px solid var(--gris-claro);
+  }
+  .model-card.ev{ border-left-color:var(--azul-ev); }
+  .model-card.dm{ border-left-color:var(--verde-dm); }
+  .model-top{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-bottom:6px; }
+  .model-name{ font-size:15.5px; font-weight:800; color:var(--negro); }
+  .model-tag{ font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; white-space:nowrap; }
+  .model-tag.ev{ color:var(--azul-ev); }
+  .model-tag.dm{ color:var(--verde-dm); }
+  .model-lista{ font-size:12px; color:var(--gris-oscuro); margin-bottom:10px; }
+  .model-lista b{ color:var(--negro); font-size:13px; }
+  .floor-row{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
+  .floor-row-single{ grid-template-columns:1fr; }
+  .floor-box{ border-radius:9px; padding:9px 10px; }
+  .floor-box.venta{ background:var(--rojo-fondo); }
+  .floor-box.gerencia{ background:var(--carbon); }
+  .floor-label{ font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; }
+  .floor-box.venta .floor-label{ color:var(--rojo-piso); }
+  .floor-box.gerencia .floor-label{ color:#B0B0B0; }
+  .floor-val{ font-size:15px; font-weight:800; margin-top:2px; }
+  .floor-box.venta .floor-val{ color:var(--rojo-piso); }
+  .floor-box.gerencia .floor-val{ color:#fff; }
+  .model-detail{ margin-top:10px; }
+  .model-detail summary{
+    font-size:11px; font-weight:700; color:var(--gris-oscuro); cursor:pointer;
+    list-style:none; display:flex; align-items:center; gap:4px;
+  }
+  .model-detail summary::-webkit-details-marker{ display:none; }
+  .model-detail summary::before{ content:"▸"; font-size:10px; }
+  .model-detail[open] summary::before{ content:"▾"; }
+  .detail-grid{
+    display:grid; grid-template-columns:1fr 1fr; gap:6px 12px;
+    margin-top:8px; padding-top:8px; border-top:1px solid var(--gris-fondo);
+  }
+  .detail-grid div{ display:flex; justify-content:space-between; font-size:11.5px; color:var(--gris-oscuro); }
+  .detail-grid div b{ color:var(--negro); }
+  .promo-section{ padding:18px 20px 4px; }
+  .promo-head h2{ font-size:13px; font-weight:800; letter-spacing:0.6px; text-transform:uppercase; margin:0 0 3px; color:var(--negro); }
+  .promo-head p{ font-size:11px; color:var(--gris-medio); margin:0 0 12px; }
+  .promo-card{
+    position:relative; overflow:hidden; border-radius:12px;
+    border:1px solid var(--gris-claro); margin-bottom:9px;
+  }
+  .promo-swipe-action{
+    position:absolute; top:0; right:0; bottom:0; width:84px;
+    background:var(--rojo-piso); display:flex; align-items:center; justify-content:center;
+  }
+  .promo-del-trash{
+    background:none; border:none; width:100%; height:100%; padding:0;
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+  }
+  .promo-swipe-content{
+    position:relative; background:var(--blanco);
+    padding:12px 14px; border-left:4px solid var(--gris-claro);
+    transition:transform 0.22s ease; touch-action:pan-y;
+  }
+  .promo-card.ev .promo-swipe-content{ border-left-color:var(--azul-ev); }
+  .promo-card.dm .promo-swipe-content{ border-left-color:var(--verde-dm); }
+  .promo-restore{
+    display:none; text-align:center; font-size:11.5px; color:var(--gris-medio);
+    padding:10px; margin-top:2px; cursor:pointer; text-decoration:underline; text-underline-offset:2px;
+  }
+  .promo-restore.show{ display:block; }
+  .promo-empty{
+    display:none; text-align:center; font-size:12px; color:var(--gris-medio);
+    padding:16px 0;
+  }
+  .promo-empty.show{ display:block; }
+  .promo-top{ margin-bottom:8px; }
+  .promo-vin{ font-size:10.5px; color:var(--gris-medio); margin-top:2px; }
+  .promo-price-row{ display:flex; justify-content:space-between; align-items:center; gap:10px; }
+  .promo-old{ font-size:11.5px; color:var(--gris-medio); }
+  .promo-old s{ color:var(--gris-medio); }
+  .promo-new{ text-align:right; }
+  .promo-new-val{ font-size:16px; font-weight:800; color:var(--rojo-piso); }
+  .promo-ahorro{ font-size:10px; font-weight:700; color:var(--verde-dm); }
+  .accesorios{ padding:18px 20px 4px; }
+  .accesorios h2{ font-size:13px; font-weight:800; letter-spacing:0.6px; text-transform:uppercase; margin:0 0 10px; color:var(--negro); }
+  .accesorios-card{ background:var(--blanco); border:1px solid var(--gris-claro); border-radius:12px; overflow:hidden; }
+  .acc-row{ display:flex; justify-content:space-between; padding:11px 14px; font-size:13px; color:var(--carbon); border-bottom:1px solid var(--gris-fondo); }
+  .acc-row:last-child{ border-bottom:none; }
+  .acc-precio{ font-weight:700; color:var(--negro); }
+  .incluido-badge{ display:inline-block; background:#E8F5E9; color:var(--verde-dm); font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:20px; border:1px solid #C8E6C9; }
+  .footer{ padding:20px 20px 10px; font-size:10.5px; color:var(--gris-medio); line-height:1.6; }
+</style>
+</head>
+<body class="gate-locked">
+<div id="bydGate" style="position:fixed;inset:0;z-index:999999;background:#0A0A0A;display:flex;align-items:center;justify-content:center;padding:24px;opacity:1;">
+  <form id="bydGateForm" style="width:100%;max-width:300px;text-align:center;font-family:Arial,sans-serif;">
+    <div style="color:#fff;font-weight:800;font-size:16px;margin-bottom:4px;">BYD Yacopini</div>
+    <div style="color:#8C8C8C;font-size:12px;margin-bottom:18px;">Acceso interno &middot; Equipo de Ventas</div>
+    <input id="bydGatePass" type="password" inputmode="numeric" placeholder="Clave" autocomplete="off" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid #4A4A4A;background:#2A2A2A;color:#fff;font-size:16px;text-align:center;box-sizing:border-box;">
+    <button type="submit" style="width:100%;margin-top:10px;padding:12px;border-radius:10px;border:none;background:#1565D8;color:#fff;font-weight:700;font-size:14px;">Entrar</button>
+    <div id="bydGateError" style="color:#E85555;font-size:12px;margin-top:10px;display:none;">Clave incorrecta</div>
+  </form>
+</div>
+<style>
+  body.gate-locked > *:not(#bydGate){display:none !important;}
+  #bydGate{ transition:opacity .25s ease; }
+  #bydGate.fadeOut{ opacity:0; }
+</style>
+<script>
+(function(){
+  var HASH = "a734aecec77bc8826bec68f0264b70228ab419e52a8fcdf05016ebee0465f257";
+  var body = document.body;
+  function unlock(){ var g=document.getElementById('bydGate'); if(g){ g.classList.add('fadeOut'); setTimeout(function(){ body.classList.remove('gate-locked'); g.remove(); }, 220); } else { body.classList.remove('gate-locked'); } }
+  if (sessionStorage.getItem('bydGateOk') === '1' || sessionStorage.getItem('bydVendorOk') === '1') { unlock(); }
+  else {
+    document.getElementById('bydGateForm').addEventListener('submit', function(e){
+      e.preventDefault();
+      var val = document.getElementById('bydGatePass').value;
+      crypto.subtle.digest('SHA-256', new TextEncoder().encode(val)).then(function(buf){
+        var hex = Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+        if (hex === HASH) { sessionStorage.setItem('bydGateOk','1'); unlock(); }
+        else { document.getElementById('bydGateError').style.display = 'block'; document.getElementById('bydGatePass').value = ''; document.getElementById('bydGatePass').focus(); }
+      });
+    });
+  }
+})();
+</script>
+
+<div class="app">
+  <div class="app-topbar">
+    <svg viewBox="12 4 529 102" xmlns="http://www.w3.org/2000/svg" aria-label="BYD Yacopini">
+      <defs><style>.st0{fill:#FFFFFF;}</style></defs>
+      <path class="st0" d="M162.93,19.18c-8.06-12.16-21.88-14.53-31.23-14.75-8.23-.19-43.9-.23-64.67-.24-40.91-.03-17.51-.01-54.36-.01v19.54c43.75,0,95.68-.1,118.41.25,4.06.06,8.08.47,11.27,3.3,2.97,2.64,4.02,6.79,2.69,10.4-2.14,5.83-8.07,7.28-13.96,7.37-9.01.14-33.77.19-52.24.22-45.3.06-25.68.03-66.16.03v19.49c43.72,0,95.76-.09,118.41.25,7.06.1,14.53,2.56,14.53,10.43s-7.46,10.45-14.53,10.56c-22.59.33-74.66.24-118.41.24v19.53c43.88,0,101.32.16,119.03-.25,9.35-.22,23.18-2.59,31.23-14.75,7.56-11.41,5.71-26.27-4.22-35.8,9.93-9.54,11.78-24.39,4.21-35.8"/>
+      <path class="st0" d="M520.08,15.93c-13.35-9.58-27.85-10.94-39.61-11.21-11.58-.27-29.05-.39-44.5-.45-37.67-.15-15.02-.08-50.91-.08v19.6c38.19,0,64.97-.32,94.46.52,8.66.24,17.95,1.16,26.31,6.96,7.92,5.5,12.62,14.26,12.62,23.72s-4.57,18.24-12.49,23.74c-8.36,5.81-17.65,6.72-26.31,6.96-29.49.83-56.27.51-94.46.51l-.13,19.59c38.41,0,66.03.14,95.41-.54,11.76-.27,26.26-1.63,39.61-11.21,12.67-9.09,20.33-23.36,20.33-39.05s-7.67-29.97-20.33-39.05"/>
+      <path class="st0" d="M227.22,48.06c-10.23-.2-13.49-3.54-13.56-13.73-.07-9.42-.02-20.58-.02-30.14h-22.56c0,9.67-.19,29.24.19,38.7.74,18.38,6.77,24.11,25.55,24.75,13.02.44,23.36.29,41.36.28v-19.69c-14.43,0-20.31.04-30.96-.16"/>
+      <path class="st0" d="M339.04,34.68c-.07,9.92-3.3,13.18-13.56,13.38-4.89.09-17.75.14-28.33.16h0s-.1.01-.1.01c-10.81,0-22.34-.02-29.1-.02v57.57h26.52v-37.88c.81,0,1.68,0,2.58,0h0s.1,0,.1,0v.02c13.8,0,31.04-.06,37.55-.26,19.93-.61,26-6.23,26.73-24.78.1-2.48.16-5.62.19-9.06V4.18h-22.56c0,9.8.04,20.81-.03,30.5"/>
+    </svg>
+    <div class="vig">VIGENCIA<b>22 de julio de 2026</b></div>
+  </div>
+
+  <div class="title-block">
+    <h1>Lista de Precios</h1>
+    <p>Valores de referencia para el equipo de ventas. Piso de venta: límite mínimo autorizado para cerrar una operación.</p>
+  </div>
+
+  <div class="legend">
+    <div class="item"><span class="dot" style="background:var(--azul-ev)"></span>EV &mdash; Eléctrico</div>
+    <div class="item"><span class="dot" style="background:var(--verde-dm)"></span>DM &mdash; Híbrido enchufable</div>
+    <div class="item"><span class="dot" style="background:var(--rojo-fondo);border:1px solid var(--rojo-piso)"></span>Piso de Venta</div>
+  </div>
+
+  <div class="cat-block">
+    <div class="cat-head"><span class="cat-pill ev">EV</span><span class="cat-title">Eléctricos</span></div>
+
+    <div class="model-card ev">
+      <div class="model-top">
+        <div class="model-name">Dolphin Mini GL</div>
+        <div class="model-tag ev">Eléctrico</div>
+      </div>
+      <div class="model-lista">Lista <b>USD 23.990</b></div>
+      <div class="floor-row floor-row-single">
+        <div class="floor-box venta">
+          <div class="floor-label">Piso Venta</div>
+          <div class="floor-val">USD 22.772</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="model-card ev">
+      <div class="model-top">
+        <div class="model-name">Dolphin Mini GS</div>
+        <div class="model-tag ev">Eléctrico</div>
+      </div>
+      <div class="model-lista">Lista <b>USD 24.990</b></div>
+      <div class="floor-row floor-row-single">
+        <div class="floor-box venta">
+          <div class="floor-label">Piso Venta</div>
+          <div class="floor-val">USD 24.680</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="model-card ev">
+      <div class="model-top">
+        <div class="model-name">Yuan Pro GS</div>
+        <div class="model-tag ev">Eléctrico</div>
+      </div>
+      <div class="model-lista">Lista <b>USD 31.990</b></div>
+      <div class="floor-row floor-row-single">
+        <div class="floor-box venta">
+          <div class="floor-label">Piso Venta</div>
+          <div class="floor-val">USD 30.371</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cat-block">
+    <div class="cat-head"><span class="cat-pill dm">DM</span><span class="cat-title">Híbridos enchufables</span></div>
+
+    <div class="model-card dm">
+      <div class="model-top">
+        <div class="model-name">Atto 2 DM-i</div>
+        <div class="model-tag dm">Híbrido</div>
+      </div>
+      <div class="model-lista">Lista <b>USD 33.990</b></div>
+      <div class="floor-row floor-row-single">
+        <div class="floor-box venta">
+          <div class="floor-label">Piso Venta</div>
+          <div class="floor-val">USD 34.590</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="model-card dm">
+      <div class="model-top">
+        <div class="model-name">Song Pro GL</div>
+        <div class="model-tag dm">Híbrido</div>
+      </div>
+      <div class="model-lista">Lista <b>USD 35.490</b></div>
+      <div class="floor-row floor-row-single">
+        <div class="floor-box venta">
+          <div class="floor-label">Piso Venta</div>
+          <div class="floor-val">USD 33.591</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="model-card dm">
+      <div class="model-top">
+        <div class="model-name">Song Pro GS</div>
+        <div class="model-tag dm">Híbrido</div>
+      </div>
+      <div class="model-lista">Lista <b>USD 37.490</b></div>
+      <div class="floor-row floor-row-single">
+        <div class="floor-box venta">
+          <div class="floor-label">Piso Venta</div>
+          <div class="floor-val">USD 36.555</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="model-card dm">
+      <div class="model-top">
+        <div class="model-name">Shark GS</div>
+        <div class="model-tag dm">Híbrido</div>
+      </div>
+      <div class="model-lista">Lista <b>USD 59.990</b></div>
+      <div class="floor-row floor-row-single">
+        <div class="floor-box venta">
+          <div class="floor-label">Piso Venta</div>
+          <div class="floor-val">USD 57.530</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="model-card dm">
+      <div class="model-top">
+        <div class="model-name">Seal U GS</div>
+        <div class="model-tag dm">Híbrido</div>
+      </div>
+      <div class="model-lista">Lista <b>USD 47.990</b></div>
+      <div class="floor-row floor-row-single">
+        <div class="floor-box venta">
+          <div class="floor-label">Piso Venta</div>
+          <div class="floor-val">USD 46.250</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="promo-section">
+    <div class="promo-head">
+      <h2>Vehículos en Promoción</h2>
+      <p>Unidades con precio especial por VIN. Válido según condiciones vigentes.</p>
+    </div>
+
+    <div class="promo-card ev" data-vin="LGXCE4CC9T2077814 &amp;middot; Apricity White">
+      <div class="promo-swipe-action">
+        <button type="button" class="promo-del-trash" aria-label="Eliminar">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m-9 0l1 13a2 2 0 002 2h6a2 2 0 002-2l1-13" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><line x1="10" y1="11" x2="10" y2="17" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><line x1="14" y1="11" x2="14" y2="17" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="promo-swipe-content">
+        <div class="promo-top">
+          <div class="model-name">Dolphin Mini GL</div>
+          <div class="promo-vin">LGXCE4CC9T2077814 &middot; Apricity White</div>
+        </div>
+        <div class="promo-price-row">
+          <div class="promo-old">Piso <s>USD 22.772</s></div>
+          <div class="promo-new">
+            <div class="promo-new-val">USD 21.992</div>
+            <div class="promo-ahorro">Ahorro vs piso: USD 780</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="promo-card ev" data-vin="LGXCE4CC2T2077816 &amp;middot; Apricity White">
+      <div class="promo-swipe-action">
+        <button type="button" class="promo-del-trash" aria-label="Eliminar">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m-9 0l1 13a2 2 0 002 2h6a2 2 0 002-2l1-13" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><line x1="10" y1="11" x2="10" y2="17" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><line x1="14" y1="11" x2="14" y2="17" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="promo-swipe-content">
+        <div class="promo-top">
+          <div class="model-name">Dolphin Mini GL</div>
+          <div class="promo-vin">LGXCE4CC2T2077816 &middot; Apricity White</div>
+        </div>
+        <div class="promo-price-row">
+          <div class="promo-old">Piso <s>USD 22.772</s></div>
+          <div class="promo-new">
+            <div class="promo-new-val">USD 21.992</div>
+            <div class="promo-ahorro">Ahorro vs piso: USD 780</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="promo-card ev" data-vin="LGXCE4CC9T2077800 &amp;middot; Obsidian Black">
+      <div class="promo-swipe-action">
+        <button type="button" class="promo-del-trash" aria-label="Eliminar">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m-9 0l1 13a2 2 0 002 2h6a2 2 0 002-2l1-13" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><line x1="10" y1="11" x2="10" y2="17" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><line x1="14" y1="11" x2="14" y2="17" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="promo-swipe-content">
+        <div class="promo-top">
+          <div class="model-name">Dolphin Mini GL</div>
+          <div class="promo-vin">LGXCE4CC9T2077800 &middot; Obsidian Black</div>
+        </div>
+        <div class="promo-price-row">
+          <div class="promo-old">Piso <s>USD 22.772</s></div>
+          <div class="promo-new">
+            <div class="promo-new-val">USD 22.232</div>
+            <div class="promo-ahorro">Ahorro vs piso: USD 540</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="promo-card ev" data-vin="LGXCE4CC8T2077805 &amp;middot; Obsidian Black">
+      <div class="promo-swipe-action">
+        <button type="button" class="promo-del-trash" aria-label="Eliminar">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m-9 0l1 13a2 2 0 002 2h6a2 2 0 002-2l1-13" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><line x1="10" y1="11" x2="10" y2="17" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><line x1="14" y1="11" x2="14" y2="17" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="promo-swipe-content">
+        <div class="promo-top">
+          <div class="model-name">Dolphin Mini GL</div>
+          <div class="promo-vin">LGXCE4CC8T2077805 &middot; Obsidian Black</div>
+        </div>
+        <div class="promo-price-row">
+          <div class="promo-old">Piso <s>USD 22.772</s></div>
+          <div class="promo-new">
+            <div class="promo-new-val">USD 22.232</div>
+            <div class="promo-ahorro">Ahorro vs piso: USD 540</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="promo-card ev" data-vin="LGXCE4CC4T2082077 &amp;middot; Sprout Green">
+      <div class="promo-swipe-action">
+        <button type="button" class="promo-del-trash" aria-label="Eliminar">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m-9 0l1 13a2 2 0 002 2h6a2 2 0 002-2l1-13" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><line x1="10" y1="11" x2="10" y2="17" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><line x1="14" y1="11" x2="14" y2="17" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="promo-swipe-content">
+        <div class="promo-top">
+          <div class="model-name">Dolphin Mini GS</div>
+          <div class="promo-vin">LGXCE4CC4T2082077 &middot; Sprout Green</div>
+        </div>
+        <div class="promo-price-row">
+          <div class="promo-old">Piso <s>USD 24.680</s></div>
+          <div class="promo-new">
+            <div class="promo-new-val">USD 24.130</div>
+            <div class="promo-ahorro">Ahorro vs piso: USD 550</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="promo-card ev" data-vin="LGXCE4CC3T2082152 &amp;middot; Sprout Green">
+      <div class="promo-swipe-action">
+        <button type="button" class="promo-del-trash" aria-label="Eliminar">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m-9 0l1 13a2 2 0 002 2h6a2 2 0 002-2l1-13" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><line x1="10" y1="11" x2="10" y2="17" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><line x1="14" y1="11" x2="14" y2="17" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="promo-swipe-content">
+        <div class="promo-top">
+          <div class="model-name">Dolphin Mini GS</div>
+          <div class="promo-vin">LGXCE4CC3T2082152 &middot; Sprout Green</div>
+        </div>
+        <div class="promo-price-row">
+          <div class="promo-old">Piso <s>USD 24.680</s></div>
+          <div class="promo-new">
+            <div class="promo-new-val">USD 23.881</div>
+            <div class="promo-ahorro">Ahorro vs piso: USD 799</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="promo-card dm" data-vin="LPE19W2A9TF128902 &amp;middot; Obsidian Black">
+      <div class="promo-swipe-action">
+        <button type="button" class="promo-del-trash" aria-label="Eliminar">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m-9 0l1 13a2 2 0 002 2h6a2 2 0 002-2l1-13" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><line x1="10" y1="11" x2="10" y2="17" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><line x1="14" y1="11" x2="14" y2="17" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="promo-swipe-content">
+        <div class="promo-top">
+          <div class="model-name">Shark GS</div>
+          <div class="promo-vin">LPE19W2A9TF128902 &middot; Obsidian Black</div>
+        </div>
+        <div class="promo-price-row">
+          <div class="promo-old">Piso <s>USD 57.530</s></div>
+          <div class="promo-new">
+            <div class="promo-new-val">USD 56.031</div>
+            <div class="promo-ahorro">Ahorro vs piso: USD 1.499</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="promo-card dm" data-vin="LPE19W2AXTF128911 &amp;middot; Obsidian Black">
+      <div class="promo-swipe-action">
+        <button type="button" class="promo-del-trash" aria-label="Eliminar">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m-9 0l1 13a2 2 0 002 2h6a2 2 0 002-2l1-13" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><line x1="10" y1="11" x2="10" y2="17" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><line x1="14" y1="11" x2="14" y2="17" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="promo-swipe-content">
+        <div class="promo-top">
+          <div class="model-name">Shark GS</div>
+          <div class="promo-vin">LPE19W2AXTF128911 &middot; Obsidian Black</div>
+        </div>
+        <div class="promo-price-row">
+          <div class="promo-old">Piso <s>USD 57.530</s></div>
+          <div class="promo-new">
+            <div class="promo-new-val">USD 56.031</div>
+            <div class="promo-ahorro">Ahorro vs piso: USD 1.499</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="promo-card dm" data-vin="LC0C74C49T5038337 &amp;middot; Snow White">
+      <div class="promo-swipe-action">
+        <button type="button" class="promo-del-trash" aria-label="Eliminar">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m-9 0l1 13a2 2 0 002 2h6a2 2 0 002-2l1-13" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><line x1="10" y1="11" x2="10" y2="17" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><line x1="14" y1="11" x2="14" y2="17" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="promo-swipe-content">
+        <div class="promo-top">
+          <div class="model-name">Song Pro GL</div>
+          <div class="promo-vin">LC0C74C49T5038337 &middot; Snow White</div>
+        </div>
+        <div class="promo-price-row">
+          <div class="promo-old">Piso <s>USD 33.591</s></div>
+          <div class="promo-new">
+            <div class="promo-new-val">USD 32.227</div>
+            <div class="promo-ahorro">Ahorro vs piso: USD 1.364</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="promo-card dm" data-vin="LC0C74C43T5038317 &amp;middot; Snow White">
+      <div class="promo-swipe-action">
+        <button type="button" class="promo-del-trash" aria-label="Eliminar">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m-9 0l1 13a2 2 0 002 2h6a2 2 0 002-2l1-13" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><line x1="10" y1="11" x2="10" y2="17" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><line x1="14" y1="11" x2="14" y2="17" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="promo-swipe-content">
+        <div class="promo-top">
+          <div class="model-name">Song Pro GL</div>
+          <div class="promo-vin">LC0C74C43T5038317 &middot; Snow White</div>
+        </div>
+        <div class="promo-price-row">
+          <div class="promo-old">Piso <s>USD 33.591</s></div>
+          <div class="promo-new">
+            <div class="promo-new-val">USD 32.227</div>
+            <div class="promo-ahorro">Ahorro vs piso: USD 1.364</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="promo-card ev" data-vin="LC0CE4CB6T4036894 &amp;middot; Time Grey">
+      <div class="promo-swipe-action">
+        <button type="button" class="promo-del-trash" aria-label="Eliminar">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m-9 0l1 13a2 2 0 002 2h6a2 2 0 002-2l1-13" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><line x1="10" y1="11" x2="10" y2="17" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><line x1="14" y1="11" x2="14" y2="17" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="promo-swipe-content">
+        <div class="promo-top">
+          <div class="model-name">Yuan Pro GS</div>
+          <div class="promo-vin">LC0CE4CB6T4036894 &middot; Time Grey</div>
+        </div>
+        <div class="promo-price-row">
+          <div class="promo-old">Piso <s>USD 30.371</s></div>
+          <div class="promo-new">
+            <div class="promo-new-val">USD 29.752</div>
+            <div class="promo-ahorro">Ahorro vs piso: USD 619</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="promo-card ev" data-vin="LC0CE4CB5T4036272 &amp;middot; Skiing White">
+      <div class="promo-swipe-action">
+        <button type="button" class="promo-del-trash" aria-label="Eliminar">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m-9 0l1 13a2 2 0 002 2h6a2 2 0 002-2l1-13" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><line x1="10" y1="11" x2="10" y2="17" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><line x1="14" y1="11" x2="14" y2="17" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="promo-swipe-content">
+        <div class="promo-top">
+          <div class="model-name">Yuan Pro GS</div>
+          <div class="promo-vin">LC0CE4CB5T4036272 &middot; Skiing White</div>
+        </div>
+        <div class="promo-price-row">
+          <div class="promo-old">Piso <s>USD 30.371</s></div>
+          <div class="promo-new">
+            <div class="promo-new-val">USD 29.752</div>
+            <div class="promo-ahorro">Ahorro vs piso: USD 619</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="promo-empty" id="promoEmptyMsg">No hay vehículos en promoción visibles.</div>
+    <div class="promo-restore" id="promoRestoreBtn">Restaurar <span id="promoHiddenCount">0</span> vendido(s) oculto(s)</div>
+  </div>
+  <div class="accesorios">
+    <h2>Accesorios</h2>
+    <div class="accesorios-card">
+      <div class="acc-row"><span>Cargador Portátil 220V</span><span class="acc-precio"><span class="incluido-badge">Incluido</span></span></div>
+      <div class="acc-row"><span>Cargador Monofásico 7kWh</span><span class="acc-precio"><span class="incluido-badge">Incluido</span></span></div>
+      <div class="acc-row"><span>Cargador Portátil 220V (adicional)</span><span class="acc-precio">USD 600</span></div>
+      <div class="acc-row"><span>Cargador Trifásico 22kWh</span><span class="acc-precio">USD 1.400</span></div>
+      <div class="acc-row"><span>Polarizado</span><span class="acc-precio">USD 120</span></div>
+      <div class="acc-row"><span>Tuercas Antirrobo</span><span class="acc-precio">USD 100</span></div>
+      <div class="acc-row"><span>Cable Macho / Macho</span><span class="acc-precio">USD 367</span></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Piso de venta: valor mínimo autorizado para el cierre de la operación. Ante consultas fuera de este rango, contactar a gerencia.<br>
+    BYD Yacopini &middot; Equipo de Ventas
+  </div>
+</div>
+
+<a id="hubBackBtn" href="./panel_ventas.html" style="position:fixed;bottom:18px;left:18px;z-index:999999;
+  width:44px;height:44px;border-radius:50%;background:#0A0A0A;color:#fff;display:flex;
+  align-items:center;justify-content:center;text-decoration:none;font-family:Arial,sans-serif;
+  font-size:20px;box-shadow:0 4px 14px rgba(0,0,0,0.3);">&larr;</a>
+
+<script>
+(function(){
+  var KEY = 'byd_lista_precios_vins_ocultos';
+  var REVEAL = 84;
+  var THRESHOLD_OPEN = 40;
+  var THRESHOLD_DELETE = 120;
+
+  function getHidden(){ try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch(e){ return []; } }
+  function setHidden(arr){ localStorage.setItem(KEY, JSON.stringify(arr)); }
+  function updateRestoreUI(){
+    var hidden = getHidden();
+    var restoreBtn = document.getElementById('promoRestoreBtn');
+    var countEl = document.getElementById('promoHiddenCount');
+    if (restoreBtn && countEl) {
+      if (hidden.length > 0) { countEl.textContent = hidden.length; restoreBtn.classList.add('show'); }
+      else { restoreBtn.classList.remove('show'); }
+    }
+  }
+  function updateEmptyState(){
+    var emptyMsg = document.getElementById('promoEmptyMsg');
+    if (!emptyMsg) return;
+    var cards = document.querySelectorAll('.promo-card');
+    var anyVisible = false;
+    cards.forEach(function(c){ if (c.style.display !== 'none') anyVisible = true; });
+    if (cards.length > 0 && !anyVisible) emptyMsg.classList.add('show');
+    else emptyMsg.classList.remove('show');
+  }
+  function markSold(card){
+    var vin = card.getAttribute('data-vin');
+    if (!vin) return;
+    var hidden = getHidden();
+    if (hidden.indexOf(vin) === -1) { hidden.push(vin); setHidden(hidden); }
+    updateRestoreUI();
+  }
+  function collapseAndRemove(card, content){
+    content.style.transition = 'transform 0.28s ease';
+    content.style.transform = 'translateX(-110%)';
+    var height = card.offsetHeight;
+    card.style.maxHeight = height + 'px';
+    card.style.overflow = 'hidden';
+    requestAnimationFrame(function(){
+      card.style.transition = 'max-height 0.28s ease 0.12s, margin-bottom 0.28s ease 0.12s, opacity 0.2s ease 0.18s';
+      card.style.maxHeight = '0px'; card.style.marginBottom = '0px'; card.style.opacity = '0';
+    });
+    setTimeout(function(){ card.style.display = 'none'; updateEmptyState(); }, 460);
+  }
+  function applyHiddenOnLoad(){
+    var hidden = getHidden();
+    document.querySelectorAll('.promo-card').forEach(function(card){
+      var vin = card.getAttribute('data-vin');
+      if (hidden.indexOf(vin) !== -1) { card.style.display = 'none'; }
+    });
+    updateRestoreUI(); updateEmptyState();
+  }
+  function wireSwipe(card){
+    var content = card.querySelector('.promo-swipe-content');
+    var trash = card.querySelector('.promo-del-trash');
+    if (!content) return;
+    var startX = 0, startY = 0, currentX = 0, dragging = false, decided = null;
+    function onStart(x, y){ startX = x; startY = y; currentX = 0; dragging = true; decided = null; content.style.transition = 'none'; }
+    function onMove(x, y, e){
+      if (!dragging) return;
+      var dx = x - startX; var dy = y - startY;
+      if (decided === null) { if (Math.abs(dx) > 6 || Math.abs(dy) > 6) { decided = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v'; } }
+      if (decided === 'v') return;
+      if (decided === 'h') {
+        if (e && e.cancelable) e.preventDefault();
+        currentX = Math.min(0, Math.max(dx, -REVEAL - 40));
+        content.style.transform = 'translateX(' + currentX + 'px)';
+      }
+    }
+    function onEnd(){
+      if (!dragging) return;
+      dragging = false;
+      content.style.transition = 'transform 0.2s ease';
+      if (decided !== 'h') { content.style.transform = 'translateX(0)'; return; }
+      if (currentX <= -THRESHOLD_DELETE) { collapseAndRemove(card, content); markSold(card); }
+      else if (currentX <= -THRESHOLD_OPEN) { content.style.transform = 'translateX(-' + REVEAL + 'px)'; }
+      else { content.style.transform = 'translateX(0)'; }
+    }
+    content.addEventListener('touchstart', function(e){ var t = e.touches[0]; onStart(t.clientX, t.clientY); }, {passive:true});
+    content.addEventListener('touchmove', function(e){ var t = e.touches[0]; onMove(t.clientX, t.clientY, e); }, {passive:false});
+    content.addEventListener('touchend', onEnd);
+    content.addEventListener('touchcancel', onEnd);
+    var mouseDown = false;
+    content.addEventListener('mousedown', function(e){ mouseDown = true; onStart(e.clientX, e.clientY); });
+    window.addEventListener('mousemove', function(e){ if (mouseDown) onMove(e.clientX, e.clientY, e); });
+    window.addEventListener('mouseup', function(){ if (mouseDown) { mouseDown = false; onEnd(); } });
+    if (trash) { trash.addEventListener('click', function(){ collapseAndRemove(card, content); markSold(card); }); }
+  }
+
+  document.querySelectorAll('.promo-card').forEach(wireSwipe);
+
+  var restoreBtn = document.getElementById('promoRestoreBtn');
+  if (restoreBtn) {
+    restoreBtn.addEventListener('click', function(){
+      setHidden([]);
+      document.querySelectorAll('.promo-card').forEach(function(card){
+        card.style.display = ''; card.style.maxHeight = ''; card.style.marginBottom = ''; card.style.opacity = ''; card.style.overflow = '';
+        var content = card.querySelector('.promo-swipe-content');
+        if (content) { content.style.transition = 'none'; content.style.transform = 'translateX(0)'; }
+      });
+      updateRestoreUI(); updateEmptyState();
+    });
+  }
+
+  applyHiddenOnLoad();
+})();
+</script>
+
+<script>
+(function(){
+  var b=document.getElementById('hubBackBtn');
+  if(b && sessionStorage.getItem('bydGateOk')==='1' && sessionStorage.getItem('bydVendorOk')!=='1'){ b.href='./index.html'; }
+})();
+</script>
+</body>
+</html>
