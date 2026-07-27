@@ -328,7 +328,11 @@
             display: flex;
             padding: 0 40px;
             gap: 4px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
         }
+        .tabs-bar::-webkit-scrollbar { display: none; }
 
         .tab-btn {
             appearance: none;
@@ -344,6 +348,8 @@
             cursor: pointer;
             border-bottom: 3px solid transparent;
             transition: all 0.2s ease;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
         .tab-btn:hover { color: var(--blanco); }
         .tab-btn.active {
@@ -861,7 +867,8 @@
 
         /* Adaptación a celulares */
         @media screen and (max-width: 768px) {
-            .tabs-bar { padding: 0 20px; }
+            .tabs-bar { padding: 0 12px; gap: 2px; }
+            .tab-btn { padding: 12px 14px; font-size: 11px; letter-spacing: 0.2px; }
             .bbdd-wrapper { padding: 24px 20px; }
             .bbdd-toolbar { flex-direction: column; align-items: flex-start; }
             .header-calc {
