@@ -328,11 +328,7 @@
             display: flex;
             padding: 0 40px;
             gap: 4px;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            scrollbar-width: none;
         }
-        .tabs-bar::-webkit-scrollbar { display: none; }
 
         .tab-btn {
             appearance: none;
@@ -348,8 +344,6 @@
             cursor: pointer;
             border-bottom: 3px solid transparent;
             transition: all 0.2s ease;
-            white-space: nowrap;
-            flex-shrink: 0;
         }
         .tab-btn:hover { color: var(--blanco); }
         .tab-btn.active {
@@ -867,8 +861,7 @@
 
         /* Adaptación a celulares */
         @media screen and (max-width: 768px) {
-            .tabs-bar { padding: 0 12px; gap: 2px; }
-            .tab-btn { padding: 12px 14px; font-size: 11px; letter-spacing: 0.2px; }
+            .tabs-bar { padding: 0 20px; }
             .bbdd-wrapper { padding: 24px 20px; }
             .bbdd-toolbar { flex-direction: column; align-items: flex-start; }
             .header-calc {
@@ -927,7 +920,7 @@
   var HASH = "a734aecec77bc8826bec68f0264b70228ab419e52a8fcdf05016ebee0465f257";
   var body = document.body;
   function unlock(){ var g=document.getElementById('bydGate'); if(g){ g.classList.add('fadeOut'); setTimeout(function(){ body.classList.remove('gate-locked'); g.remove(); }, 220); } else { body.classList.remove('gate-locked'); } }
-  if (sessionStorage.getItem('bydGateOk') === '1' || sessionStorage.getItem('bydVendorOk') === '1') { unlock(); }
+  if (sessionStorage.getItem('bydGateOk') === '1') { unlock(); }
   else {
     document.getElementById('bydGateForm').addEventListener('submit', function(e){
       e.preventDefault();
@@ -960,7 +953,6 @@
 
     <div class="tabs-bar">
         <button class="tab-btn active" data-view="calc">Calculadora</button>
-        <button class="tab-btn" data-view="inverso">¿Qué crédito me conviene?</button>
         <button class="tab-btn" data-view="bbdd">Tasas Vigentes</button>
         <button class="tab-btn" data-view="ayuda">¿Cómo usarlo?</button>
     </div>
@@ -1107,59 +1099,6 @@
         <div class="footer-note">Esta herramienta es de uso interno y tiene carácter exclusivamente informativo y orientativo. Los valores de tasas, plazos, cuotas, quebrantos, montos y entidades mostrados son simulaciones estimadas en base a la información vigente al momento de la consulta, sujetas a cambios sin previo aviso por parte de las entidades financieras y, en todos los casos, a la evaluación y aprobación crediticia de cada banco. BYD Yacopini no garantiza la exactitud, vigencia ni disponibilidad de las condiciones aquí simuladas, las cuales no constituyen una oferta, pre-aprobación ni compromiso de otorgamiento de crédito. La información aquí generada no reemplaza la documentación oficial ni las condiciones definitivas que cada entidad bancaria comunique al momento de la solicitud formal. Es responsabilidad del vendedor verificar la vigencia de las tasas y condiciones antes de comunicarlas al cliente, y es responsabilidad del cliente confirmar todos los datos con la entidad financiera correspondiente antes de tomar cualquier decisión.</div>
         <div class="footer-brand">BYD Yacopini</div>
     </div>
-    </div>
-
-    <div class="view" id="view-inverso">
-        <div class="bbdd-wrapper">
-
-            <div class="bbdd-toolbar">
-                <div>
-                    <h2>¿Qué crédito me conviene?</h2>
-                    <p>Ingresá cuánto necesita financiar el cliente y cuánto le gustaría pagar de cuota — te mostramos sólo los créditos cuya cuota quede dentro de <strong>&plusmn; $60.000</strong> de ese valor, ordenados del que más se acerca. Para los créditos con quebranto evaluamos las dos formas de pagarlo (contado o autofinanciado), para los clientes que ya no tienen más efectivo para poner en la operación.</p>
-                </div>
-            </div>
-
-            <div class="inputs-grid" style="margin-bottom:26px;">
-                <div class="form-group">
-                    <label for="inv-monto">Monto a financiar (ARS)</label>
-                    <input type="text" id="inv-monto" class="form-control" placeholder="Ej: 25.000.000" inputmode="numeric" style="font-size: 16px; font-weight: 700;">
-                </div>
-                <div class="form-group">
-                    <label for="inv-cuota">Cuota que le gustaría pagar (ARS)</label>
-                    <input type="text" id="inv-cuota" class="form-control" placeholder="Ej: 900.000" inputmode="numeric" style="font-size: 16px; font-weight: 700;">
-                </div>
-            </div>
-
-            <div class="table-card">
-                <div class="table-scroll">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Entidad</th>
-                                <th>Línea de Crédito</th>
-                                <th>Modalidad</th>
-                                <th>Plazo</th>
-                                <th>TNA %</th>
-                                <th>Quebranto / Forma de pago</th>
-                                <th style="text-align:right;">Cuota estimada (mes 1)</th>
-                                <th>Estado</th>
-                                <th style="width:40px"></th>
-                            </tr>
-                        </thead>
-                        <tbody id="inv-tbody"></tbody>
-                    </table>
-                </div>
-                <div class="bbdd-footer">
-                    <span id="inv-count">Ingresá el monto y la cuota deseada para ver sugerencias.</span>
-                    <span>Sistema de amortización Francés</span>
-                </div>
-            </div>
-
-            <div class="calc-hint-box" style="margin-top:14px;">
-                Cuando un crédito tiene quebranto, esta búsqueda evalúa ambas formas de pagarlo y las muestra como filas separadas: <strong>Contado</strong> (el cliente paga el quebranto aparte, en efectivo, y financia sólo el monto pedido) y <strong>Autofinanciado</strong> (el quebranto se suma al capital financiado, subiendo la cuota, para el cliente que ya no tiene más efectivo para poner). Al tocar "Usar" se carga el crédito en la pestaña Calculadora con esa misma forma de pago ya seleccionada, lista para emitir el datero.
-            </div>
-
-        </div>
     </div>
 
     <div class="view" id="view-bbdd">
@@ -1873,7 +1812,7 @@
         // Ocultar la toolbar de edición de BBDD (importar/exportar/agregar/generar)
         // sin destruir los botones, para que los listeners del script no fallen.
         // Se agrega un título informativo propio para la vista de solo lectura.
-        const bbddToolbar = clon.querySelector('#view-bbdd .bbdd-toolbar');
+        const bbddToolbar = clon.querySelector('.bbdd-toolbar');
         if(bbddToolbar){
             bbddToolbar.style.display = 'none';
             const infoHeader = clon.ownerDocument.createElement('div');
@@ -2289,172 +2228,6 @@
             totalIntereses: totalIntereses
         };
         btnEmitirDatero.style.display = 'block';
-    }
-
-    // ============ MODO INVERSO: "¿qué crédito me conviene?" ============
-    // El vendedor ingresa cuánto necesita financiar el cliente y cuánto le
-    // gustaría pagar de cuota; recorremos TODOS los créditos disponibles
-    // (todas las combinaciones banco+línea+modalidad+plazo ya cargadas en
-    // "creditos") y los ordenamos por qué tan bien se ajustan a esa cuota
-    // objetivo. Reutiliza cuotaMes1ConIVA() para no duplicar la fórmula.
-    const invMonto = document.getElementById('inv-monto');
-    const invCuota = document.getElementById('inv-cuota');
-    const invTbody = document.getElementById('inv-tbody');
-    const invCount = document.getElementById('inv-count');
-
-    // Margen de tolerancia sobre la cuota deseada: sólo mostramos créditos
-    // cuya cuota caiga dentro de +/- este monto respecto de lo que el
-    // cliente dijo que le gustaría pagar. Así evitamos listar opciones
-    // que en la práctica no le sirven al vendedor.
-    const MARGEN_CUOTA = 60000;
-
-    function wireMontoInput(input, onChange){
-        input.addEventListener('input', ()=>{
-            const cursorAtEnd = input.selectionStart === input.value.length;
-            const raw = parseMonto(input.value);
-            input.value = raw ? raw.toLocaleString('es-AR') : '';
-            if(cursorAtEnd) input.setSelectionRange(input.value.length, input.value.length);
-            onChange();
-        });
-    }
-    if(invMonto && invCuota){
-        wireMontoInput(invMonto, renderInverso);
-        wireMontoInput(invCuota, renderInverso);
-    }
-
-    function renderInverso(){
-        if(!invTbody) return;
-        const monto = parseMonto(invMonto.value);
-        const cuotaObjetivo = parseMonto(invCuota.value);
-
-        if(!monto || !cuotaObjetivo){
-            invTbody.innerHTML = '';
-            invCount.textContent = 'Ingresá el monto y la cuota deseada para ver sugerencias.';
-            return;
-        }
-
-        if(creditos.length === 0){
-            invTbody.innerHTML = '<tr><td colspan="9"><div class="empty-bbdd"><strong>No hay créditos cargados</strong><span>Cargá créditos en "Tasas Vigentes" primero.</span></div></td></tr>';
-            invCount.textContent = '0 créditos disponibles';
-            return;
-        }
-
-        // Para cada crédito evaluamos su/s forma/s de pago del quebranto:
-        // - Si NO tiene quebranto (bonificado), una sola opción.
-        // - Si SÍ tiene quebranto, evaluamos las DOS formas posibles:
-        //   "Contado" (el monto a financiar es el que pidió el cliente, y el
-        //   quebranto se paga aparte en efectivo) y "Autofinanciado" (el
-        //   quebranto se suma al capital financiado — montoAFinanciar =
-        //   monto / (1 - quebranto/100) — para el cliente que no tiene más
-        //   efectivo para poner en la operación). Cada forma de pago tiene
-        //   su propia cuota, y ambas compiten por el margen igual que
-        //   cualquier otro candidato.
-        const evaluados = [];
-        creditos.forEach(c=>{
-            const tieneQuebranto = c.quebranto && c.quebranto > 0;
-            const formas = tieneQuebranto ? ['Contado', 'Autofinanciacion'] : ['Contado'];
-            formas.forEach(forma=>{
-                const montoAFinanciar = (tieneQuebranto && forma === 'Autofinanciacion')
-                    ? monto / (1 - c.quebranto/100)
-                    : monto;
-                const cuota = cuotaMes1ConIVA(montoAFinanciar, c.tna, c.plazo);
-                evaluados.push({ credito: c, cuota: cuota, diff: cuota - cuotaObjetivo, pagoQuebranto: forma, montoAFinanciar: montoAFinanciar });
-            });
-        });
-
-        // Sólo mostramos alternativas cuya cuota quede dentro del margen de
-        // tolerancia (+/- MARGEN_CUOTA) respecto de lo que el cliente dijo
-        // que le gustaría pagar. El resto no se lista: no le sirven al
-        // vendedor aunque matemáticamente existan.
-        const candidatos = evaluados.filter(x => Math.abs(x.diff) <= MARGEN_CUOTA);
-
-        // Dentro del margen, ordenamos por cercanía real a la cuota deseada
-        // (la que más se acerca primero), priorizando levemente las que
-        // quedan por debajo del objetivo ante un empate en distancia.
-        candidatos.sort((a,b)=>{
-            const da = Math.abs(a.diff), db = Math.abs(b.diff);
-            if(da !== db) return da - db;
-            return a.diff - b.diff;
-        });
-
-        if(candidatos.length === 0){
-            invTbody.innerHTML = '<tr><td colspan="9"><div class="empty-bbdd"><strong>No hay créditos dentro del margen</strong><span>Ningún crédito ofrece una cuota a menos de ' + fmtMoney(MARGEN_CUOTA) + ' de lo que el cliente quiere pagar, ni pagando el quebranto al contado ni autofinanciándolo. Probá con otro monto a financiar o cuota.</span></div></td></tr>';
-            invCount.textContent = '0 de ' + evaluados.length + ' alternativas dentro del margen de ' + fmtMoney(MARGEN_CUOTA);
-            return;
-        }
-
-        invTbody.innerHTML = candidatos.map(({credito:c, cuota, diff, pagoQuebranto, montoAFinanciar})=>{
-            const dentro = diff <= 0;
-            const badge = dentro
-                ? '<span style="color:var(--verde-dm);font-weight:800;">&#10003; Dentro del presupuesto</span>'
-                : '<span style="color:#B8860B;font-weight:800;">+' + fmtMoney(diff) + ' sobre lo pedido</span>';
-            const tieneQuebranto = c.quebranto && c.quebranto > 0;
-            let quebrantoTxt;
-            if(!tieneQuebranto){
-                quebrantoTxt = 'Bonificado';
-            } else if(pagoQuebranto === 'Autofinanciacion'){
-                quebrantoTxt = c.quebranto.toFixed(2) + '% — <strong>Autofinanciado</strong><br><span style="font-size:11px;color:var(--gris-medio);">financia ' + fmtMoney(montoAFinanciar) + '</span>';
-            } else {
-                quebrantoTxt = c.quebranto.toFixed(2) + '% — Contado<br><span style="font-size:11px;color:var(--gris-medio);">paga ' + fmtMoney(montoAFinanciar * (c.quebranto/100)) + ' aparte</span>';
-            }
-            return '<tr>' +
-                '<td>' + escapeHtml(c.banco) + '</td>' +
-                '<td>' + escapeHtml(c.linea||'') + '</td>' +
-                '<td>' + c.modalidad + '</td>' +
-                '<td>' + c.plazo + ' meses</td>' +
-                '<td>' + c.tna.toFixed(2) + '%</td>' +
-                '<td>' + quebrantoTxt + '</td>' +
-                '<td style="text-align:right;font-weight:800;">' + fmtMoney(cuota) + '</td>' +
-                '<td>' + badge + '</td>' +
-                '<td><button type="button" class="btn btn-sm inv-usar" data-banco="' + escapeHtml(c.banco) + '" data-linea="' + escapeHtml(c.linea||'') + '" data-modalidad="' + c.modalidad + '" data-plazo="' + c.plazo + '" data-pago-quebranto="' + pagoQuebranto + '">Usar</button></td>' +
-                '</tr>';
-        }).join('');
-
-        invCount.textContent = candidatos.length + ' de ' + evaluados.length + ' alternativas dentro del margen de ' + fmtMoney(MARGEN_CUOTA);
-
-        invTbody.querySelectorAll('.inv-usar').forEach(btn=>{
-            btn.addEventListener('click', ()=>{
-                aplicarCreditoDesdeInverso(btn.dataset.banco, btn.dataset.linea, btn.dataset.modalidad, parseInt(btn.dataset.plazo,10), monto, btn.dataset.pagoQuebranto);
-            });
-        });
-    }
-
-    // Lleva al vendedor a la pestaña Calculadora con el crédito elegido ya
-    // cargado (banco, línea, modalidad, plazo, monto y forma de pago del
-    // quebranto), para que pueda revisar el detalle y emitir el datero
-    // desde ahí sin tener que volver a elegir todo a mano.
-    function aplicarCreditoDesdeInverso(banco, linea, modalidad, plazo, monto, pagoQuebranto){
-        document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-        document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-        document.querySelector('.tab-btn[data-view="calc"]').classList.add('active');
-        document.getElementById('view-calc').classList.add('active');
-
-        selBanco.value = banco;
-        estado.banco = banco;
-        rebuildLineaOptions(false);
-
-        selLinea.value = linea;
-        estado.linea = linea;
-        rebuildModalidadOptions(false);
-
-        if(modalidad === 'FIJA'){ modFija.checked = true; } else { modUva.checked = true; }
-        onModalidadChange(modalidad);
-
-        estado.plazo = plazo;
-        estado.pagoQuebranto = (pagoQuebranto === 'Autofinanciacion') ? 'Autofinanciacion' : 'Contado';
-        qContado.checked = (estado.pagoQuebranto === 'Contado');
-        qAutofinanciacion.checked = (estado.pagoQuebranto === 'Autofinanciacion');
-        document.querySelectorAll('.plazo-pill').forEach(p=>{
-            p.classList.toggle('active', parseInt(p.dataset.plazo,10) === plazo);
-        });
-
-        const credito = creditos.find(c => c.banco===banco && c.linea===linea && c.modalidad===modalidad && c.plazo===plazo);
-        renderQuebrantoInfo(credito || null);
-
-        inpMonto.value = monto ? monto.toLocaleString('es-AR') : '';
-        renderResult();
-        window.scrollTo(0,0);
-        showToast(estado.pagoQuebranto === 'Autofinanciacion' ? 'Crédito cargado con el quebranto autofinanciado' : 'Crédito cargado en la Calculadora');
     }
 
     // ============ DATERO (formulario + PDF) ============
@@ -2875,7 +2648,7 @@
         var tabBbdd = document.querySelector('.tab-btn[data-view="bbdd"]');
         if(tabBbdd) tabBbdd.textContent = 'Tasas Vigentes';
 
-        var bbddToolbar = document.querySelector('#view-bbdd .bbdd-toolbar');
+        var bbddToolbar = document.querySelector('.bbdd-toolbar');
         if(bbddToolbar){
             bbddToolbar.style.display = 'none';
             var infoHeader = document.createElement('div');
@@ -2928,11 +2701,5 @@
   width:44px;height:44px;border-radius:50%;background:#0A0A0A;color:#fff;display:flex;
   align-items:center;justify-content:center;text-decoration:none;font-family:Arial,sans-serif;
   font-size:20px;box-shadow:0 2px 8px rgba(0,0,0,0.35);" aria-label="Volver al inicio">&#8592;</a>
-<script>
-(function(){
-  var b=document.getElementById('hubBackBtn');
-  if(b && sessionStorage.getItem('bydVendorOk')==='1' && sessionStorage.getItem('bydGateOk')!=='1'){ b.href='./panel_ventas.html'; }
-})();
-</script>
 </body>
 </html>
