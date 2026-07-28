@@ -170,6 +170,15 @@
   .pie-legend .name{ flex:1; color:var(--carbon); font-weight:600; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .pie-legend .pct{ color:var(--gris-oscuro); font-weight:700; font-size:11.5px; white-space:nowrap; }
   .pie-legend .cnt{ color:var(--gris-medio); font-size:10.5px; margin-left:3px; white-space:nowrap; }
+
+  .col-chart-label{ margin-top:14px; margin-bottom:2px; font-weight:700; color:var(--gris-oscuro); font-size:11px; text-transform:uppercase; letter-spacing:0.4px; }
+  .col-chart{ display:flex; align-items:flex-end; gap:6px; overflow-x:auto; padding:4px 2px 0; margin-top:8px; }
+  .col-item{ display:flex; flex-direction:column; align-items:center; flex:0 0 auto; width:22px; }
+  .col-count{ font-size:9.5px; font-weight:700; color:var(--gris-oscuro); margin-bottom:3px; }
+  .col-bar-track{ width:14px; height:90px; background:var(--gris-fondo); border-radius:4px; display:flex; align-items:flex-end; overflow:hidden; }
+  .col-bar-fill{ width:100%; border-radius:4px; background:var(--azul-ev); min-height:4px; }
+  .col-bar-fill.verde{ background:var(--verde-dm); }
+  .col-day{ font-size:9.5px; color:var(--gris-medio); margin-top:4px; }
 </style>
 </head>
 <body class="gate-locked">
@@ -185,7 +194,7 @@
     </svg>
     <div style="color:#fff;font-weight:800;font-size:16px;margin-bottom:4px;">BYD Yacopini</div>
     <div style="color:#8C8C8C;font-size:12px;margin-bottom:18px;">Panel de Ventas &middot; Acceso con código personal</div>
-    <input id="bydVendorCode" type="text" inputmode="text" placeholder="Código de vendedor" autocomplete="off" autocapitalize="off" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid #4A4A4A;background:#2A2A2A;color:#fff;font-size:16px;text-align:center;box-sizing:border-box;">
+    <input id="bydVendorCode" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Código de vendedor" autocomplete="off" autocapitalize="off" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid #4A4A4A;background:#2A2A2A;color:#fff;font-size:16px;text-align:center;box-sizing:border-box;">
     <button type="submit" id="bydVendorSubmit" style="width:100%;margin-top:10px;padding:12px;border-radius:10px;border:none;background:#1565D8;color:#fff;font-weight:700;font-size:14px;">Entrar</button>
     <div id="bydVendorError" style="color:#E85555;font-size:12px;margin-top:10px;display:none;"></div>
     <div id="bydVendorNotConfigured" style="color:#D89614;font-size:12px;margin-top:14px;line-height:1.5;display:none;">
@@ -278,11 +287,15 @@
       <div class="tcard">
         <h2>Mis entregas del mes por modelo</h2>
         <div id="misEntregasList"></div>
+        <div class="col-chart-label">Entregas por día del mes</div>
+        <div id="misEntregasDiaChart"></div>
       </div>
 
       <div class="tcard">
         <h2>Mis test drives del mes</h2>
         <div id="misPruebasList"></div>
+        <div class="col-chart-label">Test drives por día del mes</div>
+        <div id="misPruebasDiaChart"></div>
       </div>
     </div>
 
@@ -572,6 +585,27 @@
       }).join('');
     }
 
+    function dailyColumnChart(containerId, records, colorClass){
+      var el = document.getElementById(containerId);
+      var map = {};
+      (records || []).forEach(function(x){
+        var day = (x.d || '').split('/')[0];
+        if (day) map[day] = (map[day] || 0) + 1;
+      });
+      var days = Object.keys(map).sort(function(a, b){ return Number(a) - Number(b); });
+      if (!days.length){
+        el.innerHTML = '<p class="note">Sin fecha disponible para el historial por día en la foto actual.</p>';
+        return;
+      }
+      var max = Math.max.apply(null, days.map(function(k){ return map[k]; }));
+      el.innerHTML = '<div class="col-chart">' + days.map(function(k){
+        var h = max ? Math.max(8, Math.round((map[k] / max) * 100)) : 0;
+        return '<div class="col-item"><div class="col-count">' + map[k] + '</div>' +
+          '<div class="col-bar-track"><div class="col-bar-fill ' + (colorClass || '') + '" style="height:' + h + '%"></div></div>' +
+          '<div class="col-day">' + k + '</div></div>';
+      }).join('') + '</div>';
+    }
+
     function clasificarTipo(modelo){
       var m = (modelo || '').toLowerCase();
       if (/\bev\b/.test(m)) return 'EV';
@@ -602,7 +636,13 @@
       var misEntregas = (d.entregasDetalle || []).filter(function(x){ return normalize(x.v) === norm; });
       document.getElementById('kpiMisEntregas').textContent = misEntregas.length;
 
-      var misVentas = (d.deudas || []).filter(function(x){ return normalize(x.v) === norm; });
+      // "Mis ventas" usa solicitudesDetalle (todas las solicitudes del mes,
+      // el MISMO universo que "Mis solicitudes") en vez de "deudas" (que solo
+      // incluye solicitudes sin VIN asignado todavía y por eso da un número
+      // menor). Si el backend todavía no tiene solicitudesDetalle (foto de
+      // respaldo vieja), cae a deudas como antes.
+      var ventasSource = (d.solicitudesDetalle && d.solicitudesDetalle.length) ? d.solicitudesDetalle : (d.deudas || []);
+      var misVentas = ventasSource.filter(function(x){ return normalize(x.v) === norm; });
 
       var misPruebas = (d.pruebasDetalle || []).filter(function(x){ return normalize(x.v) === norm; });
       document.getElementById('kpiMisPruebas').textContent = misPruebas.length;
@@ -639,7 +679,7 @@
       // Ventas: torta EV/DM + por modelo
       if (misVentas.length){
         var tipoMap = {};
-        misVentas.forEach(function(x){ var t = clasificarTipo(x.m); tipoMap[t] = (tipoMap[t] || 0) + 1; });
+        misVentas.forEach(function(x){ var t = x.tipo || clasificarTipo(x.m); tipoMap[t] = (tipoMap[t] || 0) + 1; });
         var tipoArr = Object.keys(tipoMap).map(function(k){ return { n:k, c:tipoMap[k] }; }).sort(function(a,b){ return b.c - a.c; });
         renderPieInto('ventasPieChart', 'ventasPieLegend', tipoArr);
 
@@ -662,6 +702,7 @@
       } else {
         document.getElementById('misEntregasList').innerHTML = '<p class="note">Sin entregas este mes en la foto actual.</p>';
       }
+      dailyColumnChart('misEntregasDiaChart', misEntregas, '');
 
       document.getElementById('misPruebasList').innerHTML = misPruebas.length ?
         barList((function(){
@@ -669,6 +710,7 @@
           misPruebas.forEach(function(x){ map[fixCaps(x.m)] = (map[fixCaps(x.m)] || 0) + 1; });
           return Object.keys(map).map(function(k){ return { n:k, c:map[k] }; }).sort(function(a,b){ return b.c - a.c; });
         })(), 'verde') : '<p class="note">Sin test drives este mes en la foto actual.</p>';
+      dailyColumnChart('misPruebasDiaChart', misPruebas, 'verde');
     }
 
     // ---- Datos en vivo del Tablero (mismo endpoint que gerencia) ----
@@ -710,6 +752,7 @@
       (d.solicitudesVendedor||[]).forEach(function(x){ if (esNombreValido(x.n)) nombres[x.n] = true; });
       (d.entregasDetalle||[]).forEach(function(x){ if (esNombreValido(x.v)) nombres[x.v] = true; });
       (d.deudas||[]).forEach(function(x){ if (esNombreValido(x.v)) nombres[x.v] = true; });
+      (d.solicitudesDetalle||[]).forEach(function(x){ if (esNombreValido(x.v)) nombres[x.v] = true; });
       (d.pruebasDetalle||[]).forEach(function(x){ if (esNombreValido(x.v)) nombres[x.v] = true; });
       (d.tasacionesDetalle||[]).forEach(function(x){ if (esNombreValido(x.v)) nombres[x.v] = true; });
       return Object.keys(nombres).sort(function(a,b){ return a.localeCompare(b, 'es'); });
