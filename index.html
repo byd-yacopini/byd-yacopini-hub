@@ -447,7 +447,11 @@
     border-radius:6px;
     overflow:hidden;
   }
+  /* PFILL-COLOR-V1 */
   .progress-row .pfill{ height:100%; border-radius:6px; background:var(--azul-ev); }
+  .progress-row .pfill.rojo{ background:var(--rojo); }
+  .progress-row .pfill.ambar{ background:var(--ambar); }
+  .progress-row .pfill.verde{ background:var(--verde-dm); }
   .progress-row .pval{
     flex:0 0 52px;
     text-align:right;
@@ -925,7 +929,7 @@
       .sort(function(a,b){ return b.c - a.c; });
   }
 
-  var FIXED_PIE_COLORS = { 'EV':'#00C2FF', 'DM':'#43B02A', 'Mendoza':'#00C2FF', 'San Juan':'#FF7A1A', 'San Rafael':'#FFD400' };
+  var FIXED_PIE_COLORS = { 'EV':'#8C8C8C', 'DM':'#1A1A1A', 'Mendoza':'#1B3B6F', 'San Juan':'#D4A017', 'San Rafael':'#17A398' };
   function colorForKey(key, i){ return FIXED_PIE_COLORS[key] || PIE_COLORS[i % PIE_COLORS.length]; }
   function setPctBadge(elId, change, isPoints){
     var el = document.getElementById(elId);
@@ -1299,7 +1303,7 @@
 
     var objHtml = (d.objetivos||[]).map(function(o){
       var pct = o.meta ? Math.min(100, Math.round((o.real / o.meta) * 100)) : 0;
-      var color = pct >= 80 ? 'verde' : (pct >= 40 ? 'ambar' : '');
+      var color = pct >= 68 ? 'verde' : (pct >= 34 ? 'ambar' : 'rojo');
       return '<div class="progress-row"><div class="pname">' + o.v + '</div>' +
         '<div class="ptrack"><div class="pfill ' + color + '" style="width:' + pct + '%"></div></div>' +
         '<div class="pval">' + o.real + ' / ' + o.meta + '</div></div>';
