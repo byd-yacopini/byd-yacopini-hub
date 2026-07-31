@@ -139,6 +139,7 @@
   .progress-row .pfill{ height:100%; border-radius:6px; background:var(--azul-ev); }
   .progress-row .pfill.verde{ background:var(--verde-dm); }
   .progress-row .pfill.ambar{ background:var(--ambar); }
+  .progress-row .pfill.rojo{ background:var(--rojo); }
   .progress-row .pval{ flex:0 0 52px; text-align:right; font-size:11.5px; font-weight:700; color:var(--gris-oscuro); }
 
   .badge-aging{ display:inline-block; font-size:10px; font-weight:700; padding:2px 7px; border-radius:10px; background:rgba(192,57,43,.1); color:var(--rojo); margin-left:6px; }
@@ -173,6 +174,7 @@
 
   .col-chart-label{ margin-top:14px; margin-bottom:2px; font-weight:700; color:var(--gris-oscuro); font-size:11px; text-transform:uppercase; letter-spacing:0.4px; }
   .col-chart{ display:flex; align-items:flex-end; gap:6px; overflow-x:auto; padding:4px 2px 0; margin-top:8px; }
+  #misEntregasDiaChart, #misPruebasDiaChart{ overflow-x:auto; -webkit-overflow-scrolling:touch; max-width:100%; }
   .col-item{ display:flex; flex-direction:column; align-items:center; flex:0 0 auto; width:22px; }
   .col-count{ font-size:9.5px; font-weight:700; color:var(--gris-oscuro); margin-bottom:3px; }
   .col-bar-track{ width:14px; height:90px; background:var(--gris-fondo); border-radius:4px; display:flex; align-items:flex-end; overflow:hidden; }
@@ -685,9 +687,9 @@
 
       var promedioEquipo = d.ventasPromedioPorVendedor || 0;
       var misVentasCount = misVentas.length;
-      var diffProm = Math.round((misVentasCount - promedioEquipo) * 10) / 10;
-      var colorProm = diffProm > 0 ? '#1b8a3a' : (diffProm < 0 ? '#d32f2f' : '#b8860b');
-      var textoProm = diffProm > 0 ? ('Estás ' + diffProm + ' por encima del promedio') : (diffProm < 0 ? ('Estás ' + Math.abs(diffProm) + ' por debajo del promedio') : 'Estás justo en el promedio');
+      var pctDiff = promedioEquipo > 0 ? Math.round(((misVentasCount - promedioEquipo) / promedioEquipo) * 100) : 0;
+      var colorProm = pctDiff > 0 ? '#1b8a3a' : (pctDiff < 0 ? '#d32f2f' : '#b8860b');
+      var textoProm = pctDiff > 0 ? ('Estás ' + pctDiff + '% por encima del promedio') : (pctDiff < 0 ? ('Estás ' + Math.abs(pctDiff) + '% por debajo del promedio') : 'Estás justo en el promedio');
       document.getElementById('miPromedioRow').innerHTML = '<div style="font-size:22px;font-weight:800;color:' + colorProm + ';">' + textoProm + '</div>';
       document.getElementById('miPromedioNote').textContent = 'Vos llevás ' + misVentasCount + ' ventas este mes. El promedio del equipo de vendedores BYD es ' + promedioEquipo + '.';
 
@@ -700,7 +702,7 @@
       var obj = (d.objetivos || []).find(function(x){ return normalize(x.v) === norm; });
       if (obj){
         var pct = obj.meta ? Math.min(100, Math.round((obj.real / obj.meta) * 100)) : 0;
-        var color = pct >= 80 ? 'verde' : (pct >= 40 ? 'ambar' : '');
+        var color = pct >= 68 ? 'verde' : (pct >= 34 ? 'ambar' : 'rojo');
         document.getElementById('miObjetivoRow').innerHTML =
           '<div class="progress-row"><div class="pname">' + nombre + '</div>' +
           '<div class="ptrack"><div class="pfill ' + color + '" style="width:' + pct + '%"></div></div>' +
