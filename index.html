@@ -507,6 +507,16 @@
   .card:hover{ box-shadow:0 4px 12px rgba(0,0,0,0.12); transform:translateY(-2px); }
 }
 </style>
+<style>
+/* KPI-COMPARATIVAS-V1 */
+.pct-badge{ font-size:10.5px; font-weight:700; padding:2px 7px; border-radius:10px; margin-top:4px; display:inline-block; white-space:nowrap; }
+.pct-badge.up{ background:rgba(56,142,60,.12); color:#388E3C; }
+.pct-badge.down{ background:rgba(192,57,43,.12); color:#C0392B; }
+.pct-badge.neutral{ background:rgba(140,140,140,.12); color:#8C8C8C; }
+.pie-legend .item{ flex-wrap:wrap; }
+.pie-legend .chg{ flex-basis:100%; margin-top:2px; }
+</style>
+
 
 </head>
 <body class="gate-locked">
@@ -606,6 +616,8 @@
           <div class="kpi"><div class="n" id="kpiStockTotal">–</div><div class="l">Stock físico</div></div>
           <div class="kpi"><div class="n" id="kpiPruebasGeneral">–</div><div class="l">Test drives (mes)</div></div>
           <div class="kpi"><div class="n" id="kpiTasacionesGeneral">–</div><div class="l">Tasaciones (mes)</div></div>
+          <div class="kpi"><div class="n" id="kpiUtilidadBrutaGeneral">–</div><div class="l">Utilidad bruta (mes)</div><div class="pct-badge neutral" id="kpiUtilidadBrutaGeneralPct"></div></div>
+          <div class="kpi"><div class="n" id="kpiConversionGeneral">–</div><div class="l">Tasa de conversión de leads</div><div class="pct-badge neutral" id="kpiConversionGeneralPct"></div></div>
         </div>
 
         <div class="tcard">
@@ -634,6 +646,7 @@
       <!-- ---- LEADS ---- -->
       <div class="section" id="tab-leads">
         <div class="kpi-grid">
+          <div class="kpi"><div class="n" id="kpiConversionLeads">–</div><div class="l">Tasa de conversión</div><div class="pct-badge neutral" id="kpiConversionLeadsPct"></div></div>
           <div class="kpi"><div class="n" id="kpiLeadsTotal2">–</div><div class="l">Leads BYD (mes)</div></div>
           <div class="kpi"><div class="n" id="kpiVendidos">–</div><div class="l">Vendidos (estado)</div></div>
           <div class="kpi"><div class="n" id="kpiPruebasLeads">–</div><div class="l">Test drives (mes)</div></div>
@@ -672,9 +685,8 @@
       <!-- ---- SOLICITUDES ---- -->
       <div class="section" id="tab-solicitudes">
         <div class="kpi-grid">
-          <div class="kpi"><div class="n" id="kpiSolicitudesTotal2">–</div><div class="l">Solicitudes (mes)</div></div>
-          <div class="kpi"><div class="n" id="kpiFacturado">–</div><div class="l">Facturado (mes)</div></div>
-          <div class="kpi"><div class="n" id="kpiUtilidadMensual">–</div><div class="l">Utilidad mensual</div></div>
+          <div class="kpi"><div class="n" id="kpiSolicitudesTotal2">–</div><div class="l">Solicitudes (mes)</div><div class="pct-badge neutral" id="kpiSolicitudesTotal2Pct"></div></div>
+          <div class="kpi"><div class="n" id="kpiUtilidadMensual">–</div><div class="l">Utilidad mensual</div><div class="pct-badge neutral" id="kpiUtilidadMensualPct"></div></div>
         </div>
 
         <div class="tcard">
@@ -739,7 +751,7 @@
       <div class="section" id="tab-entregas">
         <div class="kpi-grid">
           <div class="kpi"><div class="n" id="kpiEntregasUltimoDia">–</div><div class="l" id="kpiEntregasUltimoDiaLabel">Entregas último día cargado</div></div>
-          <div class="kpi"><div class="n" id="kpiEntregasMes">–</div><div class="l">Entregas (mes)</div></div>
+          <div class="kpi"><div class="n" id="kpiEntregasMes">–</div><div class="l">Entregas (mes)</div><div class="pct-badge neutral" id="kpiEntregasMesPct"></div></div>
         </div>
 
         <div class="tcard">
@@ -754,7 +766,10 @@
 
         <div class="tcard">
           <h2>Por sucursal</h2>
-          <div id="entregasSucursalBars"></div>
+          <div class="pie-wrap">
+            <div class="pie-chart" id="entregasSucursalPie"></div>
+            <div class="pie-legend" id="entregasSucursalPieLegend"></div>
+          </div>
         </div>
 
         <div class="tcard">
@@ -910,6 +925,21 @@
       .sort(function(a,b){ return b.c - a.c; });
   }
 
+  var FIXED_PIE_COLORS = { 'EV':'#00C2FF', 'DM':'#43B02A', 'Mendoza':'#00C2FF', 'San Juan':'#FF7A1A', 'San Rafael':'#FFD400' };
+  function colorForKey(key, i){ return FIXED_PIE_COLORS[key] || PIE_COLORS[i % PIE_COLORS.length]; }
+  function setPctBadge(elId, change, isPoints){
+    var el = document.getElementById(elId);
+    if (!el) return;
+    if (change === null || change === undefined){
+      el.className = 'pct-badge neutral';
+      el.textContent = 'sin dato mes pasado';
+      return;
+    }
+    var cls = change > 0 ? 'up' : (change < 0 ? 'down' : 'neutral');
+    var sign = change > 0 ? '+' : '';
+    el.className = 'pct-badge ' + cls;
+    el.textContent = sign + change + (isPoints ? ' pts' : '%') + ' vs mes pasado';
+  }
   function renderPieInto(chartElId, legendElId, items){
     var chartEl = document.getElementById(chartElId);
     var legendEl = document.getElementById(legendElId);
@@ -924,16 +954,21 @@
       var start = (acc / total) * 360;
       acc += x.c;
       var end = (acc / total) * 360;
-      var color = PIE_COLORS[i % PIE_COLORS.length];
+      var color = colorForKey(x.n, i);
       return color + ' ' + start.toFixed(2) + 'deg ' + end.toFixed(2) + 'deg';
     });
     chartEl.style.background = 'conic-gradient(' + stops.join(', ') + ')';
     legendEl.innerHTML = items.map(function(x, i){
       var pct = Math.round((x.c / total) * 100);
-      var color = PIE_COLORS[i % PIE_COLORS.length];
+      var color = colorForKey(x.n, i);
+      var chgHtml = '';
+      if (x.chg !== undefined){
+        if (x.chg === null){ chgHtml = '<span class="pct-badge neutral chg">sin dato mes pasado</span>'; }
+        else { var cls = x.chg > 0 ? 'up' : (x.chg < 0 ? 'down' : 'neutral'); chgHtml = '<span class="pct-badge ' + cls + ' chg">' + (x.chg>0?'+':'') + x.chg + '% vs mes pasado</span>'; }
+      }
       return '<div class="item"><span class="dot" style="background:' + color + '"></span>' +
         '<span class="name">' + x.n + '</span>' +
-        '<span class="pct">' + pct + '%</span><span class="cnt">(' + x.c + ')</span></div>';
+        '<span class="pct">' + pct + '%</span><span class="cnt">(' + x.c + ')</span>' + chgHtml + '</div>';
     }).join('');
   }
 
@@ -943,12 +978,24 @@
     var days = Object.keys(dailyMap).sort();
     var el = document.getElementById(elId);
     if (!days.length){ el.innerHTML = '<p class="note">Sin datos para este filtro.</p>'; return; }
-    var maxD = Math.max.apply(null, days.map(function(k){ return dailyMap[k]; }));
-    el.innerHTML = days.map(function(k){
-      var c = dailyMap[k];
-      var h = Math.max(6, Math.round((c / maxD) * 90));
-      return '<div class="col"><div class="v">' + c + '</div><div class="b" style="height:' + h + 'px"></div><div class="lbl">' + k + '</div></div>';
+    var vals = days.map(function(k){ return dailyMap[k]; });
+    var max = Math.max.apply(null, vals);
+    var w = Math.max(320, days.length * 34);
+    var h = 110, padTop = 16, padBottom = 20, chartH = h - padTop - padBottom;
+    var stepX = days.length > 1 ? (w - 20) / (days.length - 1) : 0;
+    var pts = vals.map(function(v, i){
+      var x = 10 + i * stepX;
+      var y = padTop + (max ? chartH - (v / max) * chartH : chartH);
+      return { x:x, y:y, v:v, d:days[i] };
+    });
+    var poly = pts.map(function(p){ return p.x.toFixed(1) + ',' + p.y.toFixed(1); }).join(' ');
+    var marks = pts.map(function(p){
+      return '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="3" fill="#1565D8"></circle>' +
+        '<text x="' + p.x.toFixed(1) + '" y="' + (p.y - 6).toFixed(1) + '" font-size="8.5" fill="#4A4A4A" text-anchor="middle">' + p.v + '</text>' +
+        '<text x="' + p.x.toFixed(1) + '" y="' + (h - 4).toFixed(1) + '" font-size="8.5" fill="#8C8C8C" text-anchor="middle">' + p.d + '</text>';
     }).join('');
+    el.innerHTML = '<svg viewBox="0 0 ' + w + ' ' + h + '" width="' + w + '" height="' + h + '" style="display:block;">' +
+      '<polyline points="' + poly + '" fill="none" stroke="#1565D8" stroke-width="2"></polyline>' + marks + '</svg>';
   }
 
   var currentPruebasDetalle = [];
@@ -1042,8 +1089,7 @@
     rows.forEach(function(r){ sucMap[r.suc] = (sucMap[r.suc] || 0) + 1; });
     var sucArr = Object.keys(sucMap).map(function(k){ return { n:k, c:sucMap[k] }; })
       .sort(function(a,b){ return b.c - a.c; });
-    document.getElementById('entregasSucursalBars').innerHTML = sucArr.length ?
-      barList(sucArr, 'morado') : '<p class="note">Sin entregas para este filtro.</p>';
+    renderPieInto('entregasSucursalPie', 'entregasSucursalPieLegend', sucArr);
 
     var modeloMap = {};
     rows.forEach(function(r){ modeloMap[r.m] = (modeloMap[r.m] || 0) + 1; });
@@ -1266,10 +1312,16 @@
 
     renderPieInto('sucursalPieChart', 'sucursalPieLegend', d.solicitudesSucursal || []);
     renderPieInto('tipoPieChartGeneral', 'tipoPieLegendGeneral', d.solicitudesTipoDMEV || []);
+    document.getElementById('kpiUtilidadBrutaGeneral').textContent = fmtUSD_M(d.utilidadMensual || 0);
+    setPctBadge('kpiUtilidadBrutaGeneralPct', d.utilidadMensualPctChange);
+    document.getElementById('kpiConversionGeneral').textContent = (d.leadsConversionRate != null ? d.leadsConversionRate : 0) + '%';
+    setPctBadge('kpiConversionGeneralPct', d.leadsConversionRateChange, true);
 
     // Leads
     document.getElementById('kpiLeadsTotal2').textContent = d.leadsTotal;
     document.getElementById('kpiVendidos').textContent = d.leadsVendidos;
+    document.getElementById('kpiConversionLeads').textContent = (d.leadsConversionRate != null ? d.leadsConversionRate : 0) + '%';
+    setPctBadge('kpiConversionLeadsPct', d.leadsConversionRateChange, true);
     currentLeadsDetalle = Array.isArray(d.leadsDetalle) ? d.leadsDetalle : [];
     currentPruebasDetalle = Array.isArray(d.pruebasDetalle) ? d.pruebasDetalle : [];
     currentTasacionesDetalle = Array.isArray(d.tasacionesDetalle) ? d.tasacionesDetalle : [];
@@ -1278,8 +1330,9 @@
 
     // Solicitudes
     document.getElementById('kpiSolicitudesTotal2').textContent = d.solicitudesTotal;
-    document.getElementById('kpiFacturado').textContent = fmtUSD_M(d.facturadoTotal || 0);
+    setPctBadge('kpiSolicitudesTotal2Pct', d.solicitudesTotalPctChange);
     document.getElementById('kpiUtilidadMensual').textContent = fmtUSD_M(d.utilidadMensual || 0);
+    setPctBadge('kpiUtilidadMensualPct', d.utilidadMensualPctChange);
     renderPieInto('tipoPieChartSol', 'tipoPieLegendSol', d.solicitudesTipoDMEV || []);
     document.getElementById('utilidadNote').innerHTML = (d.utilidadSinDatosCount ?
       d.utilidadSinDatosCount + ' solicitud(es) de este mes no tienen el modelo cargado en Lista de Precio y no entran en el cálculo de utilidad. ' : '') +
@@ -1304,6 +1357,7 @@
 
     // Entregas
     document.getElementById('kpiEntregasMes').textContent = d.entregasTotal;
+    setPctBadge('kpiEntregasMesPct', d.entregasTotalPctChange);
     document.getElementById('kpiEntregasUltimoDia').textContent = d.entregasUltimoDiaCount != null ? d.entregasUltimoDiaCount : '–';
     document.getElementById('kpiEntregasUltimoDiaLabel').textContent =
       'Entregas último día cargado' + (d.entregasUltimoDiaFecha ? ' (' + d.entregasUltimoDiaFecha + ')' : '');
