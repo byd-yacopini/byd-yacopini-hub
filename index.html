@@ -622,6 +622,7 @@
           <div class="kpi"><div class="n" id="kpiTasacionesGeneral">–</div><div class="l">Tasaciones (mes)</div></div>
           <div class="kpi"><div class="n" id="kpiUtilidadBrutaGeneral">–</div><div class="l">Utilidad bruta (mes)</div><div class="pct-badge neutral" id="kpiUtilidadBrutaGeneralPct"></div></div>
           <div class="kpi"><div class="n" id="kpiConversionGeneral">–</div><div class="l">Tasa de conversión de leads</div><div class="pct-badge neutral" id="kpiConversionGeneralPct"></div></div>
+          <div class="kpi"><div class="n" id="kpiPromedioVentasGeneral">–</div><div class="l">Promedio de ventas por vendedor</div></div>
         </div>
 
         <div class="tcard">
@@ -1320,6 +1321,7 @@
     setPctBadge('kpiUtilidadBrutaGeneralPct', d.utilidadMensualPctChange);
     document.getElementById('kpiConversionGeneral').textContent = (d.leadsConversionRate != null ? d.leadsConversionRate : 0) + '%';
     setPctBadge('kpiConversionGeneralPct', d.leadsConversionRateChange, true);
+    document.getElementById('kpiPromedioVentasGeneral').textContent = (d.ventasPromedioPorVendedor != null ? d.ventasPromedioPorVendedor : 0);
 
     // Leads
     document.getElementById('kpiLeadsTotal2').textContent = d.leadsTotal;
