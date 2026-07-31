@@ -490,6 +490,24 @@
     color:#1E6B3C;
   }
 </style>
+<style>
+/* DESKTOP-RESPONSIVE-V1 */
+@media (min-width: 900px){
+  .topbar{ padding-left:max(24px, calc((100% - 1440px)/2)); padding-right:max(24px, calc((100% - 1440px)/2)); }
+  .tabs{ padding-left:max(12px, calc((100% - 1440px)/2)); padding-right:max(12px, calc((100% - 1440px)/2)); }
+  .main-select-wrap{ padding-left:max(12px, calc((100% - 1440px)/2)); padding-right:max(12px, calc((100% - 1440px)/2)); }
+  .wrap{ max-width:1440px; padding:24px; }
+  .kpi-grid{ grid-template-columns:repeat(auto-fit, minmax(160px,1fr)); }
+  .section.active{ column-count:2; column-gap:20px; }
+  .section.active > .kpi-grid{ column-span:all; }
+  .tcard{ break-inside:avoid-column; margin-bottom:20px; }
+  #view-herramientas{ column-count:2; column-gap:20px; }
+  #view-herramientas h1, #view-herramientas .lead, #view-herramientas .footer-note{ column-span:all; }
+  #view-herramientas .card{ break-inside:avoid-column; padding:20px 18px; }
+  .card:hover{ box-shadow:0 4px 12px rgba(0,0,0,0.12); transform:translateY(-2px); }
+}
+</style>
+
 </head>
 <body class="gate-locked">
 <div id="bydGate" style="position:fixed;inset:0;z-index:999999;background:#0A0A0A;display:flex;align-items:center;justify-content:center;padding:24px;opacity:1;">
