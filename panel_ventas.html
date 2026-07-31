@@ -302,10 +302,11 @@
         <div id="misVentasModeloList"></div>
       </div>
 
+/* PANEL-VENTAS-TOTALES-LINEAS-V1 */
       <div class="tcard">
-        <h2>Mis entregas del mes por modelo</h2>
+        <h2>Mis entregas del mes por modelo · Total: <span id="misEntregasTotal">0</span></h2>
         <div id="misEntregasList"></div>
-        <div class="col-chart-label">Entregas por día del mes</div>
+        <div class="col-chart-label">Entregas por día del mes · Total: <span id="misEntregasDiaTotal">0</span></div>
         <div id="misEntregasDiaChart"></div>
       </div>
 
@@ -615,13 +616,25 @@
         el.innerHTML = '<p class="note">Sin fecha disponible para el historial por día en la foto actual.</p>';
         return;
       }
-      var max = Math.max.apply(null, days.map(function(k){ return map[k]; }));
-      el.innerHTML = '<div class="col-chart">' + days.map(function(k){
-        var h = max ? Math.max(8, Math.round((map[k] / max) * 100)) : 0;
-        return '<div class="col-item"><div class="col-count">' + map[k] + '</div>' +
-          '<div class="col-bar-track"><div class="col-bar-fill ' + (colorClass || '') + '" style="height:' + h + '%"></div></div>' +
-          '<div class="col-day">' + k + '</div></div>';
-      }).join('') + '</div>';
+      var vals = days.map(function(k){ return map[k]; });
+      var max = Math.max.apply(null, vals);
+      var stroke = colorClass === 'verde' ? '#388E3C' : '#1565D8';
+      var w = Math.max(320, days.length * 34);
+      var h = 110, padTop = 16, padBottom = 20, chartH = h - padTop - padBottom;
+      var stepX = days.length > 1 ? (w - 20) / (days.length - 1) : 0;
+      var pts = vals.map(function(v, i){
+        var x = 10 + i * stepX;
+        var y = padTop + (max ? chartH - (v / max) * chartH : chartH);
+        return { x:x, y:y, v:v, d:days[i] };
+      });
+      var poly = pts.map(function(p){ return p.x.toFixed(1) + ',' + p.y.toFixed(1); }).join(' ');
+      var marks = pts.map(function(p){
+        return '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="3" fill="' + stroke + '"></circle>' +
+          '<text x="' + p.x.toFixed(1) + '" y="' + (p.y - 6).toFixed(1) + '" font-size="8.5" fill="#4A4A4A" text-anchor="middle">' + p.v + '</text>' +
+          '<text x="' + p.x.toFixed(1) + '" y="' + (h - 4).toFixed(1) + '" font-size="8.5" fill="#8C8C8C" text-anchor="middle">' + p.d + '</text>';
+      }).join('');
+      el.innerHTML = '<svg viewBox="0 0 ' + w + ' ' + h + '" width="' + w + '" height="' + h + '" style="display:block;">' +
+        '<polyline points="' + poly + '" fill="none" stroke="' + stroke + '" stroke-width="2"></polyline>' + marks + '</svg>';
     }
 
     function clasificarTipo(modelo){
@@ -653,6 +666,8 @@
 
       var misEntregas = (d.entregasDetalle || []).filter(function(x){ return normalize(x.v) === norm; });
       document.getElementById('kpiMisEntregas').textContent = misEntregas.length;
+      document.getElementById('misEntregasTotal').textContent = misEntregas.length;
+      document.getElementById('misEntregasDiaTotal').textContent = misEntregas.length;
 
       // "Mis ventas" usa solicitudesDetalle (todas las solicitudes del mes,
       // el MISMO universo que "Mis solicitudes") en vez de "deudas" (que solo
