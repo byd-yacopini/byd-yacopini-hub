@@ -284,6 +284,12 @@
       </div>
 
       <div class="tcard">
+        <h2>Vos vs. el promedio del equipo</h2>
+        <div id="miPromedioRow"></div>
+        <p class="note" id="miPromedioNote"></p>
+      </div>
+
+      <div class="tcard">
         <h2>Mis leads por origen</h2>
         <div id="misLeadsOrigenList"></div>
         <p class="note">Así entraron tus leads este mes — te sirve para ver dónde estás más fuerte y dónde podés mejorar la atención.</p>
@@ -676,6 +682,14 @@
       // respaldo vieja), cae a deudas como antes.
       var ventasSource = (d.solicitudesDetalle && d.solicitudesDetalle.length) ? d.solicitudesDetalle : (d.deudas || []);
       var misVentas = ventasSource.filter(function(x){ return normalize(x.v) === norm; });
+
+      var promedioEquipo = d.ventasPromedioPorVendedor || 0;
+      var misVentasCount = misVentas.length;
+      var diffProm = Math.round((misVentasCount - promedioEquipo) * 10) / 10;
+      var colorProm = diffProm > 0 ? '#1b8a3a' : (diffProm < 0 ? '#d32f2f' : '#b8860b');
+      var textoProm = diffProm > 0 ? ('Estás ' + diffProm + ' por encima del promedio') : (diffProm < 0 ? ('Estás ' + Math.abs(diffProm) + ' por debajo del promedio') : 'Estás justo en el promedio');
+      document.getElementById('miPromedioRow').innerHTML = '<div style="font-size:22px;font-weight:800;color:' + colorProm + ';">' + textoProm + '</div>';
+      document.getElementById('miPromedioNote').textContent = 'Vos llevás ' + misVentasCount + ' ventas este mes. El promedio del equipo de vendedores BYD es ' + promedioEquipo + '.';
 
       var misPruebas = (d.pruebasDetalle || []).filter(function(x){ return normalize(x.v) === norm; });
       document.getElementById('kpiMisPruebas').textContent = misPruebas.length;
