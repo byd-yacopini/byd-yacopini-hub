@@ -808,30 +808,39 @@
     }
 
     function iniciar(d){
+      window.__panelLastData = d;
       var nombreActivo = sessionStorage.getItem('bydVendorNombre');
 
       if (!nombreActivo && gerenciaOk){
         document.getElementById('previewBanner').style.display = 'block';
-        var lista = buildVendorList(d);
         var sel = document.getElementById('previewVendorSelect');
-        sel.innerHTML = lista.map(function(n){ return '<option value="' + n.replace(/"/g,'&quot;') + '">' + n + '</option>'; }).join('');
-        nombreActivo = lista[0] || 'Vendedor Demo';
-        sel.value = nombreActivo;
-        sel.addEventListener('change', function(){
+        if (!window.__previewInited) {
+          var lista = buildVendorList(d);
+          sel.innerHTML = lista.map(function(n){ return '<option value="' + n.replace(/"/g,'&quot;') + '">' + n + '</option>'; }).join('');
+          nombreActivo = lista[0] || 'Vendedor Demo';
+          sel.value = nombreActivo;
+          sel.addEventListener('change', function(){
+            document.getElementById('greeting').textContent = 'Hola, ' + sel.value;
+            renderMiResumen(sel.value, window.__panelLastData);
+          });
+          window.__previewInited = true;
+        } else {
           nombreActivo = sel.value;
-          document.getElementById('greeting').textContent = 'Hola, ' + nombreActivo;
-          renderMiResumen(nombreActivo, d);
-        });
+        }
       }
 
       document.getElementById('greeting').textContent = nombreActivo ? ('Hola, ' + nombreActivo) : 'Hola';
       renderMiResumen(nombreActivo || '', d);
     }
 
-    fetch(TABLERO_API_URL + '?key=' + encodeURIComponent(TABLERO_API_KEY))
-      .then(function(r){ if (!r.ok) throw new Error('bad-status'); return r.json(); })
-      .then(function(liveData){ setBanner(true, liveData.generatedAt); iniciar(liveData); })
-      .catch(function(){ setBanner(false); iniciar(FALLBACK_DATA); });
+    function loadPanelData(){
+      fetch(TABLERO_API_URL + '?key=' + encodeURIComponent(TABLERO_API_KEY))
+        .then(function(r){ if (!r.ok) throw new Error('bad-status'); return r.json(); })
+        .then(function(liveData){ setBanner(true, liveData.generatedAt); iniciar(liveData); })
+        .catch(function(){ setBanner(false); iniciar(FALLBACK_DATA); });
+    }
+    loadPanelData();
+    setInterval(loadPanelData, 5 * 60 * 1000);
 
     // ---- Navegación: vista principal ----
     var mainSelect = document.getElementById('mainViewSelect');
