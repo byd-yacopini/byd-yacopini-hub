@@ -517,6 +517,17 @@
 .pct-badge.up{ background:rgba(56,142,60,.12); color:#388E3C; }
 .pct-badge.down{ background:rgba(192,57,43,.12); color:#C0392B; }
 .pct-badge.neutral{ background:rgba(140,140,140,.12); color:#8C8C8C; }
+/* DATE-FILTER-V1 */
+.progress-row{ flex-wrap:wrap; }
+.progress-row .prow-pct{ flex:0 0 100%; text-align:right; margin-top:2px; }
+.date-filter-bar{ display:flex; flex-wrap:wrap; align-items:flex-end; gap:10px; background:var(--blanco); border:1px solid var(--gris-claro); border-radius:10px; padding:10px 12px; margin-bottom:16px; }
+.date-filter-bar .df-field{ display:flex; flex-direction:column; gap:3px; }
+.date-filter-bar label{ font-size:10.5px; font-weight:700; color:var(--gris-oscuro); text-transform:uppercase; letter-spacing:0.3px; }
+.date-filter-bar input[type="date"]{ border:1px solid var(--gris-claro); border-radius:6px; padding:6px 8px; font-size:12.5px; font-family:inherit; color:var(--carbon); background:var(--blanco); }
+.date-filter-bar .df-btn{ border:none; border-radius:20px; padding:8px 16px; font-size:12px; font-weight:700; cursor:pointer; }
+.date-filter-bar .df-btn-primary{ background:var(--azul-ev); color:#fff; }
+.date-filter-bar .df-btn-secondary{ background:var(--gris-fondo); color:var(--gris-oscuro); }
+.date-filter-bar .df-note{ flex-basis:100%; font-size:10.5px; color:var(--gris-medio); }
 .pie-legend .item{ flex-wrap:wrap; }
 .pie-legend .chg{ flex-basis:100%; margin-top:2px; }
 </style>
@@ -610,6 +621,14 @@
     <div class="mainview active" id="view-tablero">
 
       <div class="snapshot-banner" id="dataBanner">Cargando datos…</div>
+
+      <div class="date-filter-bar" id="dateFilterBar">
+        <div class="df-field"><label for="dfDesde">Desde</label><input type="date" id="dfDesde"></div>
+        <div class="df-field"><label for="dfHasta">Hasta</label><input type="date" id="dfHasta"></div>
+        <button type="button" id="dfAplicar" class="df-btn df-btn-primary">Aplicar</button>
+        <button type="button" id="dfHoy" class="df-btn df-btn-secondary">Mes actual</button>
+        <div class="df-note" id="dfNote"></div>
+      </div>
 
       <!-- ---- GENERAL ---- -->
       <div class="section active" id="tab-general">
@@ -1307,9 +1326,13 @@
     var objHtml = (d.objetivos||[]).map(function(o){
       var pct = o.meta ? Math.min(100, Math.round((o.real / o.meta) * 100)) : 0;
       var color = pct >= 68 ? 'verde' : (pct >= 34 ? 'ambar' : 'rojo');
+      var chg = o.realPctChange;
+      var chgCls = (chg === null || chg === undefined) ? 'neutral' : (chg > 0 ? 'up' : (chg < 0 ? 'down' : 'neutral'));
+      var chgTxt = (chg === null || chg === undefined) ? 'sin dato mes pasado' : ((chg > 0 ? '+' : '') + chg + '% vs mes pasado');
       return '<div class="progress-row"><div class="pname">' + o.v + '</div>' +
         '<div class="ptrack"><div class="pfill ' + color + '" style="width:' + pct + '%"></div></div>' +
-        '<div class="pval">' + o.real + ' / ' + o.meta + '</div></div>';
+        '<div class="pval">' + o.real + ' / ' + o.meta + '</div>' +
+        '<div class="prow-pct"><span class="pct-badge ' + chgCls + '">' + chgTxt + '</span></div></div>';
     }).join('');
     document.getElementById('objetivosList').innerHTML = objHtml;
     var sumConMeta = (d.objetivos||[]).reduce(function(a,o){ return a + o.real; }, 0);
@@ -1396,18 +1419,49 @@
     }catch(e){ return ''; }
   }
 
+  // ---- FILTRO DE FECHAS ----
+  var currentDesde = '';
+  var currentHasta = '';
+  function pad2(n){ return (n < 10 ? '0' : '') + n; }
+  function todayISO(){ var d = new Date(); return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate()); }
+  function firstOfMonthISO(){ var d = new Date(); return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-01'; }
+  (function initDateFilter(){
+    var dDesde = document.getElementById('dfDesde');
+    var dHasta = document.getElementById('dfHasta');
+    var bAplicar = document.getElementById('dfAplicar');
+    var bHoy = document.getElementById('dfHoy');
+    if (!dDesde || !dHasta) return;
+    dDesde.value = firstOfMonthISO();
+    dHasta.value = todayISO();
+    dHasta.max = todayISO();
+    bAplicar.addEventListener('click', function(){
+      currentDesde = dDesde.value || '';
+      currentHasta = dHasta.value || '';
+      loadTablero();
+    });
+    bHoy.addEventListener('click', function(){
+      dDesde.value = firstOfMonthISO();
+      dHasta.value = todayISO();
+      currentDesde = '';
+      currentHasta = '';
+      loadTablero();
+    });
+  })();
+
   function loadTablero(){
     if (!TABLERO_API_URL) {
       renderTablero(FALLBACK_DATA);
       setBanner('snapshot', '<strong>Foto de datos:</strong> vista armada con los números reales de tu planilla al 16/07/2026. Todavía falta conectar la actualización automática.');
       return;
     }
-    fetch(TABLERO_API_URL + '?key=' + encodeURIComponent(TABLERO_API_KEY))
+    fetch(TABLERO_API_URL + '?key=' + encodeURIComponent(TABLERO_API_KEY) + (currentDesde && currentHasta ? ('&desde=' + encodeURIComponent(currentDesde) + '&hasta=' + encodeURIComponent(currentHasta)) : ''))
       .then(function(r){ return r.json(); })
       .then(function(d){
         if (d.error) throw new Error(d.error);
         renderTablero(d);
         setBanner('live', '<strong>Datos en vivo</strong> — actualizado ' + timeAgo(d.generatedAt) + '.');
+        var dfNoteEl = document.getElementById('dfNote');
+        if (dfNoteEl && d.periodoDesde) { dfNoteEl.textContent = 'Mostrando: ' + d.periodoDesde + ' al ' + d.periodoHasta + ' · comparado con ' + d.periodoPrevDesde + ' al ' + d.periodoPrevHasta; }
       })
       .catch(function(){
         renderTablero(FALLBACK_DATA);
