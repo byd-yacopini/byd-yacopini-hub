@@ -523,7 +523,7 @@
 .date-filter-bar{ display:flex; flex-wrap:wrap; align-items:flex-end; gap:10px; background:var(--blanco); border:1px solid var(--gris-claro); border-radius:10px; padding:10px 12px; margin-bottom:16px; }
 .date-filter-bar .df-field{ display:flex; flex-direction:column; gap:3px; }
 .date-filter-bar label{ font-size:10.5px; font-weight:700; color:var(--gris-oscuro); text-transform:uppercase; letter-spacing:0.3px; }
-.date-filter-bar input[type="date"]{ border:1px solid var(--gris-claro); border-radius:6px; padding:6px 8px; font-size:12.5px; font-family:inherit; color:var(--carbon); background:var(--blanco); }
+.date-filter-bar input[type="date"], .date-filter-bar select{ border:1px solid var(--gris-claro); border-radius:6px; padding:6px 8px; font-size:12.5px; font-family:inherit; color:var(--carbon); background:var(--blanco); }
 .date-filter-bar .df-btn{ border:none; border-radius:20px; padding:8px 16px; font-size:12px; font-weight:700; cursor:pointer; }
 .date-filter-bar .df-btn-primary{ background:var(--azul-ev); color:#fff; }
 .date-filter-bar .df-btn-secondary{ background:var(--gris-fondo); color:var(--gris-oscuro); }
@@ -623,8 +623,8 @@
       <div class="snapshot-banner" id="dataBanner">Cargando datos…</div>
 
       <div class="date-filter-bar" id="dateFilterBar">
-        <div class="df-field"><label for="dfDesde">Desde</label><input type="date" id="dfDesde"></div>
-        <div class="df-field"><label for="dfHasta">Hasta</label><input type="date" id="dfHasta"></div>
+        <div class="df-field"><label for="dfMes">Mes</label><select id="dfMes"></select></div>
+        <div class="df-field"><label for="dfAnio">Año</label><select id="dfAnio"></select></div>
         <button type="button" id="dfAplicar" class="df-btn df-btn-primary">Aplicar</button>
         <button type="button" id="dfHoy" class="df-btn df-btn-secondary">Mes actual</button>
         <div class="df-note" id="dfNote"></div>
@@ -1311,7 +1311,7 @@
   };
 
   function renderTablero(d){
-    document.getElementById('mesLabel').textContent = MESES[new Date().getMonth()] + ' ' + new Date().getFullYear();
+    document.getElementById('mesLabel').textContent = d.periodoMesLabel || (MESES[new Date().getMonth()] + ' ' + new Date().getFullYear());
 
     // General
     document.getElementById('kpiLeadsTotal').textContent = d.leadsTotal;
@@ -1426,27 +1426,42 @@
   function todayISO(){ var d = new Date(); return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate()); }
   function firstOfMonthISO(){ var d = new Date(); return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-01'; }
   (function initDateFilter(){
-    var dDesde = document.getElementById('dfDesde');
-    var dHasta = document.getElementById('dfHasta');
-    var bAplicar = document.getElementById('dfAplicar');
-    var bHoy = document.getElementById('dfHoy');
-    if (!dDesde || !dHasta) return;
-    dDesde.value = firstOfMonthISO();
-    dHasta.value = todayISO();
-    dHasta.max = todayISO();
-    bAplicar.addEventListener('click', function(){
-      currentDesde = dDesde.value || '';
-      currentHasta = dHasta.value || '';
-      loadTablero();
-    });
-    bHoy.addEventListener('click', function(){
-      dDesde.value = firstOfMonthISO();
-      dHasta.value = todayISO();
-      currentDesde = '';
-      currentHasta = '';
-      loadTablero();
-    });
-  })();
+  var selMes = document.getElementById('dfMes');
+  var selAnio = document.getElementById('dfAnio');
+  var bAplicar = document.getElementById('dfAplicar');
+  var bHoy = document.getElementById('dfHoy');
+  if (!selMes || !selAnio) return;
+  var MESES_FILTRO = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  var nowF = new Date();
+  var curY = nowF.getFullYear();
+  selMes.innerHTML = MESES_FILTRO.map(function(m, i){ return '<option value="' + (i+1) + '">' + m + '</option>'; }).join('');
+  selAnio.innerHTML = '';
+  for (var y = curY - 2; y <= curY; y++) {
+    var opt = document.createElement('option');
+    opt.value = String(y);
+    opt.textContent = String(y);
+    selAnio.appendChild(opt);
+  }
+  function setDefaultMesAnio(){
+    selMes.value = String(nowF.getMonth() + 1);
+    selAnio.value = String(curY);
+  }
+  setDefaultMesAnio();
+  bAplicar.addEventListener('click', function(){
+    var y = Number(selAnio.value);
+    var m = Number(selMes.value);
+    var lastDay = new Date(y, m, 0).getDate();
+    currentDesde = y + '-' + pad2(m) + '-01';
+    currentHasta = y + '-' + pad2(m) + '-' + pad2(lastDay);
+    loadTablero();
+  });
+  bHoy.addEventListener('click', function(){
+    setDefaultMesAnio();
+    currentDesde = '';
+    currentHasta = '';
+    loadTablero();
+  });
+})();
 
   function loadTablero(){
     if (!TABLERO_API_URL) {
