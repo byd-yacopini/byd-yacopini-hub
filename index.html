@@ -618,8 +618,8 @@
           <div class="kpi"><div class="n" id="kpiSolicitudesTotal">–</div><div class="l">Solicitudes (mes)</div></div>
           <div class="kpi"><div class="n" id="kpiEntregasTotal">–</div><div class="l">Entregas (mes)</div></div>
           <div class="kpi"><div class="n" id="kpiStockTotal">–</div><div class="l">Stock físico</div></div>
-          <div class="kpi"><div class="n" id="kpiPruebasGeneral">–</div><div class="l">Test drives (mes)</div></div>
-          <div class="kpi"><div class="n" id="kpiTasacionesGeneral">–</div><div class="l">Tasaciones (mes)</div></div>
+          <div class="kpi"><div class="n" id="kpiPruebasGeneral">–</div><div class="l">Test drives (mes)</div><div class="pct-badge neutral" id="kpiPruebasGeneralPct"></div></div>
+          <div class="kpi"><div class="n" id="kpiTasacionesGeneral">–</div><div class="l">Tasaciones (mes)</div><div class="pct-badge neutral" id="kpiTasacionesGeneralPct"></div></div>
           <div class="kpi"><div class="n" id="kpiUtilidadBrutaGeneral">–</div><div class="l">Utilidad bruta (mes)</div><div class="pct-badge neutral" id="kpiUtilidadBrutaGeneralPct"></div></div>
           <div class="kpi"><div class="n" id="kpiConversionGeneral">–</div><div class="l">Tasa de conversión de leads</div><div class="pct-badge neutral" id="kpiConversionGeneralPct"></div></div>
           <div class="kpi"><div class="n" id="kpiPromedioVentasGeneral">–</div><div class="l">Promedio de ventas por vendedor</div></div>
@@ -1300,7 +1300,9 @@
     document.getElementById('kpiEntregasTotal').textContent = d.entregasTotal;
     document.getElementById('kpiStockTotal').textContent = d.stockTotal;
     document.getElementById('kpiPruebasGeneral').textContent = d.pruebasTotal;
+    setPctBadge('kpiPruebasGeneralPct', d.pruebasTotalPctChange);
     document.getElementById('kpiTasacionesGeneral').textContent = d.tasacionesTotal;
+    setPctBadge('kpiTasacionesGeneralPct', d.tasacionesTotalPctChange);
 
     var objHtml = (d.objetivos||[]).map(function(o){
       var pct = o.meta ? Math.min(100, Math.round((o.real / o.meta) * 100)) : 0;
