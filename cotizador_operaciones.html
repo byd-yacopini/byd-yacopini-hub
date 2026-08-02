@@ -176,6 +176,9 @@
   }
   .pill-btn.active{ background:var(--negro); color:#fff; border-color:var(--negro); }
   .pill-btn.moneda-btn{ min-width:52px; text-align:center; }
+.pago-select{ flex:1; font-size:12.5px; font-weight:600; padding:8px 8px; border:1px solid var(--gris-claro); border-radius:8px; background:var(--gris-fondo); color:var(--negro); -webkit-appearance:none; appearance:none; min-width:0; }
+.pago-select.moneda-select{ flex:0 0 78px; }
+.item-row2{ display:flex; align-items:center; gap:6px; margin-top:8px; }
 
   .item .monto-wrap{
     flex:1;
@@ -535,7 +538,7 @@
       .then(function(r){ return r.json(); })
       .then(function(d){
         if (d.error || !Array.isArray(d.listaPrecios)) return;
-        modelosApi = d.listaPrecios.map(function(m){ return { nombre: m.modelo, lista: m.precioLista }; })
+        modelosApi = d.listaPrecios.map(function(m){ return { nombre: m.modelo, lista: m.lleno }; })
           .filter(function(m){ return m.nombre; });
         renderModeloSelect();
       })
@@ -546,7 +549,7 @@
     els.modeloSelect.innerHTML = '';
     var optManual = document.createElement('option');
     optManual.value = '';
-    optManual.textContent = modelos.length ? 'Manual / otro modelo' : 'Sin lista de precios disponible — cargá el precio manual';
+    optManual.textContent = modelos.length ? 'MODELOS' : 'Sin lista de precios disponible — cargá el precio manual';
     els.modeloSelect.appendChild(optManual);
     modelos.forEach(function(m){
       var opt = document.createElement('option');
@@ -629,85 +632,100 @@
   }
 
   function renderItems(){
-    els.itemsList.innerHTML = '';
-    els.emptyHint.style.display = items.length ? 'none' : 'block';
-    items.forEach(function(it, idx){
-      var row = document.createElement('div');
-      row.className = 'item';
+  els.itemsList.innerHTML = '';
+  els.emptyHint.style.display = items.length ? 'none' : 'block';
+  items.forEach(function(it, idx){
+    var row = document.createElement('div');
+    row.className = 'item';
 
-      // Fila 1: concepto + eliminar
-      var row1 = document.createElement('div');
-      row1.className = 'item-row1';
+    var row1 = document.createElement('div');
+    row1.className = 'item-row1';
 
-      var concepto = document.createElement('input');
-      concepto.className = 'concepto';
-      concepto.placeholder = 'Concepto (ej: Toma usado, Efectivo)';
-      concepto.value = it.concepto || '';
-      concepto.addEventListener('input', function(){ items[idx].concepto = concepto.value; saveState(); });
-
-      var del = document.createElement('button');
-      del.className = 'del';
-      del.type = 'button';
-      del.textContent = '×';
-      del.addEventListener('click', function(){
-        items.splice(idx, 1);
-        saveState();
-        renderItems();
-        recalc();
-      });
-
-      row1.appendChild(concepto);
-      row1.appendChild(del);
-
-      // Forma de pago: grupo de botones (Efectivo / Crédito / Usado Sin Tasación / Documentos / Cheques)
-      var formaGroup = pillGroup(FORMA_OPTS, it.tipo || 'efectivo', function(val){
-        items[idx].tipo = val;
-        saveState();
-      }, 'forma');
-
-      // Fila 3: moneda (botones $ / USD) + monto + equivalente en USD
-      var row3 = document.createElement('div');
-      row3.className = 'item-row3';
-
-      var montoWrap = document.createElement('div');
-      montoWrap.className = 'monto-wrap';
-      var pesoSign = document.createElement('span');
-      pesoSign.textContent = (it.moneda === 'USD') ? 'USD' : '$';
-      var monto = document.createElement('input');
-      monto.className = 'monto';
-      monto.type = 'number';
-      monto.inputMode = 'decimal';
-      monto.placeholder = '0';
-      monto.value = it.monto || '';
-      monto.addEventListener('input', function(){
-        items[idx].monto = parseFloat(monto.value) || 0;
-        saveState();
-        recalc();
-      });
-      montoWrap.appendChild(pesoSign);
-      montoWrap.appendChild(monto);
-
-      var monedaGroup = pillGroup(MONEDA_OPTS, it.moneda || 'ARS', function(val){
-        items[idx].moneda = val;
-        pesoSign.textContent = (val === 'USD') ? 'USD' : '$';
-        saveState();
-        recalc();
-      }, 'moneda');
-
-      var eq = document.createElement('div');
-      eq.className = 'eq-usd';
-      eq.textContent = fxRate ? ('≈ ' + fmtUsd(itemUsd(it))) : '—';
-
-      row3.appendChild(monedaGroup);
-      row3.appendChild(montoWrap);
-      row3.appendChild(eq);
-
-      row.appendChild(row1);
-      row.appendChild(formaGroup);
-      row.appendChild(row3);
-      els.itemsList.appendChild(row);
+    var formaSelect = document.createElement('select');
+    formaSelect.className = 'pago-select';
+    FORMA_OPTS.forEach(function(opt){
+      var o = document.createElement('option');
+      o.value = opt[0];
+      o.textContent = opt[1];
+      if ((it.tipo || 'efectivo') === opt[0]) o.selected = true;
+      formaSelect.appendChild(o);
     });
-  }
+    formaSelect.addEventListener('change', function(){
+      items[idx].tipo = formaSelect.value;
+      saveState();
+    });
+
+    var monedaSelect = document.createElement('select');
+    monedaSelect.className = 'pago-select moneda-select';
+    MONEDA_OPTS.forEach(function(opt){
+      var o = document.createElement('option');
+      o.value = opt[0];
+      o.textContent = opt[1];
+      if ((it.moneda || 'ARS') === opt[0]) o.selected = true;
+      monedaSelect.appendChild(o);
+    });
+    monedaSelect.addEventListener('change', function(){
+      items[idx].moneda = monedaSelect.value;
+      pesoSign.textContent = (monedaSelect.value === 'USD') ? 'USD' : '$';
+      saveState();
+      recalc();
+    });
+
+    var del = document.createElement('button');
+    del.className = 'del';
+    del.type = 'button';
+    del.textContent = '×';
+    del.addEventListener('click', function(){
+      items.splice(idx, 1);
+      saveState();
+      renderItems();
+      recalc();
+    });
+
+    row1.appendChild(formaSelect);
+    row1.appendChild(monedaSelect);
+    row1.appendChild(del);
+
+    var row2 = document.createElement('div');
+    row2.className = 'item-row2';
+    var montoWrap = document.createElement('div');
+    montoWrap.className = 'monto-wrap';
+    var pesoSign = document.createElement('span');
+    pesoSign.textContent = (it.moneda === 'USD') ? 'USD' : '$';
+    var monto = document.createElement('input');
+    monto.className = 'monto';
+    monto.type = 'number';
+    monto.inputMode = 'decimal';
+    monto.placeholder = '0';
+    monto.value = it.monto || '';
+    monto.addEventListener('input', function(){
+      items[idx].monto = parseFloat(monto.value) || 0;
+      saveState();
+      recalc();
+    });
+    montoWrap.appendChild(pesoSign);
+    montoWrap.appendChild(monto);
+    var eq = document.createElement('div');
+    eq.className = 'eq-usd';
+    eq.textContent = fxRate ? ('≈ ' + fmtUsd(itemUsd(it))) : '—';
+    row2.appendChild(montoWrap);
+    row2.appendChild(eq);
+
+    var row3 = document.createElement('div');
+    row3.className = 'item-row3';
+    var concepto = document.createElement('input');
+    concepto.className = 'concepto';
+    concepto.placeholder = 'Observaciones (opcional)';
+    concepto.value = it.concepto || '';
+    concepto.addEventListener('input', function(){ items[idx].concepto = concepto.value; saveState(); });
+    row3.appendChild(concepto);
+
+    row.appendChild(row1);
+    row.appendChild(row2);
+    row.appendChild(row3);
+    els.itemsList.appendChild(row);
+  });
+}
 
   function recalc(){
     var totalUsd = items.reduce(function(sum, it){ return sum + itemUsd(it); }, 0);
