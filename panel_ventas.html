@@ -141,6 +141,21 @@
   .progress-row .pfill.ambar{ background:var(--ambar); }
   .progress-row .pfill.rojo{ background:var(--rojo); }
   .progress-row .pval{ flex:0 0 52px; text-align:right; font-size:11.5px; font-weight:700; color:var(--gris-oscuro); }
+/* DATE-FILTER-V1 */
+.progress-row{ flex-wrap:wrap; }
+.progress-row .prow-pct{ flex:0 0 100%; text-align:right; margin-top:2px; }
+.pct-badge{ font-size:10.5px; font-weight:700; padding:2px 7px; border-radius:10px; margin-top:4px; display:inline-block; white-space:nowrap; }
+.pct-badge.up{ background:rgba(56,142,60,.12); color:#388E3C; }
+.pct-badge.down{ background:rgba(192,57,43,.12); color:#C0392B; }
+.pct-badge.neutral{ background:rgba(140,140,140,.12); color:#8C8C8C; }
+.date-filter-bar{ display:flex; flex-wrap:wrap; align-items:flex-end; gap:10px; background:var(--blanco); border:1px solid var(--gris-claro); border-radius:10px; padding:10px 12px; margin-bottom:16px; }
+.date-filter-bar .df-field{ display:flex; flex-direction:column; gap:3px; }
+.date-filter-bar label{ font-size:10.5px; font-weight:700; color:var(--gris-oscuro); text-transform:uppercase; letter-spacing:0.3px; }
+.date-filter-bar input[type="date"]{ border:1px solid var(--gris-claro); border-radius:6px; padding:6px 8px; font-size:12.5px; font-family:inherit; color:var(--carbon); background:var(--blanco); }
+.date-filter-bar .df-btn{ border:none; border-radius:20px; padding:8px 16px; font-size:12px; font-weight:700; cursor:pointer; }
+.date-filter-bar .df-btn-primary{ background:var(--azul-ev); color:#fff; }
+.date-filter-bar .df-btn-secondary{ background:var(--gris-fondo); color:var(--gris-oscuro); }
+.date-filter-bar .df-note{ flex-basis:100%; font-size:10.5px; color:var(--gris-medio); }
 
   .badge-aging{ display:inline-block; font-size:10px; font-weight:700; padding:2px 7px; border-radius:10px; background:rgba(192,57,43,.1); color:var(--rojo); margin-left:6px; }
   .note{ font-size:11.5px; color:var(--gris-medio); margin-top:10px; line-height:1.5; }
@@ -262,6 +277,13 @@
   <div class="mainview active" id="view-tablero">
 
     <div class="snapshot-banner" id="dataBanner">Cargando datos…</div>
+    <div class="date-filter-bar" id="dateFilterBar">
+      <div class="df-field"><label for="dfDesde">Desde</label><input type="date" id="dfDesde"></div>
+      <div class="df-field"><label for="dfHasta">Hasta</label><input type="date" id="dfHasta"></div>
+      <button type="button" id="dfAplicar" class="df-btn df-btn-primary">Aplicar</button>
+      <button type="button" id="dfHoy" class="df-btn df-btn-secondary">Mes actual</button>
+      <div class="df-note" id="dfNote"></div>
+    </div>
     <div class="preview-banner" id="previewBanner" style="display:none;">
       Vista previa de gerencia. Elegí un vendedor para ver su resumen:
       <div class="vendor-select-wrap" style="margin-top:8px;">
@@ -703,10 +725,14 @@
       if (obj){
         var pct = obj.meta ? Math.min(100, Math.round((obj.real / obj.meta) * 100)) : 0;
         var color = pct >= 68 ? 'verde' : (pct >= 34 ? 'ambar' : 'rojo');
+        var chg = obj.realPctChange;
+        var chgCls = (chg === null || chg === undefined) ? 'neutral' : (chg > 0 ? 'up' : (chg < 0 ? 'down' : 'neutral'));
+        var chgTxt = (chg === null || chg === undefined) ? 'sin dato mes pasado' : ((chg > 0 ? '+' : '') + chg + '% vs mes pasado');
         document.getElementById('miObjetivoRow').innerHTML =
           '<div class="progress-row"><div class="pname">' + nombre + '</div>' +
           '<div class="ptrack"><div class="pfill ' + color + '" style="width:' + pct + '%"></div></div>' +
-          '<div class="pval">' + obj.real + ' / ' + obj.meta + '</div></div>';
+          '<div class="pval">' + obj.real + ' / ' + obj.meta + '</div>' +
+          '<div class="prow-pct"><span class="pct-badge ' + chgCls + '">' + chgTxt + '</span></div></div>';
         document.getElementById('miObjetivoNote').textContent =
           'Meta mensual de solicitudes. Vas ' + obj.real + ' de ' + obj.meta + ' (' + pct + '%).';
       } else {
@@ -833,10 +859,44 @@
       renderMiResumen(nombreActivo || '', d);
     }
 
+    // ---- FILTRO DE FECHAS ----
+    var currentDesde = '';
+    var currentHasta = '';
+    function pad2(n){ return (n < 10 ? '0' : '') + n; }
+    function todayISO(){ var d = new Date(); return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate()); }
+    function firstOfMonthISO(){ var d = new Date(); return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-01'; }
+    (function initDateFilter(){
+      var dDesde = document.getElementById('dfDesde');
+      var dHasta = document.getElementById('dfHasta');
+      var bAplicar = document.getElementById('dfAplicar');
+      var bHoy = document.getElementById('dfHoy');
+      if (!dDesde || !dHasta) return;
+      dDesde.value = firstOfMonthISO();
+      dHasta.value = todayISO();
+      dHasta.max = todayISO();
+      bAplicar.addEventListener('click', function(){
+        currentDesde = dDesde.value || '';
+        currentHasta = dHasta.value || '';
+        loadPanelData();
+      });
+      bHoy.addEventListener('click', function(){
+        dDesde.value = firstOfMonthISO();
+        dHasta.value = todayISO();
+        currentDesde = '';
+        currentHasta = '';
+        loadPanelData();
+      });
+    })();
+
     function loadPanelData(){
-      fetch(TABLERO_API_URL + '?key=' + encodeURIComponent(TABLERO_API_KEY))
+      fetch(TABLERO_API_URL + '?key=' + encodeURIComponent(TABLERO_API_KEY) + (currentDesde && currentHasta ? ('&desde=' + encodeURIComponent(currentDesde) + '&hasta=' + encodeURIComponent(currentHasta)) : ''))
         .then(function(r){ if (!r.ok) throw new Error('bad-status'); return r.json(); })
-        .then(function(liveData){ setBanner(true, liveData.generatedAt); iniciar(liveData); })
+        .then(function(liveData){
+        setBanner(true, liveData.generatedAt);
+        iniciar(liveData);
+        var dfNoteEl = document.getElementById('dfNote');
+        if (dfNoteEl && liveData.periodoDesde) { dfNoteEl.textContent = 'Mostrando: ' + liveData.periodoDesde + ' al ' + liveData.periodoHasta + ' · comparado con ' + liveData.periodoPrevDesde + ' al ' + liveData.periodoPrevHasta; }
+      })
         .catch(function(){ setBanner(false); iniciar(FALLBACK_DATA); });
     }
     loadPanelData();
