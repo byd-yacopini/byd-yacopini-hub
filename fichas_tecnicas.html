@@ -169,16 +169,27 @@
   function showToast(msg){ toast.textContent = msg; toast.classList.add('show'); setTimeout(function(){ toast.classList.remove('show'); }, 2200); }
   document.querySelectorAll('.ficha-btn.compartir').forEach(function(btn){
     btn.addEventListener('click', function(){
-      var nombre = btn.dataset.nombre;
-      var url = new URL(btn.dataset.url, window.location.href).href;
-      if (navigator.share) {
-        navigator.share({ title: 'Ficha t\u00e9cnica ' + nombre, text: 'Ficha t\u00e9cnica ' + nombre + ' - BYD Yacopini', url: url }).catch(function(){});
-      } else if (navigator.clipboard) {
-        navigator.clipboard.writeText(url).then(function(){ showToast('Link copiado'); }).catch(function(){ showToast(url); });
-      } else {
-        showToast(url);
-      }
-    });
+  var nombre = btn.dataset.nombre;
+  var url = new URL(btn.dataset.url, window.location.href).href;
+  var fileName = (nombre || 'ficha') + '.pdf';
+  function descargarDirecto(){
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+  fetch(url).then(function(res){ return res.blob(); }).then(function(blob){
+    var file = new File([blob], fileName, { type: 'application/pdf' });
+    if (navigator.canShare && navigator.canShare({ files: [file] }) && navigator.share) {
+      navigator.share({ files: [file] }).catch(function(){});
+    } else {
+      descargarDirecto();
+    }
+  }).catch(function(){ descargarDirecto(); });
+});
   });
 })();
 </script>
