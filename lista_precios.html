@@ -88,6 +88,20 @@
   }
   .detail-grid div{ display:flex; justify-content:space-between; font-size:11.5px; color:var(--gris-oscuro); }
   .detail-grid div b{ color:var(--negro); }
+  .model-detail-secondary{ margin-top:10px; }
+  .model-detail-secondary summary{
+    font-size:11px; font-weight:700; color:var(--gris-oscuro); cursor:pointer;
+    list-style:none; display:flex; align-items:center; gap:4px;
+  }
+  .model-detail-secondary summary::-webkit-details-marker{ display:none; }
+  .model-detail-secondary summary::before{ content:"▸"; font-size:10px; }
+  .model-detail-secondary[open] summary::before{ content:"▾"; }
+  .lleno-card{
+    background:var(--blanco); border:1px solid var(--gris-claro); border-radius:9px;
+    padding:9px 10px; margin-top:10px; display:flex; align-items:center; justify-content:space-between;
+  }
+  .lleno-label{ font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; color:var(--gris-oscuro); }
+  .lleno-val{ font-size:15px; font-weight:800; color:var(--negro); }
   .promo-section{ padding:18px 20px 4px; }
   .promo-head h2{ font-size:13px; font-weight:800; letter-spacing:0.6px; text-transform:uppercase; margin:0 0 3px; color:var(--negro); }
   .promo-head p{ font-size:11px; color:var(--gris-medio); margin:0 0 12px; }
@@ -212,22 +226,30 @@
         <div class="detail-grid">
           <div><span>Flete</span><b>USD 550</b></div>
           <div><span>Patentamiento</span><b>USD 720</b></div>
-          <div><span>Lleno</span><b>USD 25.260</b></div>
+        </div>
+      </details>
+      <div class="lleno-card">
+        <div class="lleno-label">Precio Lleno</div>
+        <div class="lleno-val">USD 25.260</div>
+      </div>
+      <details class="model-detail-secondary">
+        <summary>Ver más precios</summary>
+        <div class="detail-grid">
           <div><span>Prom. Web</span><b>USD 24.586</b></div>
           <div><span>Web</span><b>USD 23.911</b></div>
           <div><span>Prom. Piso</span><b>USD 23.461</b></div>
         </div>
+        <div class="floor-row">
+          <div class="floor-box venta">
+            <div class="floor-label">Piso Venta</div>
+            <div class="floor-val">USD 23.011</div>
+          </div>
+          <div class="floor-box gerencia">
+            <div class="floor-label">Piso Gerencia</div>
+            <div class="floor-val">USD 22.711</div>
+          </div>
+        </div>
       </details>
-      <div class="floor-row">
-        <div class="floor-box venta">
-          <div class="floor-label">Piso Venta</div>
-          <div class="floor-val">USD 23.011</div>
-        </div>
-        <div class="floor-box gerencia">
-          <div class="floor-label">Piso Gerencia</div>
-          <div class="floor-val">USD 22.711</div>
-        </div>
-      </div>
     </div>
 
     <div class="model-card ev">
@@ -241,22 +263,30 @@
         <div class="detail-grid">
           <div><span>Flete</span><b>USD 550</b></div>
           <div><span>Patentamiento</span><b>USD 750</b></div>
-          <div><span>Lleno</span><b>USD 26.290</b></div>
+        </div>
+      </details>
+      <div class="lleno-card">
+        <div class="lleno-label">Precio Lleno</div>
+        <div class="lleno-val">USD 26.290</div>
+      </div>
+      <details class="model-detail-secondary">
+        <summary>Ver más precios</summary>
+        <div class="detail-grid">
           <div><span>Prom. Web</span><b>USD 25.710</b></div>
           <div><span>Web</span><b>USD 25.130</b></div>
           <div><span>Prom. Piso</span><b>USD 24.905</b></div>
         </div>
+        <div class="floor-row">
+          <div class="floor-box venta">
+            <div class="floor-label">Piso Venta</div>
+            <div class="floor-val">USD 24.680</div>
+          </div>
+          <div class="floor-box gerencia">
+            <div class="floor-label">Piso Gerencia</div>
+            <div class="floor-val">USD 24.380</div>
+          </div>
+        </div>
       </details>
-      <div class="floor-row">
-        <div class="floor-box venta">
-          <div class="floor-label">Piso Venta</div>
-          <div class="floor-val">USD 24.680</div>
-        </div>
-        <div class="floor-box gerencia">
-          <div class="floor-label">Piso Gerencia</div>
-          <div class="floor-val">USD 24.380</div>
-        </div>
-      </div>
     </div>
 
     <div class="model-card ev">
@@ -270,22 +300,30 @@
         <div class="detail-grid">
           <div><span>Flete</span><b>USD 550</b></div>
           <div><span>Patentamiento</span><b>USD 927</b></div>
-          <div><span>Lleno</span><b>USD 33.467</b></div>
+        </div>
+      </details>
+      <div class="lleno-card">
+        <div class="lleno-label">Precio Lleno</div>
+        <div class="lleno-val">USD 33.467</div>
+      </div>
+      <details class="model-detail-secondary">
+        <summary>Ver más precios</summary>
+        <div class="detail-grid">
           <div><span>Prom. Web</span><b>USD 32.569</b></div>
           <div><span>Web</span><b>USD 31.671</b></div>
           <div><span>Prom. Piso</span><b>USD 31.021</b></div>
         </div>
+        <div class="floor-row">
+          <div class="floor-box venta">
+            <div class="floor-label">Piso Venta</div>
+            <div class="floor-val">USD 30.371</div>
+          </div>
+          <div class="floor-box gerencia">
+            <div class="floor-label">Piso Gerencia</div>
+            <div class="floor-val">USD 30.071</div>
+          </div>
+        </div>
       </details>
-      <div class="floor-row">
-        <div class="floor-box venta">
-          <div class="floor-label">Piso Venta</div>
-          <div class="floor-val">USD 30.371</div>
-        </div>
-        <div class="floor-box gerencia">
-          <div class="floor-label">Piso Gerencia</div>
-          <div class="floor-val">USD 30.071</div>
-        </div>
-      </div>
     </div>
   </div>
 
@@ -303,22 +341,30 @@
         <div class="detail-grid">
           <div><span>Flete</span><b>USD 550</b></div>
           <div><span>Patentamiento</span><b>USD 963</b></div>
-          <div><span>Lleno</span><b>USD 35.503</b></div>
+        </div>
+      </details>
+      <div class="lleno-card">
+        <div class="lleno-label">Precio Lleno</div>
+        <div class="lleno-val">USD 35.503</div>
+      </div>
+      <details class="model-detail-secondary">
+        <summary>Ver más precios</summary>
+        <div class="detail-grid">
           <div><span>Prom. Web</span><b>USD 35.237</b></div>
           <div><span>Web</span><b>USD 34.970</b></div>
           <div><span>Prom. Piso</span><b>USD 34.780</b></div>
         </div>
+        <div class="floor-row">
+          <div class="floor-box venta">
+            <div class="floor-label">Piso Venta</div>
+            <div class="floor-val">USD 34.590</div>
+          </div>
+          <div class="floor-box gerencia">
+            <div class="floor-label">Piso Gerencia</div>
+            <div class="floor-val">USD 34.290</div>
+          </div>
+        </div>
       </details>
-      <div class="floor-row">
-        <div class="floor-box venta">
-          <div class="floor-label">Piso Venta</div>
-          <div class="floor-val">USD 34.590</div>
-        </div>
-        <div class="floor-box gerencia">
-          <div class="floor-label">Piso Gerencia</div>
-          <div class="floor-val">USD 34.290</div>
-        </div>
-      </div>
     </div>
 
     <div class="model-card dm">
@@ -332,22 +378,30 @@
         <div class="detail-grid">
           <div><span>Flete</span><b>USD 550</b></div>
           <div><span>Patentamiento</span><b>USD 1.026</b></div>
-          <div><span>Lleno</span><b>USD 37.066</b></div>
+        </div>
+      </details>
+      <div class="lleno-card">
+        <div class="lleno-label">Precio Lleno</div>
+        <div class="lleno-val">USD 37.066</div>
+      </div>
+      <details class="model-detail-secondary">
+        <summary>Ver más precios</summary>
+        <div class="detail-grid">
           <div><span>Prom. Web</span><b>USD 35.711</b></div>
           <div><span>Web</span><b>USD 34.356</b></div>
           <div><span>Prom. Piso</span><b>USD 33.974</b></div>
         </div>
+        <div class="floor-row">
+          <div class="floor-box venta">
+            <div class="floor-label">Piso Venta</div>
+            <div class="floor-val">USD 33.591</div>
+          </div>
+          <div class="floor-box gerencia">
+            <div class="floor-label">Piso Gerencia</div>
+            <div class="floor-val">USD 33.291</div>
+          </div>
+        </div>
       </details>
-      <div class="floor-row">
-        <div class="floor-box venta">
-          <div class="floor-label">Piso Venta</div>
-          <div class="floor-val">USD 33.591</div>
-        </div>
-        <div class="floor-box gerencia">
-          <div class="floor-label">Piso Gerencia</div>
-          <div class="floor-val">USD 33.291</div>
-        </div>
-      </div>
     </div>
 
     <div class="model-card dm">
@@ -361,22 +415,30 @@
         <div class="detail-grid">
           <div><span>Flete</span><b>USD 550</b></div>
           <div><span>Patentamiento</span><b>USD 1.086</b></div>
-          <div><span>Lleno</span><b>USD 39.126</b></div>
+        </div>
+      </details>
+      <div class="lleno-card">
+        <div class="lleno-label">Precio Lleno</div>
+        <div class="lleno-val">USD 39.126</div>
+      </div>
+      <details class="model-detail-secondary">
+        <summary>Ver más precios</summary>
+        <div class="detail-grid">
           <div><span>Prom. Web</span><b>USD 38.441</b></div>
           <div><span>Web</span><b>USD 37.755</b></div>
           <div><span>Prom. Piso</span><b>USD 37.155</b></div>
         </div>
+        <div class="floor-row">
+          <div class="floor-box venta">
+            <div class="floor-label">Piso Venta</div>
+            <div class="floor-val">USD 36.555</div>
+          </div>
+          <div class="floor-box gerencia">
+            <div class="floor-label">Piso Gerencia</div>
+            <div class="floor-val">USD 36.255</div>
+          </div>
+        </div>
       </details>
-      <div class="floor-row">
-        <div class="floor-box venta">
-          <div class="floor-label">Piso Venta</div>
-          <div class="floor-val">USD 36.555</div>
-        </div>
-        <div class="floor-box gerencia">
-          <div class="floor-label">Piso Gerencia</div>
-          <div class="floor-val">USD 36.255</div>
-        </div>
-      </div>
     </div>
 
     <div class="model-card dm">
@@ -390,22 +452,30 @@
         <div class="detail-grid">
           <div><span>Flete</span><b>USD 550</b></div>
           <div><span>Patentamiento</span><b>USD 1.744</b></div>
-          <div><span>Lleno</span><b>USD 62.284</b></div>
+        </div>
+      </details>
+      <div class="lleno-card">
+        <div class="lleno-label">Precio Lleno</div>
+        <div class="lleno-val">USD 62.284</div>
+      </div>
+      <details class="model-detail-secondary">
+        <summary>Ver más precios</summary>
+        <div class="detail-grid">
           <div><span>Prom. Web</span><b>USD 60.957</b></div>
           <div><span>Web</span><b>USD 59.630</b></div>
           <div><span>Prom. Piso</span><b>USD 58.280</b></div>
         </div>
+        <div class="floor-row">
+          <div class="floor-box venta">
+            <div class="floor-label">Piso Venta</div>
+            <div class="floor-val">USD 56.930</div>
+          </div>
+          <div class="floor-box gerencia">
+            <div class="floor-label">Piso Gerencia</div>
+            <div class="floor-val">USD 56.630</div>
+          </div>
+        </div>
       </details>
-      <div class="floor-row">
-        <div class="floor-box venta">
-          <div class="floor-label">Piso Venta</div>
-          <div class="floor-val">USD 56.930</div>
-        </div>
-        <div class="floor-box gerencia">
-          <div class="floor-label">Piso Gerencia</div>
-          <div class="floor-val">USD 56.630</div>
-        </div>
-      </div>
     </div>
 
     <div class="model-card dm">
@@ -419,22 +489,30 @@
         <div class="detail-grid">
           <div><span>Flete</span><b>USD 0</b></div>
           <div><span>Patentamiento</span><b>USD 0</b></div>
-          <div><span>Lleno</span><b>USD 48.000</b></div>
+        </div>
+      </details>
+      <div class="lleno-card">
+        <div class="lleno-label">Precio Lleno</div>
+        <div class="lleno-val">USD 48.000</div>
+      </div>
+      <details class="model-detail-secondary">
+        <summary>Ver más precios</summary>
+        <div class="detail-grid">
           <div><span>Prom. Web</span><b>USD 47.695</b></div>
           <div><span>Web</span><b>USD 47.390</b></div>
           <div><span>Prom. Piso</span><b>USD 46.820</b></div>
         </div>
+        <div class="floor-row">
+          <div class="floor-box venta">
+            <div class="floor-label">Piso Venta</div>
+            <div class="floor-val">USD 46.250</div>
+          </div>
+          <div class="floor-box gerencia">
+            <div class="floor-label">Piso Gerencia</div>
+            <div class="floor-val">USD 45.950</div>
+          </div>
+        </div>
       </details>
-      <div class="floor-row">
-        <div class="floor-box venta">
-          <div class="floor-label">Piso Venta</div>
-          <div class="floor-val">USD 46.250</div>
-        </div>
-        <div class="floor-box gerencia">
-          <div class="floor-label">Piso Gerencia</div>
-          <div class="floor-val">USD 45.950</div>
-        </div>
-      </div>
     </div>
   </div>
 
