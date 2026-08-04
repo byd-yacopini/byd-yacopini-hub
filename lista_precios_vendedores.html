@@ -65,7 +65,6 @@
   .model-lista{ font-size:12px; color:var(--gris-oscuro); margin-bottom:10px; }
   .model-lista b{ color:var(--negro); font-size:13px; }
   .floor-row{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
-  .floor-row-single{ grid-template-columns:1fr; }
   .floor-box{ border-radius:9px; padding:9px 10px; }
   .floor-box.venta{ background:var(--rojo-fondo); }
   .floor-box.gerencia{ background:var(--carbon); }
@@ -89,6 +88,20 @@
   }
   .detail-grid div{ display:flex; justify-content:space-between; font-size:11.5px; color:var(--gris-oscuro); }
   .detail-grid div b{ color:var(--negro); }
+  .model-detail-secondary{ margin-top:10px; }
+  .model-detail-secondary summary{
+    font-size:11px; font-weight:700; color:var(--gris-oscuro); cursor:pointer;
+    list-style:none; display:flex; align-items:center; gap:4px;
+  }
+  .model-detail-secondary summary::-webkit-details-marker{ display:none; }
+  .model-detail-secondary summary::before{ content:"▸"; font-size:10px; }
+  .model-detail-secondary[open] summary::before{ content:"▾"; }
+  .lleno-card{
+    background:var(--blanco); border:1px solid var(--gris-claro); border-radius:9px;
+    padding:9px 10px; margin-top:10px; display:flex; align-items:center; justify-content:space-between;
+  }
+  .lleno-label{ font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; color:var(--gris-oscuro); }
+  .lleno-val{ font-size:15px; font-weight:800; color:var(--negro); }
   .promo-section{ padding:18px 20px 4px; }
   .promo-head h2{ font-size:13px; font-weight:800; letter-spacing:0.6px; text-transform:uppercase; margin:0 0 3px; color:var(--negro); }
   .promo-head p{ font-size:11px; color:var(--gris-medio); margin:0 0 12px; }
@@ -183,14 +196,13 @@
       <path class="st0" d="M227.22,48.06c-10.23-.2-13.49-3.54-13.56-13.73-.07-9.42-.02-20.58-.02-30.14h-22.56c0,9.67-.19,29.24.19,38.7.74,18.38,6.77,24.11,25.55,24.75,13.02.44,23.36.29,41.36.28v-19.69c-14.43,0-20.31.04-30.96-.16"/>
       <path class="st0" d="M339.04,34.68c-.07,9.92-3.3,13.18-13.56,13.38-4.89.09-17.75.14-28.33.16h0s-.1.01-.1.01c-10.81,0-22.34-.02-29.1-.02v57.57h26.52v-37.88c.81,0,1.68,0,2.58,0h0s.1,0,.1,0v.02c13.8,0,31.04-.06,37.55-.26,19.93-.61,26-6.23,26.73-24.78.1-2.48.16-5.62.19-9.06V4.18h-22.56c0,9.8.04,20.81-.03,30.5"/>
     </svg>
-    <div class="vig">VIGENCIA<b>22 de julio de 2026</b></div>
+    <div class="vig">VIGENCIA<b>03 de agosto de 2026</b></div>
   </div>
 
   <div class="title-block">
     <h1>Lista de Precios</h1>
     <p>Valores de referencia para el equipo de ventas. Piso de venta: límite mínimo autorizado para cerrar una operación.</p>
   </div>
-
   <div class="legend">
     <div class="item"><span class="dot" style="background:var(--azul-ev)"></span>EV &mdash; Eléctrico</div>
     <div class="item"><span class="dot" style="background:var(--verde-dm)"></span>DM &mdash; Híbrido enchufable</div>
@@ -210,19 +222,27 @@
         <summary>Ver detalle de cálculo</summary>
         <div class="detail-grid">
           <div><span>Flete</span><b>USD 550</b></div>
-          <div><span>Patentamiento</span><b>USD 810</b></div>
-          <div><span>Lleno</span><b>USD 25.350</b></div>
-          <div><span>Prom. Web</span><b>USD 24.631</b></div>
-          <div><span>Web</span><b>USD 23.911</b></div>
-          <div><span>Prom. Piso</span><b>USD 23.342</b></div>
+          <div><span>Patentamiento</span><b>USD 720</b></div>
         </div>
       </details>
-      <div class="floor-row floor-row-single">
-        <div class="floor-box venta">
-          <div class="floor-label">Piso Venta</div>
-          <div class="floor-val">USD 22.772</div>
-        </div>
+      <div class="lleno-card">
+        <div class="lleno-label">Precio Lleno</div>
+        <div class="lleno-val">USD 25.260</div>
       </div>
+      <details class="model-detail-secondary">
+        <summary>Ver más precios</summary>
+        <div class="detail-grid">
+          <div><span>Prom. Web</span><b>USD 24.586</b></div>
+          <div><span>Web</span><b>USD 23.911</b></div>
+          <div><span>Prom. Piso</span><b>USD 23.461</b></div>
+        </div>
+        <div class="floor-row floor-row-single">
+          <div class="floor-box venta">
+            <div class="floor-label">Piso Venta</div>
+            <div class="floor-val">USD 23.011</div>
+          </div>
+        </div>
+      </details>
     </div>
 
     <div class="model-card ev">
@@ -235,19 +255,27 @@
         <summary>Ver detalle de cálculo</summary>
         <div class="detail-grid">
           <div><span>Flete</span><b>USD 550</b></div>
-          <div><span>Patentamiento</span><b>USD 840</b></div>
-          <div><span>Lleno</span><b>USD 26.380</b></div>
-          <div><span>Prom. Web</span><b>USD 25.880</b></div>
-          <div><span>Web</span><b>USD 25.380</b></div>
-          <div><span>Prom. Piso</span><b>USD 25.030</b></div>
+          <div><span>Patentamiento</span><b>USD 750</b></div>
         </div>
       </details>
-      <div class="floor-row floor-row-single">
-        <div class="floor-box venta">
-          <div class="floor-label">Piso Venta</div>
-          <div class="floor-val">USD 24.680</div>
-        </div>
+      <div class="lleno-card">
+        <div class="lleno-label">Precio Lleno</div>
+        <div class="lleno-val">USD 26.290</div>
       </div>
+      <details class="model-detail-secondary">
+        <summary>Ver más precios</summary>
+        <div class="detail-grid">
+          <div><span>Prom. Web</span><b>USD 25.710</b></div>
+          <div><span>Web</span><b>USD 25.130</b></div>
+          <div><span>Prom. Piso</span><b>USD 24.905</b></div>
+        </div>
+        <div class="floor-row floor-row-single">
+          <div class="floor-box venta">
+            <div class="floor-label">Piso Venta</div>
+            <div class="floor-val">USD 24.680</div>
+          </div>
+        </div>
+      </details>
     </div>
 
     <div class="model-card ev">
@@ -260,19 +288,27 @@
         <summary>Ver detalle de cálculo</summary>
         <div class="detail-grid">
           <div><span>Flete</span><b>USD 550</b></div>
-          <div><span>Patentamiento</span><b>USD 1.050</b></div>
-          <div><span>Lleno</span><b>USD 33.590</b></div>
-          <div><span>Prom. Web</span><b>USD 32.631</b></div>
+          <div><span>Patentamiento</span><b>USD 927</b></div>
+        </div>
+      </details>
+      <div class="lleno-card">
+        <div class="lleno-label">Precio Lleno</div>
+        <div class="lleno-val">USD 33.467</div>
+      </div>
+      <details class="model-detail-secondary">
+        <summary>Ver más precios</summary>
+        <div class="detail-grid">
+          <div><span>Prom. Web</span><b>USD 32.569</b></div>
           <div><span>Web</span><b>USD 31.671</b></div>
           <div><span>Prom. Piso</span><b>USD 31.021</b></div>
         </div>
-      </details>
-      <div class="floor-row floor-row-single">
-        <div class="floor-box venta">
-          <div class="floor-label">Piso Venta</div>
-          <div class="floor-val">USD 30.371</div>
+        <div class="floor-row floor-row-single">
+          <div class="floor-box venta">
+            <div class="floor-label">Piso Venta</div>
+            <div class="floor-val">USD 30.371</div>
+          </div>
         </div>
-      </div>
+      </details>
     </div>
   </div>
 
@@ -289,19 +325,27 @@
         <summary>Ver detalle de cálculo</summary>
         <div class="detail-grid">
           <div><span>Flete</span><b>USD 550</b></div>
-          <div><span>Patentamiento</span><b>USD 1.110</b></div>
-          <div><span>Lleno</span><b>USD 35.650</b></div>
-          <div><span>Prom. Web</span><b>USD 35.310</b></div>
+          <div><span>Patentamiento</span><b>USD 963</b></div>
+        </div>
+      </details>
+      <div class="lleno-card">
+        <div class="lleno-label">Precio Lleno</div>
+        <div class="lleno-val">USD 35.503</div>
+      </div>
+      <details class="model-detail-secondary">
+        <summary>Ver más precios</summary>
+        <div class="detail-grid">
+          <div><span>Prom. Web</span><b>USD 35.237</b></div>
           <div><span>Web</span><b>USD 34.970</b></div>
           <div><span>Prom. Piso</span><b>USD 34.780</b></div>
         </div>
-      </details>
-      <div class="floor-row floor-row-single">
-        <div class="floor-box venta">
-          <div class="floor-label">Piso Venta</div>
-          <div class="floor-val">USD 34.590</div>
+        <div class="floor-row floor-row-single">
+          <div class="floor-box venta">
+            <div class="floor-label">Piso Venta</div>
+            <div class="floor-val">USD 34.590</div>
+          </div>
         </div>
-      </div>
+      </details>
     </div>
 
     <div class="model-card dm">
@@ -314,19 +358,27 @@
         <summary>Ver detalle de cálculo</summary>
         <div class="detail-grid">
           <div><span>Flete</span><b>USD 550</b></div>
-          <div><span>Patentamiento</span><b>USD 1.155</b></div>
-          <div><span>Lleno</span><b>USD 37.195</b></div>
-          <div><span>Prom. Web</span><b>USD 35.776</b></div>
+          <div><span>Patentamiento</span><b>USD 1.026</b></div>
+        </div>
+      </details>
+      <div class="lleno-card">
+        <div class="lleno-label">Precio Lleno</div>
+        <div class="lleno-val">USD 37.066</div>
+      </div>
+      <details class="model-detail-secondary">
+        <summary>Ver más precios</summary>
+        <div class="detail-grid">
+          <div><span>Prom. Web</span><b>USD 35.711</b></div>
           <div><span>Web</span><b>USD 34.356</b></div>
           <div><span>Prom. Piso</span><b>USD 33.974</b></div>
         </div>
-      </details>
-      <div class="floor-row floor-row-single">
-        <div class="floor-box venta">
-          <div class="floor-label">Piso Venta</div>
-          <div class="floor-val">USD 33.591</div>
+        <div class="floor-row floor-row-single">
+          <div class="floor-box venta">
+            <div class="floor-label">Piso Venta</div>
+            <div class="floor-val">USD 33.591</div>
+          </div>
         </div>
-      </div>
+      </details>
     </div>
 
     <div class="model-card dm">
@@ -339,69 +391,93 @@
         <summary>Ver detalle de cálculo</summary>
         <div class="detail-grid">
           <div><span>Flete</span><b>USD 550</b></div>
-          <div><span>Patentamiento</span><b>USD 1.215</b></div>
-          <div><span>Lleno</span><b>USD 39.255</b></div>
-          <div><span>Prom. Web</span><b>USD 38.505</b></div>
+          <div><span>Patentamiento</span><b>USD 1.086</b></div>
+        </div>
+      </details>
+      <div class="lleno-card">
+        <div class="lleno-label">Precio Lleno</div>
+        <div class="lleno-val">USD 39.126</div>
+      </div>
+      <details class="model-detail-secondary">
+        <summary>Ver más precios</summary>
+        <div class="detail-grid">
+          <div><span>Prom. Web</span><b>USD 38.441</b></div>
           <div><span>Web</span><b>USD 37.755</b></div>
           <div><span>Prom. Piso</span><b>USD 37.155</b></div>
         </div>
-      </details>
-      <div class="floor-row floor-row-single">
-        <div class="floor-box venta">
-          <div class="floor-label">Piso Venta</div>
-          <div class="floor-val">USD 36.555</div>
+        <div class="floor-row floor-row-single">
+          <div class="floor-box venta">
+            <div class="floor-label">Piso Venta</div>
+            <div class="floor-val">USD 36.555</div>
+          </div>
         </div>
-      </div>
+      </details>
     </div>
 
     <div class="model-card dm">
       <div class="model-top">
-        <div class="model-name">Shark GS</div>
+        <div class="model-name">Shark DMO GS</div>
         <div class="model-tag dm">Híbrido</div>
       </div>
       <div class="model-lista">Lista <b>USD 59.990</b></div>
       <details class="model-detail">
         <summary>Ver detalle de cálculo</summary>
         <div class="detail-grid">
-          <div><span>Flete</span><b>USD 750</b></div>
-          <div><span>Patentamiento</span><b>USD 1.890</b></div>
-          <div><span>Lleno</span><b>USD 62.630</b></div>
-          <div><span>Prom. Web</span><b>USD 61.130</b></div>
-          <div><span>Web</span><b>USD 59.630</b></div>
-          <div><span>Prom. Piso</span><b>USD 58.580</b></div>
+          <div><span>Flete</span><b>USD 550</b></div>
+          <div><span>Patentamiento</span><b>USD 1.744</b></div>
         </div>
       </details>
-      <div class="floor-row floor-row-single">
-        <div class="floor-box venta">
-          <div class="floor-label">Piso Venta</div>
-          <div class="floor-val">USD 57.530</div>
-        </div>
+      <div class="lleno-card">
+        <div class="lleno-label">Precio Lleno</div>
+        <div class="lleno-val">USD 62.284</div>
       </div>
+      <details class="model-detail-secondary">
+        <summary>Ver más precios</summary>
+        <div class="detail-grid">
+          <div><span>Prom. Web</span><b>USD 60.957</b></div>
+          <div><span>Web</span><b>USD 59.630</b></div>
+          <div><span>Prom. Piso</span><b>USD 58.280</b></div>
+        </div>
+        <div class="floor-row floor-row-single">
+          <div class="floor-box venta">
+            <div class="floor-label">Piso Venta</div>
+            <div class="floor-val">USD 56.930</div>
+          </div>
+        </div>
+      </details>
     </div>
 
     <div class="model-card dm">
       <div class="model-top">
-        <div class="model-name">Seal U GS</div>
+        <div class="model-name">Seal U DMi</div>
         <div class="model-tag dm">Híbrido</div>
       </div>
-      <div class="model-lista">Lista <b>USD 47.990</b></div>
+      <div class="model-lista">Lista <b>USD 48.000</b></div>
       <details class="model-detail">
         <summary>Ver detalle de cálculo</summary>
         <div class="detail-grid">
-          <div><span>Flete</span><b>USD 750</b></div>
-          <div><span>Patentamiento</span><b>USD 1.530</b></div>
-          <div><span>Lleno</span><b>USD 50.270</b></div>
-          <div><span>Prom. Web</span><b>USD 48.830</b></div>
+          <div><span>Flete</span><b>USD 0</b></div>
+          <div><span>Patentamiento</span><b>USD 0</b></div>
+        </div>
+      </details>
+      <div class="lleno-card">
+        <div class="lleno-label">Precio Lleno</div>
+        <div class="lleno-val">USD 48.000</div>
+      </div>
+      <details class="model-detail-secondary">
+        <summary>Ver más precios</summary>
+        <div class="detail-grid">
+          <div><span>Prom. Web</span><b>USD 47.695</b></div>
           <div><span>Web</span><b>USD 47.390</b></div>
           <div><span>Prom. Piso</span><b>USD 46.820</b></div>
         </div>
-      </details>
-      <div class="floor-row floor-row-single">
-        <div class="floor-box venta">
-          <div class="floor-label">Piso Venta</div>
-          <div class="floor-val">USD 46.250</div>
+        <div class="floor-row floor-row-single">
+          <div class="floor-box venta">
+            <div class="floor-label">Piso Venta</div>
+            <div class="floor-val">USD 46.250</div>
+          </div>
         </div>
-      </div>
+      </details>
     </div>
   </div>
 
@@ -411,49 +487,17 @@
       <p>Unidades con precio especial por VIN. Válido según condiciones vigentes.</p>
     </div>
 
-    <div class="promo-card ev" data-vin="LGXCE4CC9T2077814 &amp;middot; Apricity White">
+    <div class="promo-card ev" data-vin="LGXCE4CC7T2077813 &amp;middot; Apricity White">
       <div class="promo-swipe-content">
         <div class="promo-top">
           <div class="model-name">Dolphin Mini GL</div>
-          <div class="promo-vin">LGXCE4CC9T2077814 &middot; Apricity White</div>
+          <div class="promo-vin">LGXCE4CC7T2077813 &middot; Apricity White</div>
         </div>
         <div class="promo-price-row">
-          <div class="promo-old">Piso <s>USD 22.772</s></div>
-          <div class="promo-new">
-            <div class="promo-new-val">USD 21.992</div>
-            <div class="promo-ahorro">Ahorro vs piso: USD 780</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="promo-card ev" data-vin="LGXCE4CC2T2077816 &amp;middot; Apricity White">
-      <div class="promo-swipe-content">
-        <div class="promo-top">
-          <div class="model-name">Dolphin Mini GL</div>
-          <div class="promo-vin">LGXCE4CC2T2077816 &middot; Apricity White</div>
-        </div>
-        <div class="promo-price-row">
-          <div class="promo-old">Piso <s>USD 22.772</s></div>
-          <div class="promo-new">
-            <div class="promo-new-val">USD 21.992</div>
-            <div class="promo-ahorro">Ahorro vs piso: USD 780</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="promo-card ev" data-vin="LGXCE4CC9T2077800 &amp;middot; Obsidian Black">
-      <div class="promo-swipe-content">
-        <div class="promo-top">
-          <div class="model-name">Dolphin Mini GL</div>
-          <div class="promo-vin">LGXCE4CC9T2077800 &middot; Obsidian Black</div>
-        </div>
-        <div class="promo-price-row">
-          <div class="promo-old">Piso <s>USD 22.772</s></div>
+          <div class="promo-old">Piso <s>USD 23.011</s></div>
           <div class="promo-new">
             <div class="promo-new-val">USD 22.232</div>
-            <div class="promo-ahorro">Ahorro vs piso: USD 540</div>
+            <div class="promo-ahorro">Ahorro vs piso: USD 779</div>
           </div>
         </div>
       </div>
@@ -466,10 +510,10 @@
           <div class="promo-vin">LGXCE4CC8T2077805 &middot; Obsidian Black</div>
         </div>
         <div class="promo-price-row">
-          <div class="promo-old">Piso <s>USD 22.772</s></div>
+          <div class="promo-old">Piso <s>USD 23.011</s></div>
           <div class="promo-new">
             <div class="promo-new-val">USD 22.232</div>
-            <div class="promo-ahorro">Ahorro vs piso: USD 540</div>
+            <div class="promo-ahorro">Ahorro vs piso: USD 779</div>
           </div>
         </div>
       </div>
@@ -484,136 +528,44 @@
         <div class="promo-price-row">
           <div class="promo-old">Piso <s>USD 24.680</s></div>
           <div class="promo-new">
-            <div class="promo-new-val">USD 24.130</div>
-            <div class="promo-ahorro">Ahorro vs piso: USD 550</div>
+            <div class="promo-new-val">USD 23.880</div>
+            <div class="promo-ahorro">Ahorro vs piso: USD 800</div>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="promo-card ev" data-vin="LGXCE4CC3T2082152 &amp;middot; Sprout Green">
-      <div class="promo-swipe-content">
-        <div class="promo-top">
-          <div class="model-name">Dolphin Mini GS</div>
-          <div class="promo-vin">LGXCE4CC3T2082152 &middot; Sprout Green</div>
-        </div>
-        <div class="promo-price-row">
-          <div class="promo-old">Piso <s>USD 24.680</s></div>
-          <div class="promo-new">
-            <div class="promo-new-val">USD 23.881</div>
-            <div class="promo-ahorro">Ahorro vs piso: USD 799</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="promo-card dm" data-vin="LPE19W2A9TF128902 &amp;middot; Obsidian Black">
-      <div class="promo-swipe-content">
-        <div class="promo-top">
-          <div class="model-name">Shark GS</div>
-          <div class="promo-vin">LPE19W2A9TF128902 &middot; Obsidian Black</div>
-        </div>
-        <div class="promo-price-row">
-          <div class="promo-old">Piso <s>USD 57.530</s></div>
-          <div class="promo-new">
-            <div class="promo-new-val">USD 56.031</div>
-            <div class="promo-ahorro">Ahorro vs piso: USD 1.499</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="promo-card dm" data-vin="LPE19W2AXTF128911 &amp;middot; Obsidian Black">
-      <div class="promo-swipe-content">
-        <div class="promo-top">
-          <div class="model-name">Shark GS</div>
-          <div class="promo-vin">LPE19W2AXTF128911 &middot; Obsidian Black</div>
-        </div>
-        <div class="promo-price-row">
-          <div class="promo-old">Piso <s>USD 57.530</s></div>
-          <div class="promo-new">
-            <div class="promo-new-val">USD 56.031</div>
-            <div class="promo-ahorro">Ahorro vs piso: USD 1.499</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="promo-card dm" data-vin="LC0C74C49T5038337 &amp;middot; Snow White">
+    <div class="promo-card dm" data-vin="LC0C74C41T5039112 &amp;middot; Time Grey">
       <div class="promo-swipe-content">
         <div class="promo-top">
           <div class="model-name">Song Pro GL</div>
-          <div class="promo-vin">LC0C74C49T5038337 &middot; Snow White</div>
+          <div class="promo-vin">LC0C74C41T5039112 &middot; Time Grey</div>
         </div>
         <div class="promo-price-row">
           <div class="promo-old">Piso <s>USD 33.591</s></div>
           <div class="promo-new">
             <div class="promo-new-val">USD 32.227</div>
             <div class="promo-ahorro">Ahorro vs piso: USD 1.364</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="promo-card dm" data-vin="LC0C74C43T5038317 &amp;middot; Snow White">
-      <div class="promo-swipe-content">
-        <div class="promo-top">
-          <div class="model-name">Song Pro GL</div>
-          <div class="promo-vin">LC0C74C43T5038317 &middot; Snow White</div>
-        </div>
-        <div class="promo-price-row">
-          <div class="promo-old">Piso <s>USD 33.591</s></div>
-          <div class="promo-new">
-            <div class="promo-new-val">USD 32.227</div>
-            <div class="promo-ahorro">Ahorro vs piso: USD 1.364</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="promo-card ev" data-vin="LC0CE4CB6T4036894 &amp;middot; Time Grey">
-      <div class="promo-swipe-content">
-        <div class="promo-top">
-          <div class="model-name">Yuan Pro GS</div>
-          <div class="promo-vin">LC0CE4CB6T4036894 &middot; Time Grey</div>
-        </div>
-        <div class="promo-price-row">
-          <div class="promo-old">Piso <s>USD 30.371</s></div>
-          <div class="promo-new">
-            <div class="promo-new-val">USD 29.752</div>
-            <div class="promo-ahorro">Ahorro vs piso: USD 619</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="promo-card ev" data-vin="LC0CE4CB5T4036272 &amp;middot; Skiing White">
-      <div class="promo-swipe-content">
-        <div class="promo-top">
-          <div class="model-name">Yuan Pro GS</div>
-          <div class="promo-vin">LC0CE4CB5T4036272 &middot; Skiing White</div>
-        </div>
-        <div class="promo-price-row">
-          <div class="promo-old">Piso <s>USD 30.371</s></div>
-          <div class="promo-new">
-            <div class="promo-new-val">USD 29.752</div>
-            <div class="promo-ahorro">Ahorro vs piso: USD 619</div>
           </div>
         </div>
       </div>
     </div>
     <div class="promo-empty" id="promoEmptyMsg">No hay vehículos en promoción visibles.</div>
-  </div>
+      </div>
   <div class="accesorios">
     <h2>Accesorios</h2>
     <div class="accesorios-card">
       <div class="acc-row"><span>Cargador Portátil 220V</span><span class="acc-precio"><span class="incluido-badge">Incluido</span></span></div>
       <div class="acc-row"><span>Cargador Monofásico 7kWh</span><span class="acc-precio"><span class="incluido-badge">Incluido</span></span></div>
-      <div class="acc-row"><span>Cargador Portátil 220V (adicional)</span><span class="acc-precio">USD 600</span></div>
-      <div class="acc-row"><span>Cargador Trifásico 22kWh</span><span class="acc-precio">USD 1.400</span></div>
-      <div class="acc-row"><span>Polarizado</span><span class="acc-precio">USD 120</span></div>
-      <div class="acc-row"><span>Tuercas Antirrobo</span><span class="acc-precio">USD 100</span></div>
-      <div class="acc-row"><span>Cable Macho / Macho</span><span class="acc-precio">USD 367</span></div>
+      <div class="acc-row"><span>Cargador Portátil 220V (adicional)</span><span class="acc-precio">USD 800</span></div>
+      <div class="acc-row"><span>Cargador Trifásico 22kWh</span><span class="acc-precio">USD 1600</span></div>
+      <div class="acc-row"><span>Polarizado</span><span class="acc-precio">USD 130</span></div>
+      <div class="acc-row"><span>Tuercas Antirrobo + LLAVE</span><span class="acc-precio">USD 120</span></div>
+      <div class="acc-row"><span>Cable Macho / Macho</span><span class="acc-precio">USD 370</span></div>
+      <div class="acc-row"><span>Alfombras de goma (Alternativas)</span><span class="acc-precio">USD 85</span></div>
+      <div class="acc-row"><span>ANTIVANDALICO</span><span class="acc-precio">USD 270</span></div>
+      <div class="acc-row"><span>Rueda Auxilio de chapa 215/65/R16 - SONG PRO (Alternativas)</span><span class="acc-precio">USD 710</span></div>
+      <div class="acc-row"><span>Rueda Auxilio de Chapa 205/60/R16 - ATTO2 y YUAN PRO (Alternativas)</span><span class="acc-precio">USD 610</span></div>
     </div>
   </div>
 
