@@ -845,9 +845,6 @@
     setTimeout(function(){ card.style.display = 'none'; updateEmptyState(); }, 460);
   }
   function applyHiddenOnLoad(){
-    // Aplica primero lo que ya sabíamos en este dispositivo (instantáneo,
-    // sin esperar red) y después reconcilia con el servidor, que es la
-    // fuente de verdad compartida entre gerencia y vendedores.
     applyVinsToDOM(getHidden());
     if (!TABLERO_API_URL) return;
     fetch(TABLERO_API_URL + '?key=' + encodeURIComponent(TABLERO_API_KEY) + '&action=getVinsOcultos')
