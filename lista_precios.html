@@ -789,20 +789,9 @@
   var REVEAL = 84;
   var THRESHOLD_OPEN = 40;
   var THRESHOLD_DELETE = 120;
-  // Backend compartido: sin esto, ocultar/restaurar solo afectaba a este
-  // dispositivo (localStorage no se comparte entre el celu de gerencia y
-  // el de cada vendedor, aunque sea el mismo sitio).
-  var TABLERO_API_URL = 'https://script.google.com/macros/s/AKfycbzTYBoM56BBMj2B-8hUG_MIuOh7r5qG4qq2sGlTRM-y6QyFm0XHqgE6XUG5OQB022iy/exec';
-  var TABLERO_API_KEY = 'i4uH92SO1sFyNYi8PJ2dsGb9LDM-Xoq3';
 
   function getHidden(){ try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch(e){ return []; } }
-  function setHidden(arr){ try { localStorage.setItem(KEY, JSON.stringify(arr)); } catch(e){} }
-  function applyVinsToDOM(vins){
-    document.querySelectorAll('.promo-card').forEach(function(card){
-      card.style.display = vins.indexOf(card.getAttribute('data-vin')) !== -1 ? 'none' : '';
-    });
-    updateRestoreUI(); updateEmptyState();
-  }
+  function setHidden(arr){ localStorage.setItem(KEY, JSON.stringify(arr)); }
   function updateRestoreUI(){
     var hidden = getHidden();
     var restoreBtn = document.getElementById('promoRestoreBtn');
@@ -827,10 +816,6 @@
     var hidden = getHidden();
     if (hidden.indexOf(vin) === -1) { hidden.push(vin); setHidden(hidden); }
     updateRestoreUI();
-    if (TABLERO_API_URL) {
-      fetch(TABLERO_API_URL + '?key=' + encodeURIComponent(TABLERO_API_KEY) + '&action=hideVin&vin=' + encodeURIComponent(vin))
-        .catch(function(){ /* sin conexion: queda ocultado en este dispositivo, se sincroniza en el proximo intento */ });
-    }
   }
   function collapseAndRemove(card, content){
     content.style.transition = 'transform 0.28s ease';
@@ -845,19 +830,12 @@
     setTimeout(function(){ card.style.display = 'none'; updateEmptyState(); }, 460);
   }
   function applyHiddenOnLoad(){
-    // Aplica primero lo que ya sabíamos en este dispositivo (instantáneo,
-    // sin esperar red) y después reconcilia con el servidor, que es la
-    // fuente de verdad compartida entre gerencia y vendedores.
-    applyVinsToDOM(getHidden());
-    if (!TABLERO_API_URL) return;
-    fetch(TABLERO_API_URL + '?key=' + encodeURIComponent(TABLERO_API_KEY) + '&action=getVinsOcultos')
-      .then(function(r){ return r.json(); })
-      .then(function(d){
-        if (!d || !Array.isArray(d.vins)) return;
-        setHidden(d.vins);
-        applyVinsToDOM(d.vins);
-      })
-      .catch(function(){ /* sin conexion: seguimos con lo que había en este dispositivo */ });
+    var hidden = getHidden();
+    document.querySelectorAll('.promo-card').forEach(function(card){
+      var vin = card.getAttribute('data-vin');
+      if (hidden.indexOf(vin) !== -1) { card.style.display = 'none'; }
+    });
+    updateRestoreUI(); updateEmptyState();
   }
   function wireSwipe(card){
     var content = card.querySelector('.promo-swipe-content');
@@ -908,10 +886,6 @@
         if (content) { content.style.transition = 'none'; content.style.transform = 'translateX(0)'; }
       });
       updateRestoreUI(); updateEmptyState();
-      if (TABLERO_API_URL) {
-        fetch(TABLERO_API_URL + '?key=' + encodeURIComponent(TABLERO_API_KEY) + '&action=restoreVinsOcultos')
-          .catch(function(){ /* sin conexion: queda restaurado en este dispositivo, se sincroniza en el proximo intento */ });
-      }
     });
   }
 
