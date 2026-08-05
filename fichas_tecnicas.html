@@ -185,9 +185,6 @@
     var file = new File([blob], fileName, { type: 'application/pdf' });
     if (navigator.canShare && navigator.canShare({ files: [file] }) && navigator.share) {
       navigator.share({ files: [file] }).catch(function(err){
-        // Si el usuario cancela el panel de compartir no hacemos nada. Cualquier
-        // otro error (ej: se venció el permiso porque el PDF tardó en bajar)
-        // cae a la descarga directa, para que el botón nunca quede sin hacer nada.
         if (err && err.name === 'AbortError') return;
         descargarDirecto();
         showToast('Ficha descargada');
