@@ -694,12 +694,17 @@
 
 <script>
 (function(){
-  // Solo lectura: refleja lo que gerencia oculta/muestra (misma clave de
-  // localStorage que lista_precios.html, mismo origen). El vendedor no puede
-  // eliminar ni restaurar vehículos en promoción desde esta vista.
+  // Solo lectura: refleja lo que gerencia oculta/muestra. Consulta al mismo
+  // backend que lista_precios.html — antes leía localStorage local, que
+  // nunca reflejaba lo que gerencia hacía en su propio dispositivo (no se
+  // comparte entre navegadores aunque sea el mismo sitio). El vendedor no
+  // puede eliminar ni restaurar vehículos en promoción desde esta vista.
   var KEY = 'byd_lista_precios_vins_ocultos';
+  var TABLERO_API_URL = 'https://script.google.com/macros/s/AKfycbzTYBoM56BBMj2B-8hUG_MIuOh7r5qG4qq2sGlTRM-y6QyFm0XHqgE6XUG5OQB022iy/exec';
+  var TABLERO_API_KEY = 'i4uH92SO1sFyNYi8PJ2dsGb9LDM-Xoq3';
 
   function getHidden(){ try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch(e){ return []; } }
+  function setHidden(arr){ try { localStorage.setItem(KEY, JSON.stringify(arr)); } catch(e){} }
 
   function updateEmptyState(){
     var emptyMsg = document.getElementById('promoEmptyMsg');
@@ -711,16 +716,28 @@
     else emptyMsg.classList.remove('show');
   }
 
-  function applyHiddenOnLoad(){
-    var hidden = getHidden();
+  function applyVinsToDOM(vins){
     document.querySelectorAll('.promo-card').forEach(function(card){
-      var vin = card.getAttribute('data-vin');
-      if (hidden.indexOf(vin) !== -1) { card.style.display = 'none'; }
+      card.style.display = vins.indexOf(card.getAttribute('data-vin')) !== -1 ? 'none' : '';
     });
     updateEmptyState();
   }
 
-  applyHiddenOnLoad();
+  function loadFromServer(){
+    if (!TABLERO_API_URL) return;
+    fetch(TABLERO_API_URL + '?key=' + encodeURIComponent(TABLERO_API_KEY) + '&action=getVinsOcultos')
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if (!d || !Array.isArray(d.vins)) return;
+        setHidden(d.vins);
+        applyVinsToDOM(d.vins);
+      })
+      .catch(function(){ /* sin conexion: seguimos con la ultima lista conocida en este dispositivo */ });
+  }
+
+  applyVinsToDOM(getHidden());
+  loadFromServer();
+  setInterval(loadFromServer, 60 * 1000);
 })();
 </script>
 
