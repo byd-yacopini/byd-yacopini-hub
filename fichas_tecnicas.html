@@ -162,7 +162,7 @@
   align-items:center;justify-content:center;text-decoration:none;font-family:Arial,sans-serif;
   font-size:20px;box-shadow:0 4px 14px rgba(0,0,0,0.3);">&larr;</a>
 
-<div class="ficha-toast" id="fichaToast">Link copiado</div>
+<div class="ficha-toast" id="fichaToast">Ficha descargada</div>
 <script>
 (function(){
   var toast = document.getElementById('fichaToast');
@@ -184,11 +184,19 @@
   fetch(url).then(function(res){ return res.blob(); }).then(function(blob){
     var file = new File([blob], fileName, { type: 'application/pdf' });
     if (navigator.canShare && navigator.canShare({ files: [file] }) && navigator.share) {
-      navigator.share({ files: [file] }).catch(function(){});
+      navigator.share({ files: [file] }).catch(function(err){
+        // Si el usuario cancela el panel de compartir no hacemos nada. Cualquier
+        // otro error (ej: se venció el permiso porque el PDF tardó en bajar)
+        // cae a la descarga directa, para que el botón nunca quede sin hacer nada.
+        if (err && err.name === 'AbortError') return;
+        descargarDirecto();
+        showToast('Ficha descargada');
+      });
     } else {
       descargarDirecto();
+      showToast('Ficha descargada');
     }
-  }).catch(function(){ descargarDirecto(); });
+  }).catch(function(){ descargarDirecto(); showToast('Ficha descargada'); });
 });
   });
 })();
