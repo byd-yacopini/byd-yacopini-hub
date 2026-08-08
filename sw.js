@@ -1,7 +1,7 @@
 // Service worker mínimo: cachea el shell para que el hub abra rápido
 // y funcione (parcialmente) sin conexión. No cachea las herramientas
 // completas para evitar mostrar datos de precios/créditos desactualizados.
-const CACHE_NAME = 'byd-hub-shell-v2';
+const CACHE_NAME = 'byd-hub-shell-v3';
 const SHELL_FILES = [
   './index.html',
   './manifest.json',
@@ -34,8 +34,13 @@ self.addEventListener('fetch', (event) => {
   if (isShellFile) {
     // Network-first: siempre intenta traer la versión más nueva.
     // Si no hay conexión, recién ahí usa lo cacheado.
+    // cache:'no-store' es clave acá — sin esto, fetch() puede devolver una
+    // respuesta vieja del caché HTTP normal del navegador (no del caché de
+    // este Service Worker), y esa version vieja termina guardándose de
+    // nuevo, perpetuando el problema aunque el archivo en GitHub ya se haya
+    // actualizado.
     event.respondWith(
-      fetch(event.request)
+      fetch(event.request.url, { cache: 'no-store' })
         .then((res) => {
           const clone = res.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
