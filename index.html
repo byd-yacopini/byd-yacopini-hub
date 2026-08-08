@@ -711,6 +711,13 @@
         <div class="kpi-grid">
           <div class="kpi"><div class="n" id="kpiSolicitudesTotal2">–</div><div class="l">Solicitudes (mes)</div><div class="pct-badge neutral" id="kpiSolicitudesTotal2Pct"></div></div>
           <div class="kpi"><div class="n" id="kpiUtilidadMensual">–</div><div class="l">Utilidad mensual</div><div class="pct-badge neutral" id="kpiUtilidadMensualPct"></div></div>
+          <div class="kpi"><div class="n" id="kpiUtilidadHoy">–</div><div class="l">Utilidad hoy</div></div>
+        </div>
+
+        <div class="tcard">
+          <h2>Utilidad por día (mes)</h2>
+          <div class="chart-daily" id="utilidadDiariaChart"></div>
+          <p class="note">Cada barra es la utilidad de ese día (facturación − costo de las solicitudes de ese día). Verde = ganancia, rojo = pérdida — útil para detectar de un vistazo un día con un dato mal cargado.</p>
         </div>
 
         <div class="tcard">
@@ -917,6 +924,36 @@
   }
   function fmtUSD_M(n){
     return 'USD ' + (n / 1e6).toFixed(2).replace('.', ',') + 'M';
+  }
+  // Formato compacto para montos diarios (demasiado chicos para el sufijo "M").
+  function fmtUSD_K(n){
+    var sign = n < 0 ? '-' : '';
+    return sign + 'USD ' + Math.round(Math.abs(n)).toLocaleString('es-AR');
+  }
+  function renderUtilidadDiaria(elId, rows){
+    var el = document.getElementById(elId);
+    if (!rows || !rows.length){ el.innerHTML = '<p class="note">Sin solicitudes con datos de costo cargados este mes todavía.</p>'; return; }
+    var maxAbs = Math.max.apply(null, rows.map(function(r){ return Math.abs(r.monto); }).concat([1]));
+    var barW = 22, gap = 14;
+    var stepX = barW + gap;
+    var w = Math.max(320, 16 + rows.length * stepX);
+    var h = 178, padTop = 14, padBottom = 30;
+    var chartH = (h - padTop - padBottom) / 2;
+    var midY = padTop + chartH;
+    var bars = rows.map(function(r, i){
+      var x = 8 + i * stepX;
+      var barH = maxAbs ? Math.max((Math.abs(r.monto) / maxAbs) * chartH, r.monto === 0 ? 0 : 2) : 0;
+      var pos = r.monto >= 0;
+      var y = pos ? midY - barH : midY;
+      var color = pos ? '#388E3C' : '#C0392B';
+      var labelY = pos ? y - 4 : y + barH + 11;
+      return '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + barW + '" height="' + barH.toFixed(1) + '" fill="' + color + '" rx="3"></rect>' +
+        '<text x="' + (x + barW/2).toFixed(1) + '" y="' + labelY.toFixed(1) + '" font-size="8" fill="#4A4A4A" text-anchor="middle">' + fmtUSD_K(r.monto) + '</text>' +
+        '<text x="' + (x + barW/2).toFixed(1) + '" y="' + (h - 5).toFixed(1) + '" font-size="8.5" fill="#8C8C8C" text-anchor="middle">' + r.d + '</text>';
+    }).join('');
+    el.innerHTML = '<svg viewBox="0 0 ' + w + ' ' + h + '" width="' + w + '" height="' + h + '" style="display:block;">' +
+      '<line x1="6" y1="' + midY.toFixed(1) + '" x2="' + (w-6) + '" y2="' + midY.toFixed(1) + '" stroke="#D4D4D4" stroke-width="1"></line>' +
+      bars + '</svg>';
   }
   // El backend normaliza nombres a Title Case, lo que arruina siglas de
   // modelos (EV, GS, ADAS, etc.) y algunas abreviaturas de empresas.
@@ -1299,6 +1336,12 @@
     solicitudesTipoDMEV: [ { n:'DM', c:24 }, { n:'EV', c:11 } ],
     utilidadMensual: 187500,
     utilidadSinDatosCount: 0,
+    utilidadHoy: 8200,
+    utilidadDiaria: [
+      { d:'01/08', monto:12500, acumulado:12500 }, { d:'03/08', monto:9800, acumulado:22300 },
+      { d:'04/08', monto:15200, acumulado:37500 }, { d:'06/08', monto:6400, acumulado:43900 },
+      { d:'07/08', monto:11300, acumulado:55200 }, { d:'08/08', monto:8200, acumulado:63400 }
+    ],
     entregasUltimoDiaFecha: '17/07',
     entregasUltimoDiaCount: 6,
     entregasDetalle: [
@@ -1364,6 +1407,8 @@
     setPctBadge('kpiSolicitudesTotal2Pct', d.solicitudesTotalPctChange);
     document.getElementById('kpiUtilidadMensual').textContent = fmtUSD_M(d.utilidadMensual || 0);
     setPctBadge('kpiUtilidadMensualPct', d.utilidadMensualPctChange);
+    document.getElementById('kpiUtilidadHoy').textContent = fmtUSD_K(d.utilidadHoy || 0);
+    renderUtilidadDiaria('utilidadDiariaChart', d.utilidadDiaria || []);
     renderPieInto('tipoPieChartSol', 'tipoPieLegendSol', d.solicitudesTipoDMEV || []);
     document.getElementById('utilidadNote').innerHTML = (d.utilidadSinDatosCount ?
       d.utilidadSinDatosCount + ' solicitud(es) de este mes no tienen el modelo cargado en Lista de Precio y no entran en el cálculo de utilidad. ' : '') +
