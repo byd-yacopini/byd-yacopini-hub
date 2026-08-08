@@ -38,41 +38,7 @@
   .ficha-toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
 </style>
 </head>
-<body class="gate-locked">
-<div id="bydGate" style="position:fixed;inset:0;z-index:999999;background:#0A0A0A;display:flex;align-items:center;justify-content:center;padding:24px;opacity:1;">
-  <form id="bydGateForm" style="width:100%;max-width:300px;text-align:center;font-family:Arial,sans-serif;">
-    <div style="color:#fff;font-weight:800;font-size:16px;margin-bottom:4px;">BYD Yacopini</div>
-    <div style="color:#8C8C8C;font-size:12px;margin-bottom:18px;">Acceso interno &middot; Gerencia</div>
-    <input id="bydGatePass" type="password" inputmode="numeric" placeholder="Clave" autocomplete="off" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid #4A4A4A;background:#2A2A2A;color:#fff;font-size:16px;text-align:center;box-sizing:border-box;">
-    <button type="submit" style="width:100%;margin-top:10px;padding:12px;border-radius:10px;border:none;background:#1565D8;color:#fff;font-weight:700;font-size:14px;">Entrar</button>
-    <div id="bydGateError" style="color:#E85555;font-size:12px;margin-top:10px;display:none;">Clave incorrecta</div>
-  </form>
-</div>
-<style>
-  body.gate-locked > *:not(#bydGate){display:none !important;}
-  #bydGate{ transition:opacity .25s ease; }
-  #bydGate.fadeOut{ opacity:0; }
-</style>
-<script>
-(function(){
-  var HASH = "a734aecec77bc8826bec68f0264b70228ab419e52a8fcdf05016ebee0465f257";
-  var body = document.body;
-  function unlock(){ var g=document.getElementById('bydGate'); if(g){ g.classList.add('fadeOut'); setTimeout(function(){ body.classList.remove('gate-locked'); g.remove(); }, 220); } else { body.classList.remove('gate-locked'); } }
-  if (sessionStorage.getItem('bydGateOk') === '1') { unlock(); }
-  else {
-    document.getElementById('bydGateForm').addEventListener('submit', function(e){
-      e.preventDefault();
-      var val = document.getElementById('bydGatePass').value;
-      crypto.subtle.digest('SHA-256', new TextEncoder().encode(val)).then(function(buf){
-        var hex = Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
-        if (hex === HASH) { sessionStorage.setItem('bydGateOk','1'); unlock(); }
-        else { document.getElementById('bydGateError').style.display = 'block'; document.getElementById('bydGatePass').value = ''; document.getElementById('bydGatePass').focus(); }
-      });
-    });
-  }
-})();
-</script>
-
+<body>
 <div class="app">
   <div class="app-topbar">
     <svg viewBox="12 4 529 102" xmlns="http://www.w3.org/2000/svg" aria-label="BYD Yacopini">
@@ -163,6 +129,16 @@
   font-size:20px;box-shadow:0 4px 14px rgba(0,0,0,0.3);">&larr;</a>
 
 <div class="ficha-toast" id="fichaToast">Ficha descargada</div>
+<script>
+(function(){
+  // Esta página no tiene clave propia (no es información confidencial), así
+  // que la usan tanto gerencia (llega desde index.html) como vendedores
+  // (llegan desde panel_ventas.html). El botón de volver apunta a index.html
+  // por defecto y solo cambia a panel_ventas.html si es una sesión de vendedor.
+  var b = document.getElementById('hubBackBtn');
+  if (b && sessionStorage.getItem('bydVendorOk') === '1') { b.href = './panel_ventas.html'; }
+})();
+</script>
 <script>
 (function(){
   var toast = document.getElementById('fichaToast');
