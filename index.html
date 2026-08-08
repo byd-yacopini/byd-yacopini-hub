@@ -244,6 +244,8 @@
   }
   .kpi .n{ font-size:24px; font-weight:800; color:var(--negro); }
   .kpi .l{ font-size:11px; color:var(--gris-medio); font-weight:600; margin-top:2px; }
+  .utilidad-acumulado-row{ display:flex; align-items:flex-end; justify-content:space-between; gap:10px; margin-bottom:14px; }
+  .utilidad-acumulado-val{ font-size:30px; font-weight:800; color:var(--negro); line-height:1.1; }
 
   .tcard{
     background:var(--blanco);
@@ -639,7 +641,6 @@
           <div class="kpi"><div class="n" id="kpiStockTotal">–</div><div class="l">Stock físico</div></div>
           <div class="kpi"><div class="n" id="kpiPruebasGeneral">–</div><div class="l">Test drives (mes)</div><div class="pct-badge neutral" id="kpiPruebasGeneralPct"></div></div>
           <div class="kpi"><div class="n" id="kpiTasacionesGeneral">–</div><div class="l">Tasaciones (mes)</div><div class="pct-badge neutral" id="kpiTasacionesGeneralPct"></div></div>
-          <div class="kpi"><div class="n" id="kpiUtilidadBrutaGeneral">–</div><div class="l">Utilidad bruta (mes)</div><div class="pct-badge neutral" id="kpiUtilidadBrutaGeneralPct"></div></div>
           <div class="kpi"><div class="n" id="kpiConversionGeneral">–</div><div class="l">Tasa de conversión de leads</div><div class="pct-badge neutral" id="kpiConversionGeneralPct"></div></div>
           <div class="kpi"><div class="n" id="kpiPromedioVentasGeneral">–</div><div class="l">Promedio de ventas por vendedor</div></div>
         </div>
@@ -710,12 +711,18 @@
       <div class="section" id="tab-solicitudes">
         <div class="kpi-grid">
           <div class="kpi"><div class="n" id="kpiSolicitudesTotal2">–</div><div class="l">Solicitudes (mes)</div><div class="pct-badge neutral" id="kpiSolicitudesTotal2Pct"></div></div>
-          <div class="kpi"><div class="n" id="kpiUtilidadMensual">–</div><div class="l">Utilidad mensual</div><div class="pct-badge neutral" id="kpiUtilidadMensualPct"></div></div>
           <div class="kpi"><div class="n" id="kpiUtilidadHoy">–</div><div class="l">Utilidad hoy</div></div>
         </div>
 
         <div class="tcard">
-          <h2>Utilidad por día (mes)</h2>
+          <h2>Utilidad — acumulado y por día (mes)</h2>
+          <div class="utilidad-acumulado-row">
+            <div>
+              <div class="utilidad-acumulado-val" id="utilidadAcumuladoVal">–</div>
+              <div class="l" style="font-size:11px;color:var(--gris-medio);font-weight:600;">Acumulado del mes hasta hoy</div>
+            </div>
+            <div class="pct-badge neutral" id="utilidadAcumuladoPct"></div>
+          </div>
           <div class="chart-daily" id="utilidadDiariaChart"></div>
           <p class="note">Cada barra es la utilidad de ese día (facturación − costo de las solicitudes de ese día). Verde = ganancia, rojo = pérdida — útil para detectar de un vistazo un día con un dato mal cargado.</p>
         </div>
@@ -922,10 +929,9 @@
       return barRow(x.n, x.c, max, cc);
     }).join('');
   }
-  function fmtUSD_M(n){
-    return 'USD ' + (n / 1e6).toFixed(2).replace('.', ',') + 'M';
-  }
-  // Formato compacto para montos diarios (demasiado chicos para el sufijo "M").
+  // Formato completo en USD (miles separados con punto), para no perder precisión
+  // en tarjetas de utilidad — antes se abreviaba en millones y quedaba ilegible
+  // para montos de esta magnitud (ej. "USD 0,04M" en vez de "USD 39.023").
   function fmtUSD_K(n){
     var sign = n < 0 ? '-' : '';
     return sign + 'USD ' + Math.round(Math.abs(n)).toLocaleString('es-AR');
@@ -1385,8 +1391,6 @@
 
     renderPieInto('sucursalPieChart', 'sucursalPieLegend', d.solicitudesSucursal || []);
     renderPieInto('tipoPieChartGeneral', 'tipoPieLegendGeneral', d.solicitudesTipoDMEV || []);
-    document.getElementById('kpiUtilidadBrutaGeneral').textContent = fmtUSD_M(d.utilidadMensual || 0);
-    setPctBadge('kpiUtilidadBrutaGeneralPct', d.utilidadMensualPctChange);
     document.getElementById('kpiConversionGeneral').textContent = (d.leadsConversionRate != null ? d.leadsConversionRate : 0) + '%';
     setPctBadge('kpiConversionGeneralPct', d.leadsConversionRateChange, true);
     document.getElementById('kpiPromedioVentasGeneral').textContent = (d.ventasPromedioPorVendedor != null ? d.ventasPromedioPorVendedor : 0);
@@ -1405,8 +1409,8 @@
     // Solicitudes
     document.getElementById('kpiSolicitudesTotal2').textContent = d.solicitudesTotal;
     setPctBadge('kpiSolicitudesTotal2Pct', d.solicitudesTotalPctChange);
-    document.getElementById('kpiUtilidadMensual').textContent = fmtUSD_M(d.utilidadMensual || 0);
-    setPctBadge('kpiUtilidadMensualPct', d.utilidadMensualPctChange);
+    document.getElementById('utilidadAcumuladoVal').textContent = fmtUSD_K(d.utilidadMensual || 0);
+    setPctBadge('utilidadAcumuladoPct', d.utilidadMensualPctChange);
     document.getElementById('kpiUtilidadHoy').textContent = fmtUSD_K(d.utilidadHoy || 0);
     renderUtilidadDiaria('utilidadDiariaChart', d.utilidadDiaria || []);
     renderPieInto('tipoPieChartSol', 'tipoPieLegendSol', d.solicitudesTipoDMEV || []);
