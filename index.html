@@ -643,6 +643,20 @@
           <div class="kpi"><div class="n" id="kpiTasacionesGeneral">–</div><div class="l">Tasaciones (mes)</div><div class="pct-badge neutral" id="kpiTasacionesGeneralPct"></div></div>
           <div class="kpi"><div class="n" id="kpiConversionGeneral">–</div><div class="l">Tasa de conversión de leads</div><div class="pct-badge neutral" id="kpiConversionGeneralPct"></div></div>
           <div class="kpi"><div class="n" id="kpiPromedioVentasGeneral">–</div><div class="l">Promedio de ventas por vendedor</div></div>
+          <div class="kpi"><div class="n" id="kpiUtilidadHoy">–</div><div class="l">Utilidad hoy</div></div>
+        </div>
+
+        <div class="tcard">
+          <h2>Utilidad — acumulado y por día (mes)</h2>
+          <div class="utilidad-acumulado-row">
+            <div>
+              <div class="utilidad-acumulado-val" id="utilidadAcumuladoVal">–</div>
+              <div class="l" style="font-size:11px;color:var(--gris-medio);font-weight:600;">Acumulado del mes hasta hoy</div>
+            </div>
+            <div class="pct-badge neutral" id="utilidadAcumuladoPct"></div>
+          </div>
+          <div class="chart-daily" id="utilidadDiariaChart"></div>
+          <p class="note">Cada barra es la utilidad de ese día (facturación − costo de las solicitudes de ese día). Verde = ganancia, rojo = pérdida — útil para detectar de un vistazo un día con un dato mal cargado.</p>
         </div>
 
         <div class="tcard">
@@ -711,20 +725,6 @@
       <div class="section" id="tab-solicitudes">
         <div class="kpi-grid">
           <div class="kpi"><div class="n" id="kpiSolicitudesTotal2">–</div><div class="l">Solicitudes (mes)</div><div class="pct-badge neutral" id="kpiSolicitudesTotal2Pct"></div></div>
-          <div class="kpi"><div class="n" id="kpiUtilidadHoy">–</div><div class="l">Utilidad hoy</div></div>
-        </div>
-
-        <div class="tcard">
-          <h2>Utilidad — acumulado y por día (mes)</h2>
-          <div class="utilidad-acumulado-row">
-            <div>
-              <div class="utilidad-acumulado-val" id="utilidadAcumuladoVal">–</div>
-              <div class="l" style="font-size:11px;color:var(--gris-medio);font-weight:600;">Acumulado del mes hasta hoy</div>
-            </div>
-            <div class="pct-badge neutral" id="utilidadAcumuladoPct"></div>
-          </div>
-          <div class="chart-daily" id="utilidadDiariaChart"></div>
-          <p class="note">Cada barra es la utilidad de ese día (facturación − costo de las solicitudes de ese día). Verde = ganancia, rojo = pérdida — útil para detectar de un vistazo un día con un dato mal cargado.</p>
         </div>
 
         <div class="tcard">
