@@ -519,18 +519,37 @@
 .pct-badge.up{ background:rgba(56,142,60,.12); color:#388E3C; }
 .pct-badge.down{ background:rgba(192,57,43,.12); color:#C0392B; }
 .pct-badge.neutral{ background:rgba(140,140,140,.12); color:#8C8C8C; }
-/* RANKING-VENDEDORES-V1 */
-.ranking-row{ display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--gris-fondo); }
-.ranking-row:last-child{ border-bottom:none; }
-.ranking-row .rk-pos{ flex:0 0 20px; text-align:center; font-size:12.5px; font-weight:800; color:var(--gris-oscuro); }
-.ranking-row.top1 .rk-pos{ color:#B8901F; }
-.ranking-row.top2 .rk-pos{ color:#6B7280; }
-.ranking-row.top3 .rk-pos{ color:#A15A2E; }
-.ranking-row .rk-info{ flex:1; min-width:0; }
-.ranking-row .rk-nombre{ font-size:13px; font-weight:700; color:var(--carbon); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.ranking-row .rk-suc{ font-size:10.5px; color:var(--gris-medio); }
-.ranking-row .rk-metrics{ text-align:right; flex:0 0 auto; }
-.ranking-row .rk-op{ font-size:15px; font-weight:800; color:var(--negro); font-variant-numeric:tabular-nums; }
+/* RANKING-VENDEDORES-V1 (mismo diseño que ranking_vendedores.html: podio + lista) */
+.podio{ display:flex; align-items:flex-end; gap:8px; margin:4px 0 14px; }
+.podio-card{ flex:1; background:var(--blanco); border-radius:14px; padding:14px 8px 12px; text-align:center; box-shadow:0 1px 3px rgba(0,0,0,0.08); border:1px solid var(--gris-claro); }
+.podio-card.p1{ order:2; padding-top:6px; box-shadow:0 4px 14px rgba(184,144,31,0.25); border:1px solid #B8901F; }
+.podio-card.p2{ order:1; }
+.podio-card.p3{ order:3; }
+.podio-medal{ width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12.5px; font-weight:800; color:#fff; margin:0 auto 8px; }
+.p1 .podio-medal{ background:#B8901F; width:32px; height:32px; font-size:13.5px; }
+.p2 .podio-medal{ background:#6B7280; }
+.p3 .podio-medal{ background:#A15A2E; }
+.podio-avatar{ width:40px; height:40px; border-radius:50%; background:var(--carbon); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px; margin:0 auto 8px; }
+.p1 .podio-avatar{ width:48px; height:48px; font-size:16px; }
+.podio-nombre{ font-size:11.5px; font-weight:700; color:var(--negro); line-height:1.25; min-height:28px; display:flex; align-items:center; justify-content:center; }
+.podio-op{ font-size:20px; font-weight:800; color:var(--negro); margin-top:4px; font-variant-numeric:tabular-nums; }
+.p1 .podio-op{ font-size:25px; }
+.podio-op-label{ font-size:9px; text-transform:uppercase; letter-spacing:.05em; color:var(--gris-oscuro); font-weight:700; }
+
+.lista{ display:flex; flex-direction:column; gap:8px; }
+.fila{ background:var(--gris-fondo); border-radius:12px; padding:10px 12px; display:flex; align-items:center; gap:10px; }
+.fila-pos{ width:20px; text-align:center; font-size:12.5px; font-weight:800; color:var(--gris-oscuro); flex:none; }
+.fila-avatar{ width:34px; height:34px; border-radius:50%; background:var(--gris-claro); color:var(--negro); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:11.5px; flex:none; }
+.fila-info{ flex:1; min-width:0; }
+.fila-nombre{ font-size:13px; font-weight:700; color:var(--negro); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.fila-sucursal{ font-size:10.5px; color:var(--gris-medio); }
+.fila-metricas{ text-align:right; flex:none; }
+.fila-op{ font-size:15px; font-weight:800; color:var(--negro); font-variant-numeric:tabular-nums; line-height:1.2; }
+.fila-monto{ font-size:10px; color:var(--gris-oscuro); font-variant-numeric:tabular-nums; }
+.fila-trend{ display:inline-flex; align-items:center; gap:2px; font-size:10px; font-weight:700; margin-top:2px; }
+.fila-trend.up{ color:#388E3C; }
+.fila-trend.down{ color:#C0392B; }
+.fila-trend.flat{ color:var(--gris-medio); }
 /* DATE-FILTER-V1 */
 .progress-row{ flex-wrap:wrap; }
 .progress-row .prow-pct{ flex:0 0 100%; text-align:right; margin-top:2px; }
@@ -679,7 +698,8 @@
 
         <div class="tcard">
           <h2>Ranking de Vendedores — operaciones (mes)</h2>
-          <div id="rankingVendedoresList"></div>
+          <div class="podio" id="rankingPodio"></div>
+          <div class="lista" id="rankingLista"></div>
           <p class="note">Mismo criterio que "Avance vs. objetivo": solicitudes del mes por vendedor de Mendoza. Este ranking también lo ven los vendedores desde su Panel de Ventas.</p>
         </div>
 
@@ -1377,6 +1397,47 @@
     ]
   };
 
+  // Mismo diseño de podio + lista que ranking_vendedores.html (Panel de
+  // Ventas), para que gerencia vea exactamente lo mismo en el Tablero.
+  function iniciales(nombre){
+    var partes = (nombre || '').trim().split(/\s+/).filter(Boolean);
+    if (!partes.length) return '?';
+    if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase();
+    return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
+  }
+  function medalClass(pos){ return pos === 0 ? 'p1' : (pos === 1 ? 'p2' : 'p3'); }
+  function renderRankingVendedores(ranking){
+    var podioEl = document.getElementById('rankingPodio');
+    var listaEl = document.getElementById('rankingLista');
+    if (!ranking || !ranking.length){
+      podioEl.innerHTML = '';
+      listaEl.innerHTML = '<p class="note">Sin operaciones cargadas este mes todavía.</p>';
+      return;
+    }
+    var top3 = ranking.slice(0, 3);
+    var resto = ranking.slice(3);
+    podioEl.innerHTML = top3.map(function(v, i){
+      return '<div class="podio-card ' + medalClass(i) + '">' +
+        '<div class="podio-medal">' + (i + 1) + '</div>' +
+        '<div class="podio-avatar">' + iniciales(v.nombre) + '</div>' +
+        '<div class="podio-nombre">' + v.nombre + '</div>' +
+        '<div class="podio-op">' + v.operaciones + '</div>' +
+        '<div class="podio-op-label">operaciones</div>' +
+        '</div>';
+    }).join('');
+    listaEl.innerHTML = resto.map(function(v, i){
+      var diff = v.operaciones - v.operacionesPrev;
+      var cls = diff > 0 ? 'up' : (diff < 0 ? 'down' : 'flat');
+      var txt = diff > 0 ? ('▲ +' + diff + ' vs. mes pasado') : (diff < 0 ? ('▼ ' + diff + ' vs. mes pasado') : '— igual que el mes pasado');
+      return '<div class="fila">' +
+        '<div class="fila-pos">' + (i + 4) + '</div>' +
+        '<div class="fila-avatar">' + iniciales(v.nombre) + '</div>' +
+        '<div class="fila-info"><div class="fila-nombre">' + v.nombre + '</div><div class="fila-sucursal">' + (v.sucursal || 'Sin sucursal') + '</div></div>' +
+        '<div class="fila-metricas"><div class="fila-op">' + v.operaciones + '</div><div class="fila-monto">' + fmtUSD_K(v.facturado) + '</div><div class="fila-trend ' + cls + '">' + txt + '</div></div>' +
+        '</div>';
+    }).join('');
+  }
+
   function renderTablero(d){
     document.getElementById('mesLabel').textContent = d.periodoMesLabel || (MESES[new Date().getMonth()] + ' ' + new Date().getFullYear());
 
@@ -1407,17 +1468,7 @@
     document.getElementById('objetivosNote').innerHTML =
       'Meta mensual de solicitudes por vendedor de Mendoza. Estos ' + (d.objetivos||[]).length + ' suman ' + sumConMeta + ' solicitudes; el resto (' + sumGrupos + ') se agrupa por sucursal / gerencia — entre ambos dan el total del mes (' + d.solicitudesTotal + ').';
 
-    var rankHtml = (d.rankingVendedores||[]).map(function(v, i){
-      var pos = i + 1;
-      var topCls = pos === 1 ? 'top1' : (pos === 2 ? 'top2' : (pos === 3 ? 'top3' : ''));
-      var diff = v.operaciones - v.operacionesPrev;
-      var chgCls = diff > 0 ? 'up' : (diff < 0 ? 'down' : 'neutral');
-      var chgTxt = diff > 0 ? ('+' + diff + ' vs mes pasado') : (diff < 0 ? (diff + ' vs mes pasado') : 'igual que mes pasado');
-      return '<div class="ranking-row ' + topCls + '"><div class="rk-pos">' + pos + '</div>' +
-        '<div class="rk-info"><div class="rk-nombre">' + v.nombre + '</div><div class="rk-suc">' + (v.sucursal || 'Sin sucursal') + '</div></div>' +
-        '<div class="rk-metrics"><div class="rk-op">' + v.operaciones + '</div><span class="pct-badge ' + chgCls + '">' + chgTxt + '</span></div></div>';
-    }).join('');
-    document.getElementById('rankingVendedoresList').innerHTML = rankHtml || '<p class="note">Sin operaciones cargadas este mes todavía.</p>';
+    renderRankingVendedores(d.rankingVendedores || []);
 
     renderPieInto('sucursalPieChart', 'sucursalPieLegend', d.solicitudesSucursal || []);
     renderPieInto('tipoPieChartGeneral', 'tipoPieLegendGeneral', d.solicitudesTipoDMEV || []);
