@@ -519,6 +519,18 @@
 .pct-badge.up{ background:rgba(56,142,60,.12); color:#388E3C; }
 .pct-badge.down{ background:rgba(192,57,43,.12); color:#C0392B; }
 .pct-badge.neutral{ background:rgba(140,140,140,.12); color:#8C8C8C; }
+/* RANKING-VENDEDORES-V1 */
+.ranking-row{ display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--gris-fondo); }
+.ranking-row:last-child{ border-bottom:none; }
+.ranking-row .rk-pos{ flex:0 0 20px; text-align:center; font-size:12.5px; font-weight:800; color:var(--gris-oscuro); }
+.ranking-row.top1 .rk-pos{ color:#B8901F; }
+.ranking-row.top2 .rk-pos{ color:#6B7280; }
+.ranking-row.top3 .rk-pos{ color:#A15A2E; }
+.ranking-row .rk-info{ flex:1; min-width:0; }
+.ranking-row .rk-nombre{ font-size:13px; font-weight:700; color:var(--carbon); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ranking-row .rk-suc{ font-size:10.5px; color:var(--gris-medio); }
+.ranking-row .rk-metrics{ text-align:right; flex:0 0 auto; }
+.ranking-row .rk-op{ font-size:15px; font-weight:800; color:var(--negro); font-variant-numeric:tabular-nums; }
 /* DATE-FILTER-V1 */
 .progress-row{ flex-wrap:wrap; }
 .progress-row .prow-pct{ flex:0 0 100%; text-align:right; margin-top:2px; }
@@ -663,6 +675,12 @@
           <h2>Avance vs. objetivo · <span id="mesLabel"></span></h2>
           <div id="objetivosList"></div>
           <p class="note" id="objetivosNote"></p>
+        </div>
+
+        <div class="tcard">
+          <h2>Ranking de Vendedores — operaciones (mes)</h2>
+          <div id="rankingVendedoresList"></div>
+          <p class="note">Mismo criterio que "Avance vs. objetivo": solicitudes del mes por vendedor de Mendoza. Este ranking también lo ven los vendedores desde su Panel de Ventas.</p>
         </div>
 
         <div class="tcard">
@@ -1388,6 +1406,18 @@
     var sumGrupos = (d.objetivosGerencia||0) + (d.objetivosSanJuan||0) + (d.objetivosSanRafael||0) + (d.objetivosOtros||0);
     document.getElementById('objetivosNote').innerHTML =
       'Meta mensual de solicitudes por vendedor de Mendoza. Estos ' + (d.objetivos||[]).length + ' suman ' + sumConMeta + ' solicitudes; el resto (' + sumGrupos + ') se agrupa por sucursal / gerencia — entre ambos dan el total del mes (' + d.solicitudesTotal + ').';
+
+    var rankHtml = (d.rankingVendedores||[]).map(function(v, i){
+      var pos = i + 1;
+      var topCls = pos === 1 ? 'top1' : (pos === 2 ? 'top2' : (pos === 3 ? 'top3' : ''));
+      var diff = v.operaciones - v.operacionesPrev;
+      var chgCls = diff > 0 ? 'up' : (diff < 0 ? 'down' : 'neutral');
+      var chgTxt = diff > 0 ? ('+' + diff + ' vs mes pasado') : (diff < 0 ? (diff + ' vs mes pasado') : 'igual que mes pasado');
+      return '<div class="ranking-row ' + topCls + '"><div class="rk-pos">' + pos + '</div>' +
+        '<div class="rk-info"><div class="rk-nombre">' + v.nombre + '</div><div class="rk-suc">' + (v.sucursal || 'Sin sucursal') + '</div></div>' +
+        '<div class="rk-metrics"><div class="rk-op">' + v.operaciones + '</div><span class="pct-badge ' + chgCls + '">' + chgTxt + '</span></div></div>';
+    }).join('');
+    document.getElementById('rankingVendedoresList').innerHTML = rankHtml || '<p class="note">Sin operaciones cargadas este mes todavía.</p>';
 
     renderPieInto('sucursalPieChart', 'sucursalPieLegend', d.solicitudesSucursal || []);
     renderPieInto('tipoPieChartGeneral', 'tipoPieLegendGeneral', d.solicitudesTipoDMEV || []);
