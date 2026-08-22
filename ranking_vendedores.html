@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BYD Yacopini &middot; Ranking de Vendedores</title>
+<style>
+  :root{
+    --negro:#0A0A0A;
+    --carbon:#2A2A2A;
+    --gris-oscuro:#4A4A4A;
+    --gris-medio:#8C8C8C;
+    --gris-claro:#D4D4D4;
+    --gris-fondo:#F2F2F2;
+    --blanco:#FFFFFF;
+    --oro:#B8901F;
+    --plata:#6B7280;
+    --bronce:#A15A2E;
+    --verde:#388E3C;
+    --rojo:#C0392B;
+  }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--gris-fondo); color:var(--negro); font-family:'Segoe UI', Arial, Helvetica, sans-serif; }
+  .app{ max-width:640px; margin:0 auto; padding:0 0 90px; }
+  .app-topbar{ background:var(--negro); padding:20px 20px; display:flex; align-items:center; justify-content:space-between; }
+  .app-topbar svg{ height:32px; width:auto; display:block; }
+
+  .title-block{ padding:20px 20px 4px; }
+  .title-block h1{ font-size:21px; font-weight:800; margin:0 0 4px; color:var(--negro); }
+  .title-block p{ font-size:12.5px; color:var(--gris-oscuro); margin:0; line-height:1.5; }
+
+  .period-bar{ display:flex; align-items:center; justify-content:space-between; padding:14px 20px 6px; gap:10px; flex-wrap:wrap; }
+  .period-select{ display:flex; align-items:center; gap:6px; font-size:13px; font-weight:700; color:var(--negro); background:var(--blanco); border:1px solid var(--gris-claro); border-radius:20px; padding:7px 14px; }
+  .period-select svg{ width:14px; height:14px; flex:none; }
+  .criterio-tag{ font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--gris-oscuro); background:var(--gris-claro); border-radius:20px; padding:5px 10px; }
+
+  .estado{ margin:10px 20px 0; padding:9px 12px; border-radius:8px; font-size:11.5px; line-height:1.5; }
+  .estado.cargando{ background:#EEF2F6; border:1px solid #D6DEE6; color:var(--gris-oscuro); }
+  .estado.error{ background:#FBEAEA; border:1px solid #E7B8B8; color:#8A2020; }
+  .estado.oculto{ display:none; }
+
+  .podio{ display:flex; align-items:flex-end; gap:8px; padding:18px 20px 6px; }
+  .podio-card{ flex:1; background:var(--blanco); border-radius:14px; padding:14px 10px 12px; text-align:center; box-shadow:0 1px 3px rgba(0,0,0,0.08); position:relative; }
+  .podio-card.p1{ order:2; padding-top:6px; box-shadow:0 4px 14px rgba(184,144,31,0.25); border:1px solid var(--oro); }
+  .podio-card.p2{ order:1; }
+  .podio-card.p3{ order:3; }
+  .podio-medal{ width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800; color:#fff; margin:0 auto 8px; }
+  .p1 .podio-medal{ background:var(--oro); width:34px; height:34px; font-size:14px; }
+  .p2 .podio-medal{ background:var(--plata); }
+  .p3 .podio-medal{ background:var(--bronce); }
+  .podio-avatar{ width:44px; height:44px; border-radius:50%; background:var(--carbon); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:15px; margin:0 auto 8px; }
+  .p1 .podio-avatar{ width:52px; height:52px; font-size:17px; }
+  .podio-nombre{ font-size:12px; font-weight:700; color:var(--negro); line-height:1.25; min-height:30px; display:flex; align-items:center; justify-content:center; }
+  .podio-op{ font-size:22px; font-weight:800; color:var(--negro); margin-top:4px; font-variant-numeric:tabular-nums; }
+  .p1 .podio-op{ font-size:27px; }
+  .podio-op-label{ font-size:9.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--gris-oscuro); font-weight:700; }
+
+  .lista{ padding:18px 20px 4px; display:flex; flex-direction:column; gap:8px; }
+  .fila{ background:var(--blanco); border:1px solid var(--gris-claro); border-radius:12px; padding:10px 12px; display:flex; align-items:center; gap:10px; }
+  .fila-pos{ width:22px; text-align:center; font-size:13px; font-weight:800; color:var(--gris-oscuro); flex:none; }
+  .fila-avatar{ width:36px; height:36px; border-radius:50%; background:var(--gris-claro); color:var(--negro); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:12.5px; flex:none; }
+  .fila-info{ flex:1; min-width:0; }
+  .fila-nombre{ font-size:13.5px; font-weight:700; color:var(--negro); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .fila-sucursal{ font-size:11px; color:var(--gris-medio); margin-top:1px; }
+  .fila-metricas{ text-align:right; flex:none; }
+  .fila-op{ font-size:16px; font-weight:800; color:var(--negro); font-variant-numeric:tabular-nums; line-height:1.2; }
+  .fila-monto{ font-size:10.5px; color:var(--gris-oscuro); font-variant-numeric:tabular-nums; }
+  .fila-trend{ display:inline-flex; align-items:center; gap:2px; font-size:10.5px; font-weight:700; margin-top:2px; }
+  .fila-trend.up{ color:var(--verde); }
+  .fila-trend.down{ color:var(--rojo); }
+  .fila-trend.flat{ color:var(--gris-medio); }
+
+  .leyenda{ padding:16px 20px 0; font-size:11px; color:var(--gris-medio); display:flex; gap:14px; flex-wrap:wrap; }
+  .leyenda span{ display:inline-flex; align-items:center; gap:4px; }
+
+  .vacio{ margin:20px; padding:24px; background:var(--blanco); border:1px solid var(--gris-claro); border-radius:12px; text-align:center; font-size:13px; color:var(--gris-oscuro); }
+
+  @media (min-width: 900px){
+    .app{ max-width:900px; }
+    .podio{ padding:22px 24px 8px; gap:14px; }
+    .podio-card{ padding:20px 14px 16px; }
+    .lista{ padding:22px 24px 4px; }
+    .fila{ padding:12px 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="app-topbar">
+    <svg viewBox="12 4 529 102" xmlns="http://www.w3.org/2000/svg" aria-label="BYD Yacopini">
+      <defs><style>.st0{fill:#FFFFFF;}</style></defs>
+      <path class="st0" d="M162.93,19.18c-8.06-12.16-21.88-14.53-31.23-14.75-8.23-.19-43.9-.23-64.67-.24-40.91-.03-17.51-.01-54.36-.01v19.54c43.75,0,95.68-.1,118.41.25,4.06.06,8.08.47,11.27,3.3,2.97,2.64,4.02,6.79,2.69,10.4-2.14,5.83-8.07,7.28-13.96,7.37-9.01.14-33.77.19-52.24.22-45.3.06-25.68.03-66.16.03v19.49c43.72,0,95.76-.09,118.41.25,7.06.1,14.53,2.56,14.53,10.43s-7.46,10.45-14.53,10.56c-22.59.33-74.66.24-118.41.24v19.53c43.88,0,101.32.16,119.03-.25,9.35-.22,23.18-2.59,31.23-14.75,7.56-11.41,5.71-26.27-4.22-35.8,9.93-9.54,11.78-24.39,4.21-35.8"/>
+      <path class="st0" d="M520.08,15.93c-13.35-9.58-27.85-10.94-39.61-11.21-11.58-.27-29.05-.39-44.5-.45-37.67-.15-15.02-.08-50.91-.08v19.6c38.19,0,64.97-.32,94.46.52,8.66.24,17.95,1.16,26.31,6.96,7.92,5.5,12.62,14.26,12.62,23.72s-4.57,18.24-12.49,23.74c-8.36,5.81-17.65,6.72-26.31,6.96-29.49.83-56.27.51-94.46.51l-.13,19.59c38.41,0,66.03.14,95.41-.54,11.76-.27,26.26-1.63,39.61-11.21,12.67-9.09,20.33-23.36,20.33-39.05s-7.67-29.97-20.33-39.05"/>
+      <path class="st0" d="M227.22,48.06c-10.23-.2-13.49-3.54-13.56-13.73-.07-9.42-.02-20.58-.02-30.14h-22.56c0,9.67-.19,29.24.19,38.7.74,18.38,6.77,24.11,25.55,24.75,13.02.44,23.36.29,41.36.28v-19.69c-14.43,0-20.31.04-30.96-.16"/>
+      <path class="st0" d="M339.04,34.68c-.07,9.92-3.3,13.18-13.56,13.38-4.89.09-17.75.14-28.33.16h0s-.1.01-.1.01c-10.81,0-22.34-.02-29.1-.02v57.57h26.52v-37.88c.81,0,1.68,0,2.58,0h0s.1,0,.1,0v.02c13.8,0,31.04-.06,37.55-.26,19.93-.61,26-6.23,26.73-24.78.1-2.48.16-5.62.19-9.06V4.18h-22.56c0,9.8.04,20.81-.03,30.5"/>
+    </svg>
+  </div>
+
+  <div class="title-block">
+    <h1>Ranking de Vendedores</h1>
+    <p>Quién va liderando el mes en operaciones cerradas.</p>
+  </div>
+
+  <div class="period-bar">
+    <div class="period-select">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+      <span id="periodoLabel">Cargando…</span>
+    </div>
+    <div class="criterio-tag">Por operaciones</div>
+  </div>
+
+  <div class="estado cargando" id="estadoMsg">Cargando el ranking en vivo del Tablero…</div>
+
+  <div id="contenido" style="display:none;">
+    <div class="podio" id="podio"></div>
+    <div class="lista" id="lista"></div>
+    <div class="leyenda">
+      <span><b>▲</b> subió operaciones vs. el mes pasado</span>
+      <span><b>▼</b> bajó operaciones vs. el mes pasado</span>
+      <span><b>—</b> se mantuvo igual</span>
+    </div>
+  </div>
+
+  <div class="vacio" id="vacioMsg" style="display:none;">Todavía no hay operaciones cargadas este mes para armar el ranking.</div>
+</div>
+
+<a id="hubBackBtn" href="./index.html" style="position:fixed;bottom:18px;left:18px;z-index:999999;
+  width:44px;height:44px;border-radius:50%;background:#0A0A0A;color:#fff;display:flex;
+  align-items:center;justify-content:center;text-decoration:none;font-family:Arial,sans-serif;
+  font-size:20px;box-shadow:0 4px 14px rgba(0,0,0,0.3);">&larr;</a>
+
+<script>
+(function(){
+  // Esta página la usan tanto vendedores (llegan desde panel_ventas.html)
+  // como gerencia (llega desde index.html). El botón de volver apunta a
+  // index.html por defecto y cambia a panel_ventas.html si es una sesión
+  // de vendedor — mismo patrón que fichas_tecnicas.html.
+  var b = document.getElementById('hubBackBtn');
+  if (b && sessionStorage.getItem('bydVendorOk') === '1') { b.href = './panel_ventas.html'; }
+})();
+</script>
+<script>
+(function(){
+  var TABLERO_API_URL = 'https://script.google.com/macros/s/AKfycbzTYBoM56BBMj2B-8hUG_MIuOh7r5qG4qq2sGlTRM-y6QyFm0XHqgE6XUG5OQB022iy/exec';
+  var TABLERO_API_KEY = 'i4uH92SO1sFyNYi8PJ2dsGb9LDM-Xoq3';
+
+  function esc(s){
+    var d = document.createElement('div');
+    d.textContent = (s === null || s === undefined) ? '' : String(s);
+    return d.innerHTML;
+  }
+
+  function iniciales(nombre){
+    var partes = (nombre || '').trim().split(/\s+/).filter(Boolean);
+    if (!partes.length) return '?';
+    if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase();
+    return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
+  }
+
+  function fmtUSD(n){ return 'USD ' + Math.round(Number(n) || 0).toLocaleString('es-AR'); }
+
+  function trendInfo(op, opPrev){
+    var diff = op - opPrev;
+    if (diff > 0) return { cls: 'up', txt: '▲ +' + diff + ' vs. mes pasado' };
+    if (diff < 0) return { cls: 'down', txt: '▼ ' + diff + ' vs. mes pasado' };
+    return { cls: 'flat', txt: '— igual que el mes pasado' };
+  }
+
+  function medalClass(pos){ return pos === 0 ? 'p1' : (pos === 1 ? 'p2' : 'p3'); }
+
+  function renderPodio(top3){
+    var el = document.getElementById('podio');
+    if (!top3.length) { el.innerHTML = ''; return; }
+    el.innerHTML = top3.map(function(v, i){
+      return '<div class="podio-card ' + medalClass(i) + '">' +
+        '<div class="podio-medal">' + (i + 1) + '</div>' +
+        '<div class="podio-avatar">' + esc(iniciales(v.nombre)) + '</div>' +
+        '<div class="podio-nombre">' + esc(v.nombre) + '</div>' +
+        '<div class="podio-op">' + v.operaciones + '</div>' +
+        '<div class="podio-op-label">operaciones</div>' +
+        '</div>';
+    }).join('');
+  }
+
+  function renderLista(resto, offset){
+    var el = document.getElementById('lista');
+    if (!resto.length) { el.innerHTML = ''; return; }
+    el.innerHTML = resto.map(function(v, i){
+      var t = trendInfo(v.operaciones, v.operacionesPrev);
+      return '<div class="fila">' +
+        '<div class="fila-pos">' + (offset + i + 1) + '</div>' +
+        '<div class="fila-avatar">' + esc(iniciales(v.nombre)) + '</div>' +
+        '<div class="fila-info">' +
+        '  <div class="fila-nombre">' + esc(v.nombre) + '</div>' +
+        '  <div class="fila-sucursal">' + esc(v.sucursal || 'Sin sucursal') + '</div>' +
+        '</div>' +
+        '<div class="fila-metricas">' +
+        '  <div class="fila-op">' + v.operaciones + '</div>' +
+        '  <div class="fila-monto">' + fmtUSD(v.facturado) + '</div>' +
+        '  <div class="fila-trend ' + t.cls + '">' + t.txt + '</div>' +
+        '</div>' +
+        '</div>';
+    }).join('');
+  }
+
+  function render(data){
+    var ranking = (data.rankingVendedores || []).slice();
+    var estadoEl = document.getElementById('estadoMsg');
+    var contenidoEl = document.getElementById('contenido');
+    var vacioEl = document.getElementById('vacioMsg');
+
+    var periodoEl = document.getElementById('periodoLabel');
+    if (data.periodoDesde && data.periodoHasta) {
+      periodoEl.textContent = data.periodoDesde + ' al ' + data.periodoHasta;
+    } else {
+      periodoEl.textContent = 'Mes actual';
+    }
+
+    if (!ranking.length) {
+      estadoEl.classList.add('oculto');
+      contenidoEl.style.display = 'none';
+      vacioEl.style.display = 'block';
+      return;
+    }
+
+    estadoEl.classList.add('oculto');
+    vacioEl.style.display = 'none';
+    contenidoEl.style.display = 'block';
+
+    renderPodio(ranking.slice(0, 3));
+    renderLista(ranking.slice(3), 3);
+  }
+
+  function cargar(){
+    fetch(TABLERO_API_URL + '?key=' + encodeURIComponent(TABLERO_API_KEY))
+      .then(function(r){ if (!r.ok) throw new Error('bad-status'); return r.json(); })
+      .then(function(data){
+        if (data && data.error) throw new Error(data.error);
+        render(data);
+      })
+      .catch(function(){
+        var estadoEl = document.getElementById('estadoMsg');
+        estadoEl.className = 'estado error';
+        estadoEl.textContent = 'No se pudo cargar el ranking en este momento. Probá de nuevo en un rato.';
+      });
+  }
+
+  cargar();
+  setInterval(cargar, 5 * 60 * 1000);
+})();
+</script>
+</body>
+</html>
