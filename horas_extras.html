@@ -146,6 +146,17 @@
   .badge.saldo-pos{ background:#E3F5EA;color:#1B7F4C;border-color:#BFE6CE; }
   .badge.saldo-neg{ background:#FCEBEB;color:#A32D2D;border-color:#F0C1C1; }
 
+  .pend-item{ padding:12px 4px;border-top:1px solid var(--gris-claro); }
+  .pend-item:first-child{ border-top:none; }
+  .pend-item .info b{ display:block;font-size:14px;color:var(--negro); }
+  .pend-item .info span{ font-size:12px;color:var(--gris-medio);line-height:1.5; }
+  .pend-actions{ display:flex;gap:8px;margin-top:10px; }
+  .pend-actions .btn{ width:auto;flex:1;padding:9px 10px;font-size:12.5px; }
+  .btn-aprobar{ background:#1B7F4C;color:#fff;border-color:#1B7F4C; }
+  .btn-aprobar:hover{ background:#166b40; }
+  .btn-descartar{ background:#FCEBEB;color:#A32D2D;border-color:#F0C1C1; }
+  .btn-descartar:hover{ background:#F8D9D9; }
+
   .tabbar{
     background:var(--blanco);border-bottom:1px solid var(--gris-claro);
     display:flex;
@@ -310,6 +321,11 @@
 <main>
   <!-- GESTION -->
   <section id="view-gestion" class="view active">
+    <h1 class="section-title">Certificados de eventos (Calendario)</h1>
+    <div class="card" id="pendientesCard">
+      <div id="pendientesList"><div class="empty"><span class="big">🕓</span>Buscando eventos fuera de horario…</div></div>
+    </div>
+
     <h1 class="section-title">Registrar movimiento</h1>
     <div class="card">
       <label>Tipo de movimiento</label>
@@ -839,10 +855,113 @@ document.getElementById('btnVolverResumen').addEventListener('click', () => {
   document.getElementById('resumenCard').style.display = 'block';
 });
 
+/* ---------- CERTIFICADOS DE EVENTOS (Calendario) ---------- */
+let pendientesEventos = [];
+
+function fmtHorarioRango(ini, fin){
+  if (ini && fin) return ini + '–' + fin;
+  return ini || fin || 'sin horario';
+}
+
+async function loadPendientesEventos(){
+  const cont = document.getElementById('pendientesList');
+  try{
+    const url = TABLERO_API_URL + '?key=' + encodeURIComponent(TABLERO_API_KEY) + '&action=listarEventosHorasExtraPendientes';
+    const resp = await fetch(url, {cache:'no-store'});
+    if(!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+    pendientesEventos = data.pendientes || [];
+  }catch(e){
+    console.error(e);
+    cont.innerHTML = '<div class="empty"><span class="big">⚠️</span>No se pudieron cargar los eventos pendientes.</div>';
+    return;
+  }
+  renderPendientesEventos();
+}
+
+function renderPendientesEventos(){
+  const cont = document.getElementById('pendientesList');
+  if (!pendientesEventos.length){
+    cont.innerHTML = '<div class="empty"><span class="big">✅</span>No hay eventos fuera de horario pendientes de aprobar.</div>';
+    return;
+  }
+  cont.innerHTML = pendientesEventos.map((p, i) => `
+    <div class="pend-item" data-idx="${i}">
+      <div class="info">
+        <b>${escapeHtml(p.vendedor)}</b>
+        <span>${fmtDate(p.fecha)} · ${escapeHtml(fmtHorarioRango(p.horarioInicio, p.horarioFin))} · ${fmtHoras(p.horas)}${p.ubicacion ? (' · ' + escapeHtml(p.ubicacion)) : ''}</span>
+      </div>
+      <div class="pend-actions">
+        <button type="button" class="btn btn-aprobar" data-aprobar="${i}">Aprobar</button>
+        <button type="button" class="btn btn-descartar" data-descartar="${i}">Descartar</button>
+      </div>
+    </div>
+  `).join('');
+
+  cont.querySelectorAll('[data-aprobar]').forEach(btn => {
+    btn.addEventListener('click', () => aprobarPendiente(Number(btn.dataset.aprobar), btn));
+  });
+  cont.querySelectorAll('[data-descartar]').forEach(btn => {
+    btn.addEventListener('click', () => descartarPendiente(Number(btn.dataset.descartar), btn));
+  });
+}
+
+async function aprobarPendiente(idx, btn){
+  const p = pendientesEventos[idx];
+  if (!p) return;
+  btn.disabled = true;
+  btn.textContent = 'Aprobando…';
+  try{
+    const url = TABLERO_API_URL + '?key=' + encodeURIComponent(TABLERO_API_KEY) + '&action=aprobarEventoHorasExtra' +
+      '&eventoId=' + encodeURIComponent(p.eventoId) + '&vendedor=' + encodeURIComponent(p.vendedor);
+    const resp = await fetch(url, {cache:'no-store'});
+    if(!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+
+    guardarHistorialLocal(data);
+    renderLocalHistorial();
+    pendientesEventos.splice(idx, 1);
+    renderPendientesEventos();
+    toast('Comprobante ' + data.numero + ' emitido');
+    openTicket(data);
+  }catch(e){
+    console.error(e);
+    toast('No se pudo aprobar: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = 'Aprobar';
+  }
+}
+
+async function descartarPendiente(idx, btn){
+  const p = pendientesEventos[idx];
+  if (!p) return;
+  if (!confirm('¿Descartar este evento? No se va a generar ningún certificado.')) return;
+  btn.disabled = true;
+  try{
+    const url = TABLERO_API_URL + '?key=' + encodeURIComponent(TABLERO_API_KEY) + '&action=descartarEventoHorasExtra' +
+      '&eventoId=' + encodeURIComponent(p.eventoId) + '&vendedor=' + encodeURIComponent(p.vendedor);
+    const resp = await fetch(url, {cache:'no-store'});
+    if(!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+
+    pendientesEventos.splice(idx, 1);
+    renderPendientesEventos();
+    toast('Evento descartado');
+  }catch(e){
+    console.error(e);
+    toast('No se pudo descartar: ' + e.message);
+    btn.disabled = false;
+  }
+}
+
 /* ---------- INIT ---------- */
 document.getElementById('inpFechaHoras').value = new Date().toISOString().slice(0,10);
 renderLocalHistorial();
 loadVendedores();
+loadPendientesEventos();
 </script>
 
 <a id="hubBackBtn" href="./index.html" style="position:fixed;bottom:18px;left:18px;z-index:999999;
