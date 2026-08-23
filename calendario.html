@@ -52,10 +52,11 @@
   }
   label:first-of-type{ margin-top:0; }
   input[type=text],input[type=date],input[type=time],textarea,select{
-    width:100%; padding:10px 11px; border:1px solid var(--gris-claro); border-radius:8px;
+    width:100%; padding:0 11px; border:1px solid var(--gris-claro); border-radius:8px;
     font-size:14.5px; font-family:inherit; background:var(--blanco); color:var(--carbon);
   }
-  textarea{ resize:vertical; min-height:52px; }
+  input[type=text],input[type=date],input[type=time],select{ height:44px; }
+  textarea{ resize:vertical; min-height:52px; padding-top:10px; padding-bottom:10px; }
   input:focus,textarea:focus,select:focus{ outline:none; border-color:var(--gris-medio); }
 
   .btn{
