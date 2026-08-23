@@ -317,6 +317,12 @@
     overflow-x:auto;
     padding-top:6px;
   }
+  /* El SVG de renderUtilidadDiaria mide 178px de alto (necesita espacio arriba
+     y abajo para las barras positivas/negativas + etiquetas). Los otros dos
+     usos de .chart-daily (leadsDaily/entregasDaily) generan un SVG de 110px,
+     por eso encajan en los 120px de la clase base — este necesita su propia
+     altura o las etiquetas de monto se superponen con el contenido de arriba. */
+  #utilidadDiariaChart{ height:190px; }
   .chart-daily .col{
     flex:0 0 auto;
     width:22px;
