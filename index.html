@@ -1215,8 +1215,25 @@
     filtradas.forEach(function(r){ modeloMap[r.m] = (modeloMap[r.m] || 0) + 1; });
     var modeloArr = Object.keys(modeloMap).map(function(k){ return { n: k, c: modeloMap[k] }; })
       .sort(function(a, b){ return b.c - a.c; });
-    document.getElementById('solicitudesModelo').innerHTML = modeloArr.length ?
+    var totalModeloSet = {};
+    currentSolicitudesDetalle.forEach(function(r){ totalModeloSet[r.m] = true; });
+    var maxRows = Object.keys(totalModeloSet).length;
+
+    var html = modeloArr.length ?
       barList(fixModelArr(modeloArr), 'morado') : '<p class="note">Sin solicitudes para este filtro.</p>';
+    // Rellena con filas invisibles hasta el máximo de modelos posible (el de
+    // "Todos", sin filtrar) para que el bloque mida siempre lo mismo — así
+    // filtrar por vendedor no hace saltar el resto de la página cuando trae
+    // menos modelos. Se calcula por cantidad de filas, no por altura en
+    // píxeles medida en el DOM, porque esta pestaña puede estar oculta
+    // (display:none) al momento de cargar los datos.
+    var faltantes = Math.max(0, maxRows - modeloArr.length);
+    for (var i = 0; i < faltantes; i++) {
+      html += '<div class="bar-row" style="visibility:hidden;" aria-hidden="true">' +
+        '<div class="top"><span class="name">—</span><span class="count">0</span></div>' +
+        '<div class="bar-track"><div class="bar-fill" style="width:4%"></div></div></div>';
+    }
+    document.getElementById('solicitudesModelo').innerHTML = html;
   }
   document.getElementById('solicitudesModeloVendedorFilter').addEventListener('change', updateSolicitudesModeloView);
 
