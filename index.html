@@ -1041,7 +1041,7 @@
       .replace(/\bgl\b/gi, 'GL')
       .replace(/\badas\b/gi, 'ADAS')
       .replace(/\bdmo\b/gi, 'DMO')
-      .replace(/\bdm-i\b/gi, 'DM-i')
+      .replace(/\bdm[\s-]i\b/gi, 'DM-i')
       .replace(/\bfwd\b/gi, 'FWD')
       .replace(/\bs\.a\.u\b/gi, 'S.A.U')
       .replace(/\bsrl\b/gi, 'SRL')
@@ -1297,47 +1297,8 @@
   document.getElementById('entregasVendedorFilter').addEventListener('change', renderEntregasView);
 
   // ---- Stock por color de fila (llegados / pagados esperando / sin pagar) ----
-  // Estos datos NO vienen del Apps Script en vivo: en la planilla de Stock los
-  // colores de fila los pintan a mano (celeste = llegó, amarillo = pagado y
-  // esperando, blanco = todavía sin pagar; verde = entregado, que ya está
-  // cubierto por el reporte de Entregas y por eso no se repite acá). Se carga
-  // como una foto puntual y hay que actualizarla a mano cada tanto.
-  var STOCK_COLOR_SNAPSHOT = {
-    fecha: '19/07/2026',
-    llegados: {
-      total: 55,
-      detalle: [
-        { modelo:'Dolphin Mini EV GS', total:23, variantes:[{color:'Apricity White', c:21},{color:'Obsidian Black', c:2}] },
-        { modelo:'Atto 2 DM-i GS', total:8, variantes:[{color:'Time Grey', c:3},{color:'Skiing White', c:2},{color:'Malachite Darkcyan', c:2},{color:'Obsidian Black', c:1}] },
-        { modelo:'Shark DMO GS', total:8, variantes:[{color:'Black', c:6},{color:'Obsidian Black', c:2}] },
-        { modelo:'Song Pro DM-i GS', total:8, variantes:[{color:'Snow White', c:4},{color:'Atlantis Blue', c:2},{color:'Time Grey', c:1},{color:'Obsidian Black', c:1}] },
-        { modelo:'Seal U', total:4, variantes:[{color:'Obsidian Black', c:2},{color:'Time Grey', c:1},{color:'Smoke Gray', c:1}] },
-        { modelo:'Song Pro DM-i GL', total:2, variantes:[{color:'Atlantis Blue', c:1},{color:'Snow White', c:1}] },
-        { modelo:'Yuan Pro EVGS C/ADAS', total:1, variantes:[{color:'Obsidian Black', c:1}] },
-        { modelo:'Dolphin Mini 4 Seats EU', total:1, variantes:[{color:'Sprout Green', c:1}] }
-      ]
-    },
-    esperando: {
-      total: 7,
-      detalle: [
-        { modelo:'Song Pro DM-i GS', total:4, variantes:[{color:'Snow White', c:3},{color:'Time Grey', c:1}] },
-        { modelo:'Atto 2 DM-i GS', total:3, variantes:[{color:'Time Grey', c:3}] }
-      ]
-    },
-    sinPagar: {
-      total: 149,
-      detalle: [
-        { modelo:'Dolphin Mini EV GS', total:30, variantes:[{color:'Obsidian Black', c:13},{color:'Apricity White', c:9},{color:'Sprout Green', c:8}] },
-        { modelo:'Yuan Pro EVGS C/ADAS', total:26, variantes:[{color:'Time Grey', c:14},{color:'Skiing White', c:8},{color:'Malachite Darkcyan', c:4}] },
-        { modelo:'Song Pro DM-i GL', total:25, variantes:[{color:'Time Grey', c:14},{color:'Snow White', c:8},{color:'Atlantis Blue', c:2},{color:'Obsidian Black', c:1}] },
-        { modelo:'Song Pro DM-i GS', total:24, variantes:[{color:'Time Grey', c:18},{color:'Snow White', c:5},{color:'Obsidian Black', c:1}] },
-        { modelo:'Shark DMO GS', total:22, variantes:[{color:'Pallas White', c:8},{color:'Black', c:7},{color:'Obsidian Black', c:7}] },
-        { modelo:'Sin modelo cargado', total:15, variantes:[{color:'Sin color cargado', c:15}] },
-        { modelo:'Dolphin Mini EV GL', total:7, variantes:[{color:'Apricity White', c:5},{color:'Obsidian Black', c:2}] }
-      ]
-    }
-  };
-
+  // En vivo desde la planilla externa de compras (buildStockCompras en
+  // Código.gs): agrupa por ARRIBO/PAGO, excluyendo lo ya ENTREGADO.
   function renderStockColorModelDetalle(arr, colorClass){
     if (!arr || !arr.length) return '<p class="note">Sin datos.</p>';
     var max = Math.max.apply(null, arr.map(function(x){ return x.total; }));
@@ -1354,11 +1315,16 @@
     }).join('');
   }
 
-  function renderStockColorBlock(elId, noteElId, bloque, colorClass, etiqueta){
+  function renderStockColorBlock(elId, noteElId, bloque, colorClass, etiqueta, fecha){
+    if (!bloque){
+      document.getElementById(elId).innerHTML = '<p class="note">No se pudo leer la planilla de compras.</p>';
+      document.getElementById(noteElId).innerHTML = '';
+      return;
+    }
     document.getElementById(elId).innerHTML = renderStockColorModelDetalle(bloque.detalle, colorClass);
     document.getElementById(noteElId).innerHTML =
       'Total: <strong>' + bloque.total + '</strong> unidades. ' + etiqueta +
-      ' Foto manual de la planilla de Stock al ' + STOCK_COLOR_SNAPSHOT.fecha + ' — no se actualiza sola todavía.';
+      ' Datos en vivo desde la planilla de compras — actualizado ' + fecha + '.';
   }
 
   // ---- Snapshot de referencia (se usa si todavía no está conectado el Apps Script,
@@ -1587,9 +1553,15 @@
       barList(d.deudasPorModeloColor.map(function(x){ return { n: fixCaps(x.n), c: x.c }; }), 'rojo') :
       '<p class="note">Sin deudas este mes.</p>';
 
-    renderStockColorBlock('stockLlegados', 'stockLlegadosNote', STOCK_COLOR_SNAPSHOT.llegados, '', 'Ya están en el concesionario.');
-    renderStockColorBlock('stockEsperando', 'stockEsperandoNote', STOCK_COLOR_SNAPSHOT.esperando, 'ambar', 'Ya se pagaron, todavía no llegaron.');
-    renderStockColorBlock('stockSinPagar', 'stockSinPagarNote', STOCK_COLOR_SNAPSHOT.sinPagar, 'gris', 'Todavía no se pagaron.');
+    if (d.stockComprasError) {
+      ['stockLlegados', 'stockEsperando', 'stockSinPagar'].forEach(function(id){
+        document.getElementById(id).innerHTML = '<p class="note">No se pudo leer la planilla de compras: ' + d.stockComprasError + '</p>';
+      });
+    } else {
+      renderStockColorBlock('stockLlegados', 'stockLlegadosNote', d.stockLlegados, '', 'Ya están en el concesionario, todavía no se entregaron.', d.stockComprasFecha);
+      renderStockColorBlock('stockEsperando', 'stockEsperandoNote', d.stockEsperando, 'ambar', 'Ya se pagaron, todavía no llegaron.', d.stockComprasFecha);
+      renderStockColorBlock('stockSinPagar', 'stockSinPagarNote', d.stockSinPagar, 'gris', 'Todavía no se pagaron.', d.stockComprasFecha);
+    }
 
     // Entregas
     document.getElementById('kpiEntregasMes').textContent = d.entregasTotal;
