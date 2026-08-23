@@ -783,11 +783,16 @@
         </div>
 
         <div class="tcard">
-          <h2>Por vendedor</h2>
-          <div id="solicitudesVendedor"></div>
+          <h2>Ranking de Vendedores — operaciones (mes)</h2>
+          <div class="podio" id="rankingPodioSol"></div>
+          <div class="lista" id="rankingListaSol"></div>
         </div>
 
         <div class="tcard">
+          <div class="filter-row">
+            <label for="solicitudesModeloVendedorFilter">Vendedor</label>
+            <select class="filter-select" id="solicitudesModeloVendedorFilter"><option value="">Todos</option></select>
+          </div>
           <h2>Por modelo</h2>
           <div id="solicitudesModelo"></div>
         </div>
@@ -983,17 +988,6 @@
     var pct = Math.max(4, Math.round((count / max) * 100));
     return '<div class="bar-row"><div class="top"><span class="name">' + name + '</span><span class="count">' + count + '</span></div>' +
       '<div class="bar-track"><div class="bar-fill ' + (colorClass||'') + '" style="width:' + pct + '%"></div></div></div>';
-  }
-  // Recorta una lista larga (ej. solicitudes por vendedor) a los primeros n
-  // ordenados de mayor a menor, agrupando el resto en una fila "Otros" — evita
-  // que un widget con 15-20 filas, la mayoría de valor bajo, abrume la vista.
-  function topPlusOtros(arr, n){
-    if (!arr || arr.length <= n) return arr || [];
-    var sorted = arr.slice().sort(function(a, b){ return b.c - a.c; });
-    var top = sorted.slice(0, n);
-    var resto = sorted.slice(n);
-    var restoSum = resto.reduce(function(s, x){ return s + x.c; }, 0);
-    return top.concat([{ n: 'Otros (' + resto.length + ' vendedores)', c: restoSum }]);
   }
   function barList(arr, colorClass){
     if (!arr || !arr.length) return '<p class="note">Sin datos.</p>';
@@ -1200,6 +1194,31 @@
 
   document.getElementById('leadsVendedorFilter').addEventListener('change', updateLeadsView);
   document.getElementById('leadsOrigenFilter').addEventListener('change', updateLeadsView);
+
+  // ---- Solicitudes: "Por modelo" filtrable por vendedor ----
+  var currentSolicitudesDetalle = [];
+  function populateSolicitudesModeloFilter(rows){
+    var sel = document.getElementById('solicitudesModeloVendedorFilter');
+    var prev = sel.value;
+    var vendedores = {};
+    rows.forEach(function(r){ vendedores[r.v] = true; });
+    var vendList = Object.keys(vendedores).sort(function(a, b){ return a.localeCompare(b, 'es'); });
+    sel.innerHTML = '<option value="">Todos</option>' + vendList.map(function(v){
+      return '<option value="' + v.replace(/"/g, '&quot;') + '">' + v + '</option>';
+    }).join('');
+    sel.value = vendList.indexOf(prev) !== -1 ? prev : '';
+  }
+  function updateSolicitudesModeloView(){
+    var vSel = document.getElementById('solicitudesModeloVendedorFilter').value;
+    var filtradas = vSel ? currentSolicitudesDetalle.filter(function(r){ return r.v === vSel; }) : currentSolicitudesDetalle;
+    var modeloMap = {};
+    filtradas.forEach(function(r){ modeloMap[r.m] = (modeloMap[r.m] || 0) + 1; });
+    var modeloArr = Object.keys(modeloMap).map(function(k){ return { n: k, c: modeloMap[k] }; })
+      .sort(function(a, b){ return b.c - a.c; });
+    document.getElementById('solicitudesModelo').innerHTML = modeloArr.length ?
+      barList(fixModelArr(modeloArr), 'morado') : '<p class="note">Sin solicitudes para este filtro.</p>';
+  }
+  document.getElementById('solicitudesModeloVendedorFilter').addEventListener('change', updateSolicitudesModeloView);
 
   // ---- Stock: modelo con sub-conteo por color / interior ----
   function renderStockModeloDetalle(arr){
@@ -1443,9 +1462,9 @@
     return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
   }
   function medalClass(pos){ return pos === 0 ? 'p1' : (pos === 1 ? 'p2' : 'p3'); }
-  function renderRankingVendedores(ranking){
-    var podioEl = document.getElementById('rankingPodio');
-    var listaEl = document.getElementById('rankingLista');
+  function renderRankingVendedores(ranking, podioId, listaId){
+    var podioEl = document.getElementById(podioId || 'rankingPodio');
+    var listaEl = document.getElementById(listaId || 'rankingLista');
     if (!ranking || !ranking.length){
       podioEl.innerHTML = '';
       listaEl.innerHTML = '<p class="note">Sin operaciones cargadas este mes todavía.</p>';
@@ -1535,10 +1554,10 @@
     document.getElementById('utilidadNote').innerHTML = (d.utilidadSinDatosCount ?
       d.utilidadSinDatosCount + ' solicitud(es) de este mes no tienen el modelo cargado en Lista de Precio y no entran en el cálculo de utilidad. ' : '') +
       'Utilidad = Facturación − Precio Compra − Gastos de entrega − Gastos de patentamiento, según Lista de Precio.';
-    document.getElementById('solicitudesVendedor').innerHTML = barList(topPlusOtros(d.solicitudesVendedor, 6), function(x){
-      return x.n.indexOf('Otros') === 0 ? 'gris' : '';
-    });
-    document.getElementById('solicitudesModelo').innerHTML = barList(fixModelArr(d.solicitudesModelo), 'morado');
+    renderRankingVendedores(d.rankingVendedores || [], 'rankingPodioSol', 'rankingListaSol');
+    currentSolicitudesDetalle = Array.isArray(d.solicitudesDetalle) ? d.solicitudesDetalle : [];
+    populateSolicitudesModeloFilter(currentSolicitudesDetalle);
+    updateSolicitudesModeloView();
 
     // Stock
     document.getElementById('kpiStockTotal2').textContent = d.stockTotal;
