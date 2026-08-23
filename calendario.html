@@ -21,7 +21,7 @@
   }
   *{ box-sizing:border-box; }
   body{ margin:0; background:var(--gris-fondo); color:var(--negro); font-family:'Segoe UI', Arial, Helvetica, sans-serif; }
-  .app{ max-width:640px; margin:0 auto; padding:0 0 90px; }
+  .app{ max-width:640px; margin:0 auto; padding:0 0 100px; }
   .app-topbar{ background:var(--negro); padding:20px 20px; display:flex; align-items:center; justify-content:space-between; }
   .app-topbar svg{ height:32px; width:auto; display:block; }
 
@@ -70,11 +70,37 @@
   .btn-sm{ padding:7px 11px; font-size:12.5px; }
   .btn-ok{ background:var(--verde); color:#fff; border-color:var(--verde); }
   .btn-danger{ background:var(--rojo); color:#fff; border-color:var(--rojo); }
+  .btn-danger-ghost{ color:var(--rojo); border-color:#EFC9C9; background:#FCEBEB; }
+  .btn-danger-ghost:hover{ background:#F8D9D9; }
 
   .errmsg{
     font-size:12.5px; color:#A32D2D; line-height:1.5; margin-top:10px;
     background:#FCEBEB; border:1px solid #F0C1C1; border-radius:8px; padding:9px 11px;
   }
+
+  /* ---------- Grilla mensual ---------- */
+  .mesnav{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .mesnav-label{ font-size:15px; font-weight:800; color:var(--negro); text-transform:capitalize; }
+  .navbtn{
+    border:1px solid var(--gris-claro); background:var(--blanco); width:34px; height:34px;
+    border-radius:9px; font-size:18px; line-height:1; color:var(--carbon); cursor:pointer;
+  }
+  .navbtn:hover{ background:var(--gris-fondo); }
+  .gridmes{ display:grid; grid-template-columns:repeat(7,1fr); gap:3px; }
+  .gridmes + .gridmes{ margin-top:2px; }
+  .diasemana{ text-align:center; font-size:10.5px; font-weight:700; color:var(--gris-medio); text-transform:uppercase; padding-bottom:6px; }
+  .diacelda{
+    aspect-ratio:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    border-radius:9px; cursor:pointer; position:relative; gap:2px;
+  }
+  .diacelda.vacia{ cursor:default; }
+  .diacelda:not(.vacia):hover{ background:var(--gris-fondo); }
+  .diacelda .num{ font-size:13px; font-weight:600; color:var(--carbon); }
+  .diacelda .dot{ width:5px; height:5px; border-radius:50%; background:var(--azul-ev); }
+  .diacelda.hoy{ background:var(--negro); }
+  .diacelda.hoy:hover{ background:var(--carbon); }
+  .diacelda.hoy .num{ color:#fff; }
+  .diacelda.hoy .dot{ background:#fff; }
 
   .datehdr{
     margin:22px 20px 8px; font-size:12.5px; font-weight:800; text-transform:uppercase;
@@ -85,7 +111,8 @@
     border-radius:14px; padding:16px;
   }
   .evento-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
-  .evento-hora{ font-size:20px; font-weight:800; color:var(--negro); font-variant-numeric:tabular-nums; }
+  .evento-hora{ font-size:19px; font-weight:800; color:var(--negro); font-variant-numeric:tabular-nums; }
+  .evento-head-right{ display:flex; align-items:center; gap:8px; }
   .evento-badge{
     font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.03em;
     padding:4px 10px; border-radius:20px; white-space:nowrap;
@@ -93,11 +120,17 @@
   .evento-badge.asignado{ background:#E3F5EA; color:#1B7F4C; }
   .evento-badge.postulado{ background:#FCF3DF; color:#8A6412; }
   .evento-badge.rechazado{ background:#FCEBEB; color:#A32D2D; }
+  .btn-eliminar{
+    border:none; background:none; color:var(--gris-medio); font-size:16px; cursor:pointer;
+    padding:2px 4px; line-height:1; border-radius:6px;
+  }
+  .btn-eliminar:hover{ background:#FCEBEB; color:var(--rojo); }
   .evento-ubi{
     margin-top:8px; font-size:13.5px; color:var(--carbon); display:flex; align-items:flex-start; gap:6px;
   }
   .evento-ubi a{ color:var(--azul-ev); text-decoration:none; font-weight:600; }
   .evento-ubi a:hover{ text-decoration:underline; }
+  .evento-vehiculo{ margin-top:6px; font-size:13px; color:var(--gris-oscuro); display:flex; align-items:flex-start; gap:6px; }
   .evento-obs{ margin-top:8px; font-size:13px; color:var(--gris-oscuro); line-height:1.5; white-space:pre-wrap; }
 
   .chiplist{ display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
@@ -134,6 +167,32 @@
 
   .vacio{ margin:20px; padding:24px; background:var(--blanco); border:1px solid var(--gris-claro); border-radius:12px; text-align:center; font-size:13px; color:var(--gris-oscuro); }
 
+  /* ---------- FAB + hoja de alta ---------- */
+  .fab{
+    position:fixed; bottom:18px; right:18px; z-index:999998;
+    width:52px; height:52px; border-radius:50%; background:var(--negro); color:#fff;
+    border:none; font-size:26px; line-height:1; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.3);
+  }
+  .fab:hover{ background:var(--carbon); }
+
+  .sheet-overlay{
+    position:fixed; inset:0; background:rgba(10,10,10,.5); z-index:1000000;
+    display:flex; align-items:flex-end; justify-content:center;
+  }
+  .sheet{
+    background:var(--blanco); width:100%; max-width:640px; border-radius:18px 18px 0 0;
+    padding:18px 20px 22px; max-height:88vh; overflow-y:auto;
+  }
+  .sheet-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
+  .sheet-head h2{ font-size:13px; font-weight:800; margin:0; text-transform:uppercase; letter-spacing:.05em; color:var(--gris-oscuro); }
+  .sheet-close{ border:none; background:none; font-size:22px; line-height:1; color:var(--gris-medio); cursor:pointer; padding:4px 8px; }
+  .sheet-close:hover{ color:var(--negro); }
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+
+  @media (min-width: 640px){
+    .sheet-overlay{ align-items:center; }
+    .sheet{ border-radius:16px; }
+  }
   @media (min-width: 900px){
     .app{ max-width:900px; }
   }
@@ -153,29 +212,60 @@
 
   <div class="title-block">
     <h1>Calendario</h1>
-    <p id="subtitulo">Eventos del mes.</p>
+    <p id="subtitulo">Eventos del mes. Tocá un día para ver o cargar un evento.</p>
   </div>
 
   <div class="estado cargando" id="estadoMsg">Cargando eventos del mes…</div>
 
-  <!-- Solo gerencia: alta de evento -->
-  <div class="tcard oculto" id="formCard" style="display:none;">
-    <h2>Nuevo evento</h2>
-    <label for="inpFecha">Fecha</label>
-    <input type="date" id="inpFecha">
-    <label for="inpHorario">Horario</label>
-    <input type="time" id="inpHorario">
-    <label for="inpUbicacion">Ubicación</label>
-    <input type="text" id="inpUbicacion" placeholder="Ej: Salón Yacopini, Av. San Martín 1234, Godoy Cruz">
-    <label for="inpObservaciones">Observaciones</label>
-    <textarea id="inpObservaciones" placeholder="Opcional"></textarea>
-    <button class="btn btn-primary" id="btnCrearEvento">Crear evento</button>
-    <div class="errmsg" id="formMsg" style="display:none;"></div>
+  <div class="tcard">
+    <div class="mesnav">
+      <button type="button" class="navbtn" id="btnMesPrev" aria-label="Mes anterior">&lsaquo;</button>
+      <div class="mesnav-label" id="mesLabel">&nbsp;</div>
+      <button type="button" class="navbtn" id="btnMesNext" aria-label="Mes siguiente">&rsaquo;</button>
+    </div>
+    <div class="gridmes">
+      <div class="diasemana">D</div><div class="diasemana">L</div><div class="diasemana">M</div>
+      <div class="diasemana">M</div><div class="diasemana">J</div><div class="diasemana">V</div><div class="diasemana">S</div>
+    </div>
+    <div class="gridmes" id="gridDias"></div>
   </div>
 
   <div id="listaEventos"></div>
 
   <div class="vacio" id="vacioMsg" style="display:none;">No hay eventos cargados para este mes.</div>
+</div>
+
+<!-- Solo gerencia: botón flotante para dar de alta un evento -->
+<button type="button" class="fab" id="fabNuevo" style="display:none;" aria-label="Nuevo evento">+</button>
+
+<!-- Solo gerencia: hoja de alta de evento -->
+<div class="sheet-overlay" id="sheetOverlay" style="display:none;">
+  <div class="sheet">
+    <div class="sheet-head">
+      <h2>Nuevo evento</h2>
+      <button type="button" class="sheet-close" id="btnCerrarSheet" aria-label="Cerrar">&times;</button>
+    </div>
+    <label for="inpFecha">Fecha</label>
+    <input type="date" id="inpFecha">
+    <div class="row2">
+      <div>
+        <label for="inpHorarioInicio">Horario de inicio</label>
+        <input type="time" id="inpHorarioInicio">
+      </div>
+      <div>
+        <label for="inpHorarioFin">Horario final</label>
+        <input type="time" id="inpHorarioFin">
+      </div>
+    </div>
+    <label for="inpUbicacion">Ubicación</label>
+    <input type="text" id="inpUbicacion" placeholder="Ej: Salón Yacopini, Av. San Martín 1234, Godoy Cruz">
+    <label for="selVehiculo">Vehículo de test drive</label>
+    <select id="selVehiculo"><option value="">— Ninguno —</option></select>
+    <label for="inpObservaciones">Observaciones</label>
+    <textarea id="inpObservaciones" placeholder="Opcional"></textarea>
+    <button class="btn btn-primary" id="btnCrearEvento">Crear evento</button>
+    <div class="errmsg" id="formMsg" style="display:none;"></div>
+  </div>
 </div>
 
 <a id="hubBackBtn" href="./index.html" style="position:fixed;bottom:18px;left:18px;z-index:999999;
@@ -195,13 +285,25 @@
 (function(){
   var TABLERO_API_URL = 'https://script.google.com/macros/s/AKfycbzTYBoM56BBMj2B-8hUG_MIuOh7r5qG4qq2sGlTRM-y6QyFm0XHqgE6XUG5OQB022iy/exec';
   var TABLERO_API_KEY = 'i4uH92SO1sFyNYi8PJ2dsGb9LDM-Xoq3';
+  var FLOTA_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTCc5ChpqyCdJn0pcJxCp4NxxtsQd2Cl09Z1nqKZF0ECFIXK9B07oRBpl4v8Z5Lm9Gr_VPE7Wi89FFX/pub?gid=0&single=true&output=csv';
 
   var esGerencia = sessionStorage.getItem('bydGateOk') === '1';
   var esVendedor = sessionStorage.getItem('bydVendorOk') === '1';
   var nombreVendedor = sessionStorage.getItem('bydVendorNombre') || '';
 
+  var MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+  var hoyDate = new Date();
+  var currentMes = hoyDate.getMonth() + 1;
+  var currentAnio = hoyDate.getFullYear();
+  var hoyIso = isoDeFecha(hoyDate);
+
   var vendedoresCache = null; // [{nombre, sucursal}]
+  var flotaCache = null;      // [{marca, anio, patente, chasis, color, ubicacion}]
   var eventosCache = [];
+
+  function pad2(n){ return n < 10 ? '0' + n : '' + n; }
+  function isoDeFecha(d){ return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
 
   function esc(s){
     var d = document.createElement('div');
@@ -222,6 +324,14 @@
     return dias[d.getDay()] + ' ' + partes[2] + '/' + partes[1];
   }
 
+  function fmtHorario(ev){
+    var i = (ev.horarioInicio || '').trim();
+    var f = (ev.horarioFin || '').trim();
+    if (i && f) return i + ' – ' + f;
+    if (i) return i;
+    return '—';
+  }
+
   function mapsUrl(direccion){
     return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(direccion);
   }
@@ -234,6 +344,109 @@
       vendedoresCache = data.vendedores || [];
       return vendedoresCache;
     }).catch(function(){ vendedoresCache = []; return vendedoresCache; });
+  }
+
+  /* ---------- Flota (para el selector de vehículo de test drive) ---------- */
+  function normalizeHeader(s){
+    s = (s || '').toString();
+    var out = '';
+    s = s.normalize('NFD');
+    for (var i = 0; i < s.length; i++) {
+      var code = s.charCodeAt(i);
+      if (code >= 0x0300 && code <= 0x036f) continue;
+      out += s.charAt(i);
+    }
+    return out.trim().toUpperCase();
+  }
+  function splitCsvLine(line){
+    return line.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(function(p){ return p.trim().replace(/^"|"$/g, ''); });
+  }
+  function parseFlotaCSV(text){
+    var rawLines = text.split(/\r\n|\n|\r/);
+    var headerIdx = -1, headerCols = null;
+    for (var i = 0; i < rawLines.length; i++) {
+      var cols = splitCsvLine(rawLines[i]).map(normalizeHeader);
+      if (cols.indexOf('MODELO') !== -1 && cols.indexOf('DOMINIO') !== -1) { headerIdx = i; headerCols = cols; break; }
+    }
+    if (headerIdx === -1) return [];
+    var idxModelo = headerCols.indexOf('MODELO');
+    var idxAnio = headerCols.indexOf('ANO');
+    var idxDominio = headerCols.indexOf('DOMINIO');
+    var out = [];
+    for (var j = headerIdx + 1; j < rawLines.length; j++) {
+      var raw = rawLines[j];
+      if (!raw || !raw.trim() || /^,*$/.test(raw.trim())) continue;
+      var cols2 = splitCsvLine(raw);
+      var modelo = (cols2[idxModelo] || '').trim();
+      if (!modelo) continue;
+      out.push({
+        marca: modelo,
+        anio: idxAnio !== -1 ? (cols2[idxAnio] || '').trim() : '',
+        patente: idxDominio !== -1 ? (cols2[idxDominio] || '').trim().toUpperCase() : ''
+      });
+    }
+    return out;
+  }
+  function cargarFlota(){
+    if (flotaCache) return Promise.resolve(flotaCache);
+    return fetch(FLOTA_SHEET_CSV_URL, {cache:'no-store'}).then(function(r){ return r.text(); }).then(function(csv){
+      flotaCache = parseFlotaCSV(csv);
+      return flotaCache;
+    }).catch(function(){ flotaCache = []; return flotaCache; });
+  }
+  function etiquetaVehiculo(v){
+    var t = v.marca + (v.anio ? (' ' + v.anio) : '');
+    return v.patente ? (t + ' — ' + v.patente) : t;
+  }
+
+  /* ---------- Grilla mensual ---------- */
+  function cambiarMes(delta){
+    var d = new Date(currentAnio, currentMes - 1 + delta, 1);
+    currentMes = d.getMonth() + 1;
+    currentAnio = d.getFullYear();
+    cargar();
+  }
+
+  function renderGrid(eventos){
+    document.getElementById('mesLabel').textContent = MESES_ES[currentMes - 1] + ' ' + currentAnio;
+
+    var eventosPorDia = {};
+    eventos.forEach(function(ev){
+      var partes = (ev.fecha || '').split('-');
+      if (partes.length !== 3) return;
+      var d = Number(partes[2]);
+      eventosPorDia[d] = (eventosPorDia[d] || 0) + 1;
+    });
+
+    var primerDia = new Date(currentAnio, currentMes - 1, 1);
+    var diasEnMes = new Date(currentAnio, currentMes, 0).getDate();
+    var offset = primerDia.getDay();
+
+    var html = '';
+    for (var i = 0; i < offset; i++) html += '<div class="diacelda vacia"></div>';
+    for (var day = 1; day <= diasEnMes; day++) {
+      var iso = currentAnio + '-' + pad2(currentMes) + '-' + pad2(day);
+      var esHoy = iso === hoyIso;
+      var tieneEventos = !!eventosPorDia[day];
+      html += '<div class="diacelda' + (esHoy ? ' hoy' : '') + '" data-fecha="' + iso + '">' +
+        '<div class="num">' + day + '</div>' +
+        (tieneEventos ? '<div class="dot"></div>' : '') +
+        '</div>';
+    }
+    var cont = document.getElementById('gridDias');
+    cont.innerHTML = html;
+
+    cont.querySelectorAll('.diacelda[data-fecha]').forEach(function(cell){
+      cell.addEventListener('click', function(){
+        var fecha = cell.getAttribute('data-fecha');
+        if (esGerencia) {
+          abrirFormulario(fecha);
+        } else {
+          var target = document.querySelector('.evento[data-fecha="' + fecha + '"]');
+          if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      });
+    });
   }
 
   /* ---------- Render ---------- */
@@ -316,9 +529,13 @@
           if (estado === 'Asignado' || estado === 'Aprobado') badge = '<span class="evento-badge asignado">Asignado</span>';
           else if (estado === 'Postulado') badge = '<span class="evento-badge postulado">Postulado</span>';
         }
-        html += '<div class="evento" data-id="' + ev.id + '">' +
-          '<div class="evento-head"><div class="evento-hora">' + (esc(ev.horario) || '&mdash;') + '</div>' + badge + '</div>' +
+        html += '<div class="evento" data-id="' + ev.id + '" data-fecha="' + esc(ev.fecha) + '">' +
+          '<div class="evento-head"><div class="evento-hora">' + esc(fmtHorario(ev)) + '</div>' +
+          '<div class="evento-head-right">' + badge +
+          (esGerencia ? '<button type="button" class="btn-eliminar" data-eliminar="' + ev.id + '" aria-label="Eliminar evento" title="Eliminar evento">&times;</button>' : '') +
+          '</div></div>' +
           '<div class="evento-ubi">📍 <a href="' + mapsUrl(ev.ubicacion) + '" target="_blank" rel="noopener">' + esc(ev.ubicacion) + '</a></div>' +
+          (ev.vehiculo ? '<div class="evento-vehiculo">🚗 ' + esc(ev.vehiculo) + '</div>' : '') +
           (ev.observaciones ? '<div class="evento-obs">' + esc(ev.observaciones) + '</div>' : '') +
           (esGerencia ? renderAsignacionesGerencia(ev) : '') +
           (esVendedor ? renderEstadoVendedorHtml(ev) : '') +
@@ -379,6 +596,14 @@
         llamar('responderPostulacion', { eventoId: eventoId, vendedor: vendedor, aprobar: 'false' }).then(cargar);
       });
     });
+    document.querySelectorAll('[data-eliminar]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var eventoId = btn.getAttribute('data-eliminar');
+        if (!confirm('¿Eliminar este evento? Esta acción no se puede deshacer.')) return;
+        btn.disabled = true;
+        llamar('eliminarEventoCalendario', { eventoId: eventoId }).then(cargar);
+      });
+    });
   }
 
   /* ---------- Acciones vendedor ---------- */
@@ -407,14 +632,46 @@
   }
 
   /* ---------- Alta de evento (gerencia) ---------- */
+  function abrirFormulario(fechaPrefill){
+    document.getElementById('formMsg').style.display = 'none';
+    document.getElementById('inpFecha').value = fechaPrefill || hoyIso;
+    document.getElementById('inpHorarioInicio').value = '';
+    document.getElementById('inpHorarioFin').value = '';
+    document.getElementById('inpUbicacion').value = '';
+    document.getElementById('inpObservaciones').value = '';
+    document.getElementById('selVehiculo').value = '';
+    document.getElementById('sheetOverlay').style.display = 'flex';
+
+    var sel = document.getElementById('selVehiculo');
+    if (sel.options.length <= 1) {
+      cargarFlota().then(function(flota){
+        sel.innerHTML = '<option value="">— Ninguno —</option>' +
+          flota.map(function(v){ var lbl = etiquetaVehiculo(v); return '<option value="' + esc(lbl) + '">' + esc(lbl) + '</option>'; }).join('');
+      });
+    }
+  }
+  function cerrarFormulario(){
+    document.getElementById('sheetOverlay').style.display = 'none';
+  }
+
   if (esGerencia) {
-    document.getElementById('formCard').style.display = 'block';
+    document.getElementById('fabNuevo').style.display = 'flex';
+    document.getElementById('fabNuevo').style.alignItems = 'center';
+    document.getElementById('fabNuevo').style.justifyContent = 'center';
+    document.getElementById('fabNuevo').addEventListener('click', function(){ abrirFormulario(hoyIso); });
+    document.getElementById('btnCerrarSheet').addEventListener('click', cerrarFormulario);
+    document.getElementById('sheetOverlay').addEventListener('click', function(e){
+      if (e.target === document.getElementById('sheetOverlay')) cerrarFormulario();
+    });
+
     document.getElementById('btnCrearEvento').addEventListener('click', function(){
       var msgEl = document.getElementById('formMsg');
       msgEl.style.display = 'none';
       var fecha = document.getElementById('inpFecha').value;
-      var horario = document.getElementById('inpHorario').value;
+      var horarioInicio = document.getElementById('inpHorarioInicio').value;
+      var horarioFin = document.getElementById('inpHorarioFin').value;
       var ubicacion = document.getElementById('inpUbicacion').value.trim();
+      var vehiculo = document.getElementById('selVehiculo').value;
       var observaciones = document.getElementById('inpObservaciones').value.trim();
       if (!fecha) { msgEl.textContent = 'Ingresá la fecha.'; msgEl.style.display = 'block'; return; }
       if (!ubicacion) { msgEl.textContent = 'Ingresá la ubicación.'; msgEl.style.display = 'block'; return; }
@@ -422,12 +679,12 @@
       var btn = document.getElementById('btnCrearEvento');
       btn.disabled = true;
       btn.textContent = 'Creando…';
-      llamar('crearEventoCalendario', { fecha: fecha, horario: horario, ubicacion: ubicacion, observaciones: observaciones, creadoPor: 'Gerencia' })
+      llamar('crearEventoCalendario', {
+        fecha: fecha, horarioInicio: horarioInicio, horarioFin: horarioFin,
+        ubicacion: ubicacion, vehiculo: vehiculo, observaciones: observaciones, creadoPor: 'Gerencia'
+      })
         .then(function(){
-          document.getElementById('inpFecha').value = '';
-          document.getElementById('inpHorario').value = '';
-          document.getElementById('inpUbicacion').value = '';
-          document.getElementById('inpObservaciones').value = '';
+          cerrarFormulario();
           return cargar();
         })
         .catch(function(e){ msgEl.textContent = e.message || 'No se pudo crear el evento.'; msgEl.style.display = 'block'; })
@@ -435,15 +692,20 @@
     });
   }
 
+  document.getElementById('btnMesPrev').addEventListener('click', function(){ cambiarMes(-1); });
+  document.getElementById('btnMesNext').addEventListener('click', function(){ cambiarMes(1); });
+
   /* ---------- Carga inicial ---------- */
   function cargar(){
-    var url = TABLERO_API_URL + '?key=' + encodeURIComponent(TABLERO_API_KEY) + '&action=listarEventosCalendario';
+    var url = TABLERO_API_URL + '?key=' + encodeURIComponent(TABLERO_API_KEY) +
+      '&action=listarEventosCalendario&mes=' + currentMes + '&anio=' + currentAnio;
     return fetch(url, {cache:'no-store'})
       .then(function(r){ if (!r.ok) throw new Error('bad-status'); return r.json(); })
       .then(function(data){
         if (data && data.error) throw new Error(data.error);
         eventosCache = data.eventos || [];
         document.getElementById('estadoMsg').classList.add('oculto');
+        renderGrid(eventosCache);
         renderEventos(eventosCache);
       })
       .catch(function(){
