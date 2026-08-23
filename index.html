@@ -687,6 +687,16 @@
         </div>
 
         <div class="tcard">
+          <h2>Autos en trámite (compras a fábrica)</h2>
+          <div class="kpi-grid" style="margin-bottom:0;">
+            <div class="kpi"><div class="n" id="kpiStockSinPagarGen">–</div><div class="l">Sin pagar</div><div class="kpi-usd" id="kpiStockSinPagarGenUsd"></div></div>
+            <div class="kpi"><div class="n" id="kpiStockEsperandoGen">–</div><div class="l">Pagadas, esperando arribo</div><div class="kpi-usd" id="kpiStockEsperandoGenUsd"></div></div>
+            <div class="kpi"><div class="n" id="kpiStockLlegadosGen">–</div><div class="l">Pagadas, arribadas, sin entregar</div><div class="kpi-usd" id="kpiStockLlegadosGenUsd"></div></div>
+          </div>
+          <p class="note" id="stockComprasNoteGen"></p>
+        </div>
+
+        <div class="tcard">
           <h2>Utilidad — acumulado y por día (mes)</h2>
           <div class="utilidad-acumulado-row">
             <div>
@@ -1364,6 +1374,25 @@
     document.getElementById('stockComprasNote').innerHTML = 'Datos en vivo desde la planilla de compras — actualizado ' + d.stockComprasFecha + '.';
   }
 
+  // Mismas 3 tarjetas, versión fija (sin filtros) para el Tablero General.
+  function renderGeneralStockCompras(d){
+    if (d.stockComprasError){
+      ['SinPagarGen', 'EsperandoGen', 'LlegadosGen'].forEach(function(idPrefix){
+        document.getElementById('kpiStock' + idPrefix).textContent = '–';
+        document.getElementById('kpiStock' + idPrefix + 'Usd').textContent = '';
+      });
+      document.getElementById('stockComprasNoteGen').innerHTML = 'No se pudo leer la planilla de compras: ' + d.stockComprasError;
+      return;
+    }
+    var map = { SinPagarGen: d.stockSinPagar, EsperandoGen: d.stockEsperando, LlegadosGen: d.stockLlegados };
+    Object.keys(map).forEach(function(idPrefix){
+      var bloque = map[idPrefix];
+      document.getElementById('kpiStock' + idPrefix).textContent = bloque ? bloque.total : '–';
+      document.getElementById('kpiStock' + idPrefix + 'Usd').textContent = bloque ? fmtUSD_K(bloque.montoTotal || 0) : '';
+    });
+    document.getElementById('stockComprasNoteGen').innerHTML = 'Datos en vivo desde la planilla de compras — actualizado ' + d.stockComprasFecha + '.';
+  }
+
   // ---- Snapshot de referencia (se usa si todavía no está conectado el Apps Script,
   // o si por algún motivo falla la conexión en vivo) ----
   var FALLBACK_DATA = {
@@ -1566,6 +1595,7 @@
     // Solicitudes
     document.getElementById('kpiSolicitudesTotal2').textContent = d.solicitudesTotal;
     setPctBadge('kpiSolicitudesTotal2Pct', d.solicitudesTotalPctChange);
+    renderGeneralStockCompras(d);
     document.getElementById('utilidadAcumuladoVal').textContent = fmtUSD_K(d.utilidadMensual || 0);
     setPctBadge('utilidadAcumuladoPct', d.utilidadMensualPctChange);
     document.getElementById('kpiUtilidadHoy').textContent = fmtUSD_K(d.utilidadHoy || 0);
