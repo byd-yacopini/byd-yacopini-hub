@@ -246,6 +246,7 @@
   }
   .kpi .n{ font-size:24px; font-weight:800; color:var(--negro); }
   .kpi .l{ font-size:11px; color:var(--gris-medio); font-weight:600; margin-top:2px; }
+  .kpi .kpi-usd{ font-size:11.5px; color:var(--gris-oscuro); font-weight:700; margin-top:6px; }
   .utilidad-acumulado-row{ display:flex; align-items:flex-end; justify-content:space-between; gap:10px; margin-bottom:14px; }
   .utilidad-acumulado-val{ font-size:30px; font-weight:800; color:var(--negro); line-height:1.1; }
 
@@ -814,9 +815,9 @@
         <div class="tcard">
           <h2>Autos en trámite (compras a fábrica)</h2>
           <div class="kpi-grid" style="margin-bottom:0;">
-            <div class="kpi"><div class="n" id="kpiStockSinPagar">–</div><div class="l">Sin pagar</div></div>
-            <div class="kpi"><div class="n" id="kpiStockEsperando">–</div><div class="l">Pagadas, esperando arribo</div></div>
-            <div class="kpi"><div class="n" id="kpiStockLlegados">–</div><div class="l">Pagadas, arribadas, sin entregar</div></div>
+            <div class="kpi"><div class="n" id="kpiStockSinPagar">–</div><div class="l">Sin pagar</div><div class="kpi-usd" id="kpiStockSinPagarUsd"></div></div>
+            <div class="kpi"><div class="n" id="kpiStockEsperando">–</div><div class="l">Pagadas, esperando arribo</div><div class="kpi-usd" id="kpiStockEsperandoUsd"></div></div>
+            <div class="kpi"><div class="n" id="kpiStockLlegados">–</div><div class="l">Pagadas, arribadas, sin entregar</div><div class="kpi-usd" id="kpiStockLlegadosUsd"></div></div>
           </div>
           <p class="note" id="stockComprasNote"></p>
         </div>
@@ -1293,17 +1294,19 @@
   // Código.gs): agrupa por ARRIBO/PAGO, excluyendo lo ya ENTREGADO. Solo
   // el total por tarjeta — sin desglose por modelo/color, a pedido de
   // gerencia, para que la pestaña de Stock no sea un reporte tan largo.
+  function renderStockComprasKpi(idPrefix, bloque){
+    document.getElementById('kpiStock' + idPrefix).textContent = bloque ? bloque.total : '–';
+    document.getElementById('kpiStock' + idPrefix + 'Usd').textContent = bloque ? fmtUSD_K(bloque.montoTotal || 0) : '';
+  }
   function renderStockComprasKpis(d){
     if (d.stockComprasError){
-      document.getElementById('kpiStockSinPagar').textContent = '–';
-      document.getElementById('kpiStockEsperando').textContent = '–';
-      document.getElementById('kpiStockLlegados').textContent = '–';
+      ['SinPagar', 'Esperando', 'Llegados'].forEach(function(idPrefix){ renderStockComprasKpi(idPrefix, null); });
       document.getElementById('stockComprasNote').innerHTML = 'No se pudo leer la planilla de compras: ' + d.stockComprasError;
       return;
     }
-    document.getElementById('kpiStockSinPagar').textContent = d.stockSinPagar ? d.stockSinPagar.total : '–';
-    document.getElementById('kpiStockEsperando').textContent = d.stockEsperando ? d.stockEsperando.total : '–';
-    document.getElementById('kpiStockLlegados').textContent = d.stockLlegados ? d.stockLlegados.total : '–';
+    renderStockComprasKpi('SinPagar', d.stockSinPagar);
+    renderStockComprasKpi('Esperando', d.stockEsperando);
+    renderStockComprasKpi('Llegados', d.stockLlegados);
     document.getElementById('stockComprasNote').innerHTML = 'Datos en vivo desde la planilla de compras — actualizado ' + d.stockComprasFecha + '.';
   }
 
