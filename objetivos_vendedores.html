@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Objetivos de Vendedores · Yacopini BYD</title>
+<style>
+  :root{
+    --negro:#0A0A0A;
+    --carbon:#2A2A2A;
+    --gris-oscuro:#4A4A4A;
+    --gris-medio:#8C8C8C;
+    --gris-claro:#D4D4D4;
+    --gris-fondo:#F2F2F2;
+    --blanco:#FFFFFF;
+    --azul-ev:#1565D8;
+    --verde-dm:#388E3C;
+    --radius:12px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--gris-fondo);
+    color:var(--carbon);
+    font-family:'Segoe UI', Arial, Helvetica, sans-serif;
+  }
+
+  .topbar{
+    position:sticky;top:0;z-index:20;
+    background:var(--negro);
+    color:#fff;
+    padding:16px 18px 15px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .topbar svg{ height:30px; width:auto; display:block; }
+  .topbar .sub{
+    font-size:11px;
+    color:#B8B8B8;
+    text-align:right;
+    line-height:1.5;
+  }
+  .topbar .sub .doctype{
+    font-size:12.5px;
+    font-weight:700;
+    color:#fff;
+    letter-spacing:.02em;
+  }
+
+  main{max-width:520px;margin:0 auto;padding:18px 16px 90px;}
+  @media (min-width: 900px){
+    /* DESKTOP-RESPONSIVE-V1 */
+    main{ max-width:760px; }
+  }
+
+  h1.section-title{
+    font-size:13.5px;
+    font-weight:800;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    color:var(--gris-oscuro);
+    margin:0 0 12px;
+  }
+
+  .card{
+    background:var(--blanco);
+    border:1px solid var(--gris-claro);
+    border-radius:var(--radius);
+    padding:8px 18px;
+    margin-bottom:14px;
+  }
+
+  .hint{
+    font-size:12px;color:#8A97A3;line-height:1.55;margin:0 0 14px;
+  }
+
+  .vrow{
+    display:flex;justify-content:space-between;align-items:center;gap:12px;
+    padding:13px 0;border-top:1px solid var(--gris-claro);
+  }
+  .vrow:first-child{border-top:none;}
+  .vrow .info{min-width:0;flex:1;}
+  .vrow .info b{display:block;font-size:14px;color:var(--negro);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .vrow .info span{font-size:12px;color:var(--gris-medio);}
+  .vrow .metainput{
+    width:76px;flex:none;
+    padding:9px 6px;text-align:center;
+    border:1px solid var(--gris-claro);border-radius:8px;
+    font-size:15px;font-weight:700;font-family:inherit;color:var(--negro);
+    background:var(--gris-fondo);
+  }
+  .vrow .metainput:focus{ outline:none;border-color:var(--azul-ev);background:var(--blanco); }
+  .vrow .metainput.dirty{ border-color:var(--azul-ev);background:#EAF1FC; }
+
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    padding:13px 16px;border-radius:8px;
+    font-family:inherit;font-size:14.5px;font-weight:700;cursor:pointer;
+    width:100%;
+    border:1px solid var(--negro);
+    background:var(--negro);color:#fff;
+    transition:background .15s ease;
+  }
+  .btn:hover{ background:var(--carbon); }
+  .btn:active{ transform:scale(0.99); }
+  .btn:disabled{ opacity:.55;cursor:default; }
+
+  .empty{
+    text-align:center;color:var(--gris-medio);padding:36px 12px;font-size:13.5px;
+  }
+  .empty .big{font-size:30px;display:block;margin-bottom:8px;}
+
+  .toast{
+    position:fixed;bottom:90px;left:50%;transform:translateX(-50%);
+    background:var(--negro);color:#fff;padding:10px 18px;border-radius:10px;
+    font-size:13px;font-weight:600;z-index:60;opacity:0;pointer-events:none;transition:opacity .2s;
+    box-shadow:0 4px 14px rgba(0,0,0,.18);
+    max-width:88vw;text-align:center;
+  }
+  .toast.show{ opacity:1; }
+
+  .savebar{
+    position:fixed;left:0;right:0;bottom:0;z-index:50;
+    background:var(--blanco);border-top:1px solid var(--gris-claro);
+    padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+  }
+  .savebar-inner{max-width:520px;margin:0 auto;}
+  @media (min-width:900px){ .savebar-inner{ max-width:760px; } }
+</style>
+</head>
+<body class="gate-locked">
+<div id="bydGate" style="position:fixed;inset:0;z-index:999999;background:#0A0A0A;display:flex;align-items:center;justify-content:center;padding:24px;opacity:1;">
+  <form id="bydGateForm" style="width:100%;max-width:300px;text-align:center;font-family:Arial,sans-serif;">
+    <div style="color:#fff;font-weight:800;font-size:16px;margin-bottom:4px;">BYD Yacopini</div>
+    <div style="color:#8C8C8C;font-size:12px;margin-bottom:18px;">Acceso interno &middot; Gerencia</div>
+    <input id="bydGatePass" type="password" inputmode="numeric" placeholder="Clave" autocomplete="off" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid #4A4A4A;background:#2A2A2A;color:#fff;font-size:16px;text-align:center;box-sizing:border-box;">
+    <button type="submit" style="width:100%;margin-top:10px;padding:12px;border-radius:10px;border:none;background:#1565D8;color:#fff;font-weight:700;font-size:14px;">Entrar</button>
+    <div id="bydGateError" style="color:#E85555;font-size:12px;margin-top:10px;display:none;">Clave incorrecta</div>
+  </form>
+</div>
+<style>
+  body.gate-locked > *:not(#bydGate){display:none !important;}
+  #bydGate{ transition:opacity .25s ease; }
+  #bydGate.fadeOut{ opacity:0; }
+</style>
+<script>
+(function(){
+  var HASH = "a734aecec77bc8826bec68f0264b70228ab419e52a8fcdf05016ebee0465f257";
+  var body = document.body;
+  function unlock(){ var g=document.getElementById('bydGate'); if(g){ g.classList.add('fadeOut'); setTimeout(function(){ body.classList.remove('gate-locked'); g.remove(); }, 220); } else { body.classList.remove('gate-locked'); } }
+  if (sessionStorage.getItem('bydGateOk') === '1') { unlock(); }
+  else {
+    document.getElementById('bydGateForm').addEventListener('submit', function(e){
+      e.preventDefault();
+      var val = document.getElementById('bydGatePass').value;
+      crypto.subtle.digest('SHA-256', new TextEncoder().encode(val)).then(function(buf){
+        var hex = Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+        if (hex === HASH) {
+          sessionStorage.setItem('bydGateOk','1');
+          unlock();
+        } else {
+          document.getElementById('bydGateError').style.display = 'block';
+          document.getElementById('bydGatePass').value = '';
+          document.getElementById('bydGatePass').focus();
+        }
+      });
+    });
+  }
+})();
+</script>
+
+<div class="topbar">
+  <svg viewBox="12 4 529 102" xmlns="http://www.w3.org/2000/svg" aria-label="BYD Yacopini">
+    <defs><style>.st0{fill:#FFFFFF;}</style></defs>
+    <path class="st0" d="M162.93,19.18c-8.06-12.16-21.88-14.53-31.23-14.75-8.23-.19-43.9-.23-64.67-.24-40.91-.03-17.51-.01-54.36-.01v19.54c43.75,0,95.68-.1,118.41.25,4.06.06,8.08.47,11.27,3.3,2.97,2.64,4.02,6.79,2.69,10.4-2.14,5.83-8.07,7.28-13.96,7.37-9.01.14-33.77.19-52.24.22-45.3.06-25.68.03-66.16.03v19.49c43.72,0,95.76-.09,118.41.25,7.06.1,14.53,2.56,14.53,10.43s-7.46,10.45-14.53,10.56c-22.59.33-74.66.24-118.41.24v19.53c43.88,0,101.32.16,119.03-.25,9.35-.22,23.18-2.59,31.23-14.75,7.56-11.41,5.71-26.27-4.22-35.8,9.93-9.54,11.78-24.39,4.21-35.8"/>
+    <path class="st0" d="M520.08,15.93c-13.35-9.58-27.85-10.94-39.61-11.21-11.58-.27-29.05-.39-44.5-.45-37.67-.15-15.02-.08-50.91-.08v19.6c38.19,0,64.97-.32,94.46.52,8.66.24,17.95,1.16,26.31,6.96,7.92,5.5,12.62,14.26,12.62,23.72s-4.57,18.24-12.49,23.74c-8.36,5.81-17.65,6.72-26.31,6.96-29.49.83-56.27.51-94.46.51l-.13,19.59c38.41,0,66.03.14,95.41-.54,11.76-.27,26.26-1.63,39.61-11.21,12.67-9.09,20.33-23.36,20.33-39.05s-7.67-29.97-20.33-39.05"/>
+    <path class="st0" d="M227.22,48.06c-10.23-.2-13.49-3.54-13.56-13.73-.07-9.42-.02-20.58-.02-30.14h-22.56c0,9.67-.19,29.24.19,38.7.74,18.38,6.77,24.11,25.55,24.75,13.02.44,23.36.29,41.36.28v-19.69c-14.43,0-20.31.04-30.96-.16"/>
+    <path class="st0" d="M339.04,34.68c-.07,9.92-3.3,13.18-13.56,13.38-4.89.09-17.75.14-28.33.16h0s-.1.01-.1.01c-10.81,0-22.34-.02-29.1-.02v57.57h26.52v-37.88c.81,0,1.68,0,2.58,0h0s.1,0,.1,0v.02c13.8,0,31.04-.06,37.55-.26,19.93-.61,26-6.23,26.73-24.78.1-2.48.16-5.62.19-9.06V4.18h-22.56c0,9.8.04,20.81-.03,30.5"/>
+  </svg>
+  <div class="sub">
+    <div class="doctype">Objetivos de Vendedores</div>
+    Godoy Cruz · ARG092511
+  </div>
+</div>
+
+<main>
+  <h1 class="section-title" id="mesTitle">Objetivos del mes</h1>
+  <div class="hint">Es el objetivo mensual de operaciones (solicitudes) que ve cada vendedor en su panel, en "Mi avance vs. objetivo". Cambiá el número y tocá Guardar cambios.</div>
+  <div class="card">
+    <div id="vlist"><div class="empty"><span class="big">⏳</span>Cargando vendedores…</div></div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<div class="savebar">
+  <div class="savebar-inner">
+    <button class="btn" id="btnGuardar" disabled>Guardar cambios</button>
+  </div>
+</div>
+
+<script>
+const TABLERO_API_URL = 'https://script.google.com/macros/s/AKfycbzTYBoM56BBMj2B-8hUG_MIuOh7r5qG4qq2sGlTRM-y6QyFm0XHqgE6XUG5OQB022iy/exec';
+const TABLERO_API_KEY = 'i4uH92SO1sFyNYi8PJ2dsGb9LDM-Xoq3';
+
+let objetivosOriginal = []; // [{vendedor, sucursal, meta}]
+let mesActual = '';
+let anioActual = '';
+
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+function escapeHtml(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, function(ch){
+    return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[ch];
+  });
+}
+
+function capitalizarMes(mes){
+  if (!mes) return '';
+  return mes.charAt(0) + mes.slice(1).toLowerCase();
+}
+
+async function loadObjetivos(){
+  const cont = document.getElementById('vlist');
+  try{
+    const url = TABLERO_API_URL + '?key=' + encodeURIComponent(TABLERO_API_KEY) + '&action=listarObjetivosVendedores';
+    const resp = await fetch(url, {cache:'no-store'});
+    if(!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+    objetivosOriginal = data.objetivos || [];
+    mesActual = data.mes || '';
+    anioActual = data.anio || '';
+    document.getElementById('mesTitle').textContent = 'Objetivos de ' + capitalizarMes(mesActual) + ' ' + anioActual;
+    renderLista();
+  }catch(e){
+    console.error(e);
+    cont.innerHTML = '<div class="empty"><span class="big">⚠️</span>No se pudieron cargar los objetivos.</div>';
+    toast('Error al cargar los objetivos');
+  }
+}
+
+function renderLista(){
+  const cont = document.getElementById('vlist');
+  if (!objetivosOriginal.length){
+    cont.innerHTML = '<div class="empty"><span class="big">🕓</span>No hay vendedores cargados.</div>';
+    return;
+  }
+  cont.innerHTML = objetivosOriginal.map((o, i) => `
+    <div class="vrow">
+      <div class="info">
+        <b>${escapeHtml(o.vendedor)}</b>
+        <span>${escapeHtml(o.sucursal || 'Sin sucursal')}</span>
+      </div>
+      <input class="metainput" type="number" min="0" step="1" inputmode="numeric"
+        data-idx="${i}" value="${Number(o.meta) || 0}">
+    </div>
+  `).join('');
+  cont.querySelectorAll('.metainput').forEach(inp => {
+    inp.addEventListener('input', onMetaChange);
+  });
+  updateGuardarState();
+}
+
+function onMetaChange(e){
+  const idx = Number(e.target.dataset.idx);
+  const original = Number(objetivosOriginal[idx].meta) || 0;
+  const actual = Number(e.target.value) || 0;
+  e.target.classList.toggle('dirty', actual !== original);
+  updateGuardarState();
+}
+
+function getCambios(){
+  const inputs = document.querySelectorAll('.metainput');
+  const cambios = [];
+  inputs.forEach(inp => {
+    const idx = Number(inp.dataset.idx);
+    const original = Number(objetivosOriginal[idx].meta) || 0;
+    const actual = Number(inp.value) || 0;
+    if (actual !== original) {
+      cambios.push({ vendedor: objetivosOriginal[idx].vendedor, meta: actual, idx: idx });
+    }
+  });
+  return cambios;
+}
+
+function updateGuardarState(){
+  const cambios = getCambios();
+  const btn = document.getElementById('btnGuardar');
+  btn.disabled = cambios.length === 0;
+  btn.textContent = cambios.length ? ('Guardar cambios (' + cambios.length + ')') : 'Guardar cambios';
+}
+
+document.getElementById('btnGuardar').addEventListener('click', async () => {
+  const cambios = getCambios();
+  if (!cambios.length) return;
+  const btn = document.getElementById('btnGuardar');
+  btn.disabled = true;
+  btn.textContent = 'Guardando…';
+
+  let ok = 0, fail = 0;
+  for (const c of cambios) {
+    try{
+      const url = TABLERO_API_URL + '?key=' + encodeURIComponent(TABLERO_API_KEY) + '&action=actualizarObjetivo' +
+        '&vendedor=' + encodeURIComponent(c.vendedor) +
+        '&meta=' + encodeURIComponent(c.meta) +
+        '&mes=' + encodeURIComponent(mesActual) +
+        '&anio=' + encodeURIComponent(anioActual);
+      const resp = await fetch(url, {cache:'no-store'});
+      const data = await resp.json();
+      if (data.error) throw new Error(data.error);
+      objetivosOriginal[c.idx].meta = c.meta;
+      ok++;
+    }catch(e){
+      console.error(e);
+      fail++;
+    }
+  }
+
+  renderLista();
+  if (fail === 0) toast('Objetivos actualizados (' + ok + ')');
+  else toast('Guardado con errores: ' + ok + ' ok, ' + fail + ' con error');
+});
+
+loadObjetivos();
+</script>
+
+<a id="hubBackBtn" href="./index.html" style="position:fixed;bottom:76px;left:18px;z-index:999999;
+  width:44px;height:44px;border-radius:50%;background:#0A0A0A;color:#fff;display:flex;
+  align-items:center;justify-content:center;text-decoration:none;font-family:Arial,sans-serif;
+  font-size:20px;box-shadow:0 2px 8px rgba(0,0,0,0.35);" aria-label="Volver al inicio">&#8592;</a>
+</body>
+</html>
