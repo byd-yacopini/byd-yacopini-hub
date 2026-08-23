@@ -812,21 +812,13 @@
         </div>
 
         <div class="tcard">
-          <h2>Autos llegados al concesionario</h2>
-          <div id="stockLlegados"></div>
-          <p class="note" id="stockLlegadosNote"></p>
-        </div>
-
-        <div class="tcard">
-          <h2>Autos pagados, esperando que lleguen</h2>
-          <div id="stockEsperando"></div>
-          <p class="note" id="stockEsperandoNote"></p>
-        </div>
-
-        <div class="tcard">
-          <h2>Autos todavía sin pagar</h2>
-          <div id="stockSinPagar"></div>
-          <p class="note" id="stockSinPagarNote"></p>
+          <h2>Autos en trámite (compras a fábrica)</h2>
+          <div class="kpi-grid" style="margin-bottom:0;">
+            <div class="kpi"><div class="n" id="kpiStockSinPagar">–</div><div class="l">Sin pagar</div></div>
+            <div class="kpi"><div class="n" id="kpiStockEsperando">–</div><div class="l">Pagadas, esperando arribo</div></div>
+            <div class="kpi"><div class="n" id="kpiStockLlegados">–</div><div class="l">Pagadas, arribadas, sin entregar</div></div>
+          </div>
+          <p class="note" id="stockComprasNote"></p>
         </div>
 
         <div class="tcard">
@@ -1296,35 +1288,23 @@
 
   document.getElementById('entregasVendedorFilter').addEventListener('change', renderEntregasView);
 
-  // ---- Stock por color de fila (llegados / pagados esperando / sin pagar) ----
+  // ---- Stock en trámite (llegados / pagados esperando / sin pagar) ----
   // En vivo desde la planilla externa de compras (buildStockCompras en
-  // Código.gs): agrupa por ARRIBO/PAGO, excluyendo lo ya ENTREGADO.
-  function renderStockColorModelDetalle(arr, colorClass){
-    if (!arr || !arr.length) return '<p class="note">Sin datos.</p>';
-    var max = Math.max.apply(null, arr.map(function(x){ return x.total; }));
-    return arr.map(function(m){
-      var pct = Math.max(4, Math.round((m.total / max) * 100));
-      var variantesHtml = (m.variantes || []).map(function(v){
-        return '<div class="variant-row"><span class="vname">' + fixCaps(v.color) + '</span><span class="vcount">' + v.c + '</span></div>';
-      }).join('');
-      return '<div class="model-group">' +
-        '<div class="bar-row"><div class="top"><span class="name">' + fixCaps(m.modelo) + '</span><span class="count">' + m.total + '</span></div>' +
-        '<div class="bar-track"><div class="bar-fill ' + (colorClass||'') + '" style="width:' + pct + '%"></div></div></div>' +
-        '<div class="stock-variantes">' + variantesHtml + '</div>' +
-        '</div>';
-    }).join('');
-  }
-
-  function renderStockColorBlock(elId, noteElId, bloque, colorClass, etiqueta, fecha){
-    if (!bloque){
-      document.getElementById(elId).innerHTML = '<p class="note">No se pudo leer la planilla de compras.</p>';
-      document.getElementById(noteElId).innerHTML = '';
+  // Código.gs): agrupa por ARRIBO/PAGO, excluyendo lo ya ENTREGADO. Solo
+  // el total por tarjeta — sin desglose por modelo/color, a pedido de
+  // gerencia, para que la pestaña de Stock no sea un reporte tan largo.
+  function renderStockComprasKpis(d){
+    if (d.stockComprasError){
+      document.getElementById('kpiStockSinPagar').textContent = '–';
+      document.getElementById('kpiStockEsperando').textContent = '–';
+      document.getElementById('kpiStockLlegados').textContent = '–';
+      document.getElementById('stockComprasNote').innerHTML = 'No se pudo leer la planilla de compras: ' + d.stockComprasError;
       return;
     }
-    document.getElementById(elId).innerHTML = renderStockColorModelDetalle(bloque.detalle, colorClass);
-    document.getElementById(noteElId).innerHTML =
-      'Total: <strong>' + bloque.total + '</strong> unidades. ' + etiqueta +
-      ' Datos en vivo desde la planilla de compras — actualizado ' + fecha + '.';
+    document.getElementById('kpiStockSinPagar').textContent = d.stockSinPagar ? d.stockSinPagar.total : '–';
+    document.getElementById('kpiStockEsperando').textContent = d.stockEsperando ? d.stockEsperando.total : '–';
+    document.getElementById('kpiStockLlegados').textContent = d.stockLlegados ? d.stockLlegados.total : '–';
+    document.getElementById('stockComprasNote').innerHTML = 'Datos en vivo desde la planilla de compras — actualizado ' + d.stockComprasFecha + '.';
   }
 
   // ---- Snapshot de referencia (se usa si todavía no está conectado el Apps Script,
@@ -1553,15 +1533,7 @@
       barList(d.deudasPorModeloColor.map(function(x){ return { n: fixCaps(x.n), c: x.c }; }), 'rojo') :
       '<p class="note">Sin deudas este mes.</p>';
 
-    if (d.stockComprasError) {
-      ['stockLlegados', 'stockEsperando', 'stockSinPagar'].forEach(function(id){
-        document.getElementById(id).innerHTML = '<p class="note">No se pudo leer la planilla de compras: ' + d.stockComprasError + '</p>';
-      });
-    } else {
-      renderStockColorBlock('stockLlegados', 'stockLlegadosNote', d.stockLlegados, '', 'Ya están en el concesionario, todavía no se entregaron.', d.stockComprasFecha);
-      renderStockColorBlock('stockEsperando', 'stockEsperandoNote', d.stockEsperando, 'ambar', 'Ya se pagaron, todavía no llegaron.', d.stockComprasFecha);
-      renderStockColorBlock('stockSinPagar', 'stockSinPagarNote', d.stockSinPagar, 'gris', 'Todavía no se pagaron.', d.stockComprasFecha);
-    }
+    renderStockComprasKpis(d);
 
     // Entregas
     document.getElementById('kpiEntregasMes').textContent = d.entregasTotal;
