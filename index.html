@@ -814,10 +814,23 @@
 
         <div class="tcard">
           <h2>Autos en trámite (compras a fábrica)</h2>
-          <div class="kpi-grid" style="margin-bottom:0;">
-            <div class="kpi"><div class="n" id="kpiStockSinPagar">–</div><div class="l">Sin pagar</div><div class="kpi-usd" id="kpiStockSinPagarUsd"></div></div>
-            <div class="kpi"><div class="n" id="kpiStockEsperando">–</div><div class="l">Pagadas, esperando arribo</div><div class="kpi-usd" id="kpiStockEsperandoUsd"></div></div>
-            <div class="kpi"><div class="n" id="kpiStockLlegados">–</div><div class="l">Pagadas, arribadas, sin entregar</div><div class="kpi-usd" id="kpiStockLlegadosUsd"></div></div>
+          <div class="filter-row">
+            <label for="stockEstadoFilter">Estado</label>
+            <select class="filter-select" id="stockEstadoFilter">
+              <option value="">Todos</option>
+              <option value="SinPagar">Sin pagar</option>
+              <option value="Esperando">Pagadas, esperando arribo</option>
+              <option value="Llegados">Pagadas, arribadas, sin entregar</option>
+            </select>
+          </div>
+          <div class="filter-row">
+            <label for="stockModeloFilter">Modelo</label>
+            <select class="filter-select" id="stockModeloFilter"><option value="">Todos</option></select>
+          </div>
+          <div class="kpi-grid" style="margin-bottom:0;" id="stockComprasKpiGrid">
+            <div class="kpi" id="kpiCardSinPagar"><div class="n" id="kpiStockSinPagar">–</div><div class="l">Sin pagar</div><div class="kpi-usd" id="kpiStockSinPagarUsd"></div></div>
+            <div class="kpi" id="kpiCardEsperando"><div class="n" id="kpiStockEsperando">–</div><div class="l">Pagadas, esperando arribo</div><div class="kpi-usd" id="kpiStockEsperandoUsd"></div></div>
+            <div class="kpi" id="kpiCardLlegados"><div class="n" id="kpiStockLlegados">–</div><div class="l">Pagadas, arribadas, sin entregar</div><div class="kpi-usd" id="kpiStockLlegadosUsd"></div></div>
           </div>
           <p class="note" id="stockComprasNote"></p>
         </div>
@@ -1291,22 +1304,63 @@
 
   // ---- Stock en trámite (llegados / pagados esperando / sin pagar) ----
   // En vivo desde la planilla externa de compras (buildStockCompras en
-  // Código.gs): agrupa por ARRIBO/PAGO, excluyendo lo ya ENTREGADO. Solo
-  // el total por tarjeta — sin desglose por modelo/color, a pedido de
-  // gerencia, para que la pestaña de Stock no sea un reporte tan largo.
-  function renderStockComprasKpi(idPrefix, bloque){
-    document.getElementById('kpiStock' + idPrefix).textContent = bloque ? bloque.total : '–';
-    document.getElementById('kpiStock' + idPrefix + 'Usd').textContent = bloque ? fmtUSD_K(bloque.montoTotal || 0) : '';
+  // Código.gs): agrupa por ARRIBO/PAGO, excluyendo lo ya ENTREGADO. Las
+  // tarjetas muestran solo el total (cantidad + monto) — filtrables por
+  // Estado y Modelo, recalculando cada tarjeta visible del lado del cliente
+  // a partir del detalle por modelo que ya manda el backend.
+  var currentStockCompras = { SinPagar: null, Esperando: null, Llegados: null };
+
+  function totalParaModelo(bloque, modelo){
+    if (!bloque) return { total: 0, monto: 0 };
+    if (!modelo) return { total: bloque.total, monto: bloque.montoTotal || 0 };
+    var entry = (bloque.detalle || []).find(function(x){ return x.modelo === modelo; });
+    return entry ? { total: entry.total, monto: entry.monto || 0 } : { total: 0, monto: 0 };
   }
+
+  function populateStockModeloFilter(){
+    var sel = document.getElementById('stockModeloFilter');
+    var prev = sel.value;
+    var modelos = {};
+    ['SinPagar', 'Esperando', 'Llegados'].forEach(function(idPrefix){
+      var bloque = currentStockCompras[idPrefix];
+      (bloque && bloque.detalle || []).forEach(function(x){ modelos[x.modelo] = true; });
+    });
+    var modeloList = Object.keys(modelos).sort(function(a, b){ return a.localeCompare(b, 'es'); });
+    sel.innerHTML = '<option value="">Todos</option>' + modeloList.map(function(m){
+      return '<option value="' + m.replace(/"/g, '&quot;') + '">' + fixCaps(m) + '</option>';
+    }).join('');
+    sel.value = modeloList.indexOf(prev) !== -1 ? prev : '';
+  }
+
+  function updateStockComprasView(){
+    var estadoSel = document.getElementById('stockEstadoFilter').value;
+    var modeloSel = document.getElementById('stockModeloFilter').value;
+
+    ['SinPagar', 'Esperando', 'Llegados'].forEach(function(idPrefix){
+      var visible = !estadoSel || estadoSel === idPrefix;
+      document.getElementById('kpiCard' + idPrefix).style.display = visible ? '' : 'none';
+      if (!visible) return;
+      var r = totalParaModelo(currentStockCompras[idPrefix], modeloSel);
+      document.getElementById('kpiStock' + idPrefix).textContent = r.total;
+      document.getElementById('kpiStock' + idPrefix + 'Usd').textContent = fmtUSD_K(r.monto);
+    });
+  }
+  document.getElementById('stockEstadoFilter').addEventListener('change', updateStockComprasView);
+  document.getElementById('stockModeloFilter').addEventListener('change', updateStockComprasView);
+
   function renderStockComprasKpis(d){
     if (d.stockComprasError){
-      ['SinPagar', 'Esperando', 'Llegados'].forEach(function(idPrefix){ renderStockComprasKpi(idPrefix, null); });
+      currentStockCompras = { SinPagar: null, Esperando: null, Llegados: null };
+      ['SinPagar', 'Esperando', 'Llegados'].forEach(function(idPrefix){
+        document.getElementById('kpiStock' + idPrefix).textContent = '–';
+        document.getElementById('kpiStock' + idPrefix + 'Usd').textContent = '';
+      });
       document.getElementById('stockComprasNote').innerHTML = 'No se pudo leer la planilla de compras: ' + d.stockComprasError;
       return;
     }
-    renderStockComprasKpi('SinPagar', d.stockSinPagar);
-    renderStockComprasKpi('Esperando', d.stockEsperando);
-    renderStockComprasKpi('Llegados', d.stockLlegados);
+    currentStockCompras = { SinPagar: d.stockSinPagar, Esperando: d.stockEsperando, Llegados: d.stockLlegados };
+    populateStockModeloFilter();
+    updateStockComprasView();
     document.getElementById('stockComprasNote').innerHTML = 'Datos en vivo desde la planilla de compras — actualizado ' + d.stockComprasFecha + '.';
   }
 
