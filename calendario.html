@@ -288,6 +288,13 @@
         <select id="filtroVehiculo"><option value="">Todos</option></select>
       </div>
     </div>
+    <div>
+      <label for="filtroEtiqueta">Categoría</label>
+      <select id="filtroEtiqueta">
+        <option value="">Todas</option>
+        <option value="__sin__">Sin categoría</option>
+      </select>
+    </div>
   </div>
 
   <div id="listaEventos"></div>
@@ -878,7 +885,7 @@
     document.getElementById('etiquetasOverlay').style.display = 'none';
   }
 
-  /* ---------- Filtros (vendedor / vehículo) ---------- */
+  /* ---------- Filtros (vendedor / vehículo / categoría) ---------- */
   function poblarFiltros(eventos){
     var selV = document.getElementById('filtroVendedor');
     var valV = selV.value;
@@ -898,13 +905,27 @@
     selVe.innerHTML = '<option value="">Todos</option>' +
       vehiculos.map(function(v){ return '<option value="' + esc(v) + '">' + esc(v) + '</option>'; }).join('');
     selVe.value = valVe;
+
+    var selEt = document.getElementById('filtroEtiqueta');
+    var valEt = selEt.value;
+    cargarEtiquetas().then(function(etiquetas){
+      selEt.innerHTML = '<option value="">Todas</option>' +
+        '<option value="__sin__">Sin categoría</option>' +
+        etiquetas.map(function(e){ return '<option value="' + esc(e.nombre) + '">' + esc(e.nombre) + '</option>'; }).join('');
+      selEt.value = valEt;
+    });
   }
 
   function aplicarFiltros(eventos){
     var vendedor = normalize(document.getElementById('filtroVendedor').value);
     var vehiculo = document.getElementById('filtroVehiculo').value;
+    var etiqueta = document.getElementById('filtroEtiqueta').value;
     return eventos.filter(function(ev){
       if (vehiculo && ev.vehiculo !== vehiculo) return false;
+      if (etiqueta) {
+        if (etiqueta === '__sin__') { if (ev.etiqueta) return false; }
+        else if (ev.etiqueta !== etiqueta) return false;
+      }
       if (vendedor) {
         var tiene = (ev.asignaciones || []).some(function(a){ return normalize(a.vendedor) === vendedor; });
         if (!tiene) return false;
@@ -1013,6 +1034,7 @@
     document.getElementById('filtroVendedorWrap').style.display = 'none';
   }
   document.getElementById('filtroVehiculo').addEventListener('change', renderizarConFiltros);
+  document.getElementById('filtroEtiqueta').addEventListener('change', renderizarConFiltros);
 
   document.getElementById('btnMesPrev').addEventListener('click', function(){ cambiarMes(-1); });
   document.getElementById('btnMesNext').addEventListener('click', function(){ cambiarMes(1); });
