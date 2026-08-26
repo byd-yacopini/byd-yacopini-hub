@@ -97,11 +97,19 @@
   .diacelda.vacia{ cursor:default; }
   .diacelda:not(.vacia):hover{ background:var(--gris-fondo); }
   .diacelda .num{ font-size:13px; font-weight:600; color:var(--carbon); }
-  .diacelda .dot{ width:5px; height:5px; border-radius:50%; background:var(--azul-ev); }
+  .diacelda.weekend .num{ color:var(--gris-medio); }
+  .diacelda .dot{ width:6px; height:6px; border-radius:50%; background:var(--azul-ev); }
+  .diacelda .badge-count{
+    position:absolute; top:3px; right:4px; min-width:15px; height:15px; padding:0 3px;
+    border-radius:8px; background:var(--azul-ev); color:#fff; font-size:9px; font-weight:800;
+    display:flex; align-items:center; justify-content:center; line-height:1;
+  }
+  .diacelda.pasado{ opacity:.42; }
   .diacelda.hoy{ background:var(--negro); }
   .diacelda.hoy:hover{ background:var(--carbon); }
   .diacelda.hoy .num{ color:#fff; }
   .diacelda.hoy .dot{ background:#fff; }
+  .diacelda.hoy .badge-count{ background:#fff; color:var(--negro); }
 
   .datehdr{
     margin:22px 20px 8px; font-size:12.5px; font-weight:800; text-transform:uppercase;
@@ -544,7 +552,10 @@
       var partes = (ev.fecha || '').split('-');
       if (partes.length !== 3) return;
       var d = Number(partes[2]);
-      eventosPorDia[d] = (eventosPorDia[d] || 0) + 1;
+      if (!eventosPorDia[d]) eventosPorDia[d] = { count: 0, colores: [] };
+      eventosPorDia[d].count++;
+      var c = ev.etiquetaColor || '';
+      if (c && eventosPorDia[d].colores.indexOf(c) === -1) eventosPorDia[d].colores.push(c);
     });
 
     var primerDia = new Date(currentAnio, currentMes - 1, 1);
@@ -556,10 +567,26 @@
     for (var day = 1; day <= diasEnMes; day++) {
       var iso = currentAnio + '-' + pad2(currentMes) + '-' + pad2(day);
       var esHoy = iso === hoyIso;
-      var tieneEventos = !!eventosPorDia[day];
-      html += '<div class="diacelda' + (esHoy ? ' hoy' : '') + '" data-fecha="' + iso + '">' +
+      var esPasado = !esHoy && iso < hoyIso;
+      var dow = new Date(currentAnio, currentMes - 1, day).getDay();
+      var esFinde = dow === 0 || dow === 6;
+      var info = eventosPorDia[day];
+      var colorUnico = info && info.colores.length === 1 ? info.colores[0] : '';
+
+      var clases = 'diacelda' + (esHoy ? ' hoy' : '') + (esPasado ? ' pasado' : '') + (esFinde ? ' weekend' : '');
+      var estiloBg = '';
+      if (info && !esHoy) {
+        estiloBg = ' style="background:' + (colorUnico ? colorUnico + '26' : 'rgba(21,101,216,.14)') + ';"';
+      }
+      var indicador = '';
+      if (info) {
+        indicador = info.count > 1
+          ? '<div class="badge-count"' + (colorUnico ? ' style="background:' + colorUnico + ';"' : '') + '>' + info.count + '</div>'
+          : '<div class="dot"' + (colorUnico ? ' style="background:' + colorUnico + ';"' : '') + '></div>';
+      }
+      html += '<div class="' + clases + '" data-fecha="' + iso + '"' + estiloBg + '>' +
         '<div class="num">' + day + '</div>' +
-        (tieneEventos ? '<div class="dot"></div>' : '') +
+        indicador +
         '</div>';
     }
     var cont = document.getElementById('gridDias');
