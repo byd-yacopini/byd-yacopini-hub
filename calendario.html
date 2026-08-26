@@ -189,6 +189,44 @@
   .sheet-close{ border:none; background:none; font-size:22px; line-height:1; color:var(--gris-medio); cursor:pointer; padding:4px 8px; }
   .sheet-close:hover{ color:var(--negro); }
   .row2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  input[type=color]{ width:100%; height:44px; padding:4px; border:1px solid var(--gris-claro); border-radius:8px; background:var(--blanco); cursor:pointer; }
+
+  .chk-row{ display:flex; align-items:center; gap:8px; margin-top:14px; }
+  .chk-row input[type=checkbox]{ width:auto; margin:0; }
+  .chk-row span{ text-transform:none; font-size:13px; color:var(--carbon); font-weight:600; }
+
+  .etiqueta-badge{
+    display:inline-flex; align-items:center; font-size:11px; font-weight:700;
+    padding:3px 9px; border-radius:20px; margin-top:8px;
+  }
+  .etiqueta-fila{
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    padding:8px 0; border-bottom:1px solid var(--gris-fondo); font-size:13px;
+  }
+  .etiqueta-fila .swatch{ width:14px; height:14px; border-radius:50%; flex:none; display:inline-block; margin-right:8px; }
+  .etiqueta-fila .nom{ display:flex; align-items:center; flex:1; font-weight:600; }
+  .btn-editar{
+    border:none; background:none; color:var(--gris-medio); font-size:15px; cursor:pointer;
+    padding:2px 6px; line-height:1; border-radius:6px;
+  }
+  .btn-editar:hover{ background:var(--gris-fondo); color:var(--negro); }
+
+  .conflicto-warn{
+    font-size:12.5px; color:#8A6412; line-height:1.5; margin-top:10px;
+    background:#FCF3DF; border:1px solid #EAD9A8; border-radius:8px; padding:9px 11px;
+  }
+
+  .filtro-card .row2{ margin-top:0; }
+
+  .toast{
+    position:fixed; left:50%; bottom:84px; transform:translateX(-50%) translateY(12px);
+    max-width:560px; width:calc(100% - 40px); background:var(--negro); color:#fff;
+    font-size:13px; line-height:1.5; padding:12px 16px; border-radius:12px;
+    box-shadow:0 6px 20px rgba(0,0,0,.35); z-index:1000001; opacity:0; pointer-events:none;
+    transition:opacity .2s ease, transform .2s ease;
+  }
+  .toast.warn{ background:#8A6412; }
+  .toast.visible{ opacity:1; transform:translateX(-50%) translateY(0); pointer-events:auto; }
 
   @media (min-width: 640px){
     .sheet-overlay{ align-items:center; }
@@ -230,6 +268,20 @@
     <div class="gridmes" id="gridDias"></div>
   </div>
 
+  <div class="tcard filtro-card">
+    <h2>Filtrar eventos</h2>
+    <div class="row2">
+      <div id="filtroVendedorWrap">
+        <label for="filtroVendedor">Vendedor</label>
+        <select id="filtroVendedor"><option value="">Todos</option></select>
+      </div>
+      <div>
+        <label for="filtroVehiculo">Vehículo</label>
+        <select id="filtroVehiculo"><option value="">Todos</option></select>
+      </div>
+    </div>
+  </div>
+
   <div id="listaEventos"></div>
 
   <div class="vacio" id="vacioMsg" style="display:none;">No hay eventos cargados para este mes.</div>
@@ -242,7 +294,7 @@
 <div class="sheet-overlay" id="sheetOverlay" style="display:none;">
   <div class="sheet">
     <div class="sheet-head">
-      <h2>Nuevo evento</h2>
+      <h2 id="sheetTitulo">Nuevo evento</h2>
       <button type="button" class="sheet-close" id="btnCerrarSheet" aria-label="Cerrar">&times;</button>
     </div>
     <label for="inpFecha">Fecha</label>
@@ -263,10 +315,50 @@
     <select id="selVehiculo"><option value="">— Ninguno —</option></select>
     <label for="inpObservaciones">Observaciones</label>
     <textarea id="inpObservaciones" placeholder="Opcional"></textarea>
+    <label for="selEtiqueta">Categoría</label>
+    <div class="row2" style="grid-template-columns:1fr auto;">
+      <select id="selEtiqueta"><option value="">— Sin categoría —</option></select>
+      <button type="button" class="btn btn-sm" id="btnGestionarEtiquetas" style="height:44px;">Etiquetas</button>
+    </div>
+    <div id="recurrenciaBlock">
+      <div class="chk-row">
+        <input type="checkbox" id="chkRepetir">
+        <span>Repetir cada semana</span>
+      </div>
+      <div id="repetirHastaBlock" style="display:none;">
+        <label for="inpRepetirHasta">Repetir hasta</label>
+        <input type="date" id="inpRepetirHasta">
+      </div>
+    </div>
     <button class="btn btn-primary" id="btnCrearEvento">Crear evento</button>
     <div class="errmsg" id="formMsg" style="display:none;"></div>
   </div>
 </div>
+
+<!-- Solo gerencia: gestión de etiquetas -->
+<div class="sheet-overlay" id="etiquetasOverlay" style="display:none;">
+  <div class="sheet">
+    <div class="sheet-head">
+      <h2>Etiquetas de eventos</h2>
+      <button type="button" class="sheet-close" id="btnCerrarEtiquetas" aria-label="Cerrar">&times;</button>
+    </div>
+    <div id="listaEtiquetas"></div>
+    <div class="row2" style="margin-top:14px;">
+      <div>
+        <label for="inpNuevaEtiquetaNombre">Nombre</label>
+        <input type="text" id="inpNuevaEtiquetaNombre" placeholder="Ej: Test Drive">
+      </div>
+      <div>
+        <label for="inpNuevaEtiquetaColor">Color</label>
+        <input type="color" id="inpNuevaEtiquetaColor" value="#1565D8">
+      </div>
+    </div>
+    <button class="btn btn-primary" id="btnCrearEtiqueta">Agregar etiqueta</button>
+    <div class="errmsg" id="etiquetaMsg" style="display:none;"></div>
+  </div>
+</div>
+
+<div class="toast" id="toastMsg"></div>
 
 <a id="hubBackBtn" href="./index.html" style="position:fixed;bottom:18px;left:18px;z-index:999999;
   width:44px;height:44px;border-radius:50%;background:#0A0A0A;color:#fff;display:flex;
@@ -300,7 +392,10 @@
 
   var vendedoresCache = null; // [{nombre, sucursal}]
   var flotaCache = null;      // [{marca, anio, patente, chasis, color, ubicacion}]
+  var etiquetasCache = null;  // [{nombre, color}]
   var eventosCache = [];
+  var eventoIdEditando = null;
+  var toastTimer = null;
 
   function pad2(n){ return n < 10 ? '0' + n : '' + n; }
   function isoDeFecha(d){ return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
@@ -334,6 +429,40 @@
 
   function mapsUrl(direccion){
     return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(direccion);
+  }
+
+  function toast(msg, isWarn){
+    var el = document.getElementById('toastMsg');
+    el.textContent = msg;
+    el.className = 'toast visible' + (isWarn ? ' warn' : '');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ el.className = 'toast'; }, isWarn ? 6000 : 3500);
+  }
+
+  function mostrarConflictos(conflictos){
+    if (!conflictos || !conflictos.length) return;
+    var partes = conflictos.map(function(c){
+      return (c.horarioInicio || '?') + '–' + (c.horarioFin || '?') + ' (' + c.ubicacion + ')';
+    });
+    toast('⚠️ Ese vehículo ya está asignado ese día en: ' + partes.join(', '), true);
+  }
+
+  /* ---------- Etiquetas ---------- */
+  function cargarEtiquetas(forzar){
+    if (etiquetasCache && !forzar) return Promise.resolve(etiquetasCache);
+    return llamar('listarEtiquetasEventos', {}).then(function(data){
+      etiquetasCache = data.etiquetas || [];
+      return etiquetasCache;
+    }).catch(function(){ etiquetasCache = etiquetasCache || []; return etiquetasCache; });
+  }
+
+  function poblarSelectEtiquetas(valorActual, forzar){
+    var sel = document.getElementById('selEtiqueta');
+    cargarEtiquetas(forzar).then(function(etiquetas){
+      sel.innerHTML = '<option value="">— Sin categoría —</option>' +
+        etiquetas.map(function(e){ return '<option value="' + esc(e.nombre) + '">' + esc(e.nombre) + '</option>'; }).join('');
+      sel.value = valorActual || '';
+    });
   }
 
   /* ---------- Vendedores (para el selector de asignación de gerencia) ---------- */
@@ -529,11 +658,14 @@
           if (estado === 'Asignado' || estado === 'Aprobado') badge = '<span class="evento-badge asignado">Asignado</span>';
           else if (estado === 'Postulado') badge = '<span class="evento-badge postulado">Postulado</span>';
         }
+        var colorEt = ev.etiquetaColor || '#8C8C8C';
         html += '<div class="evento" data-id="' + ev.id + '" data-fecha="' + esc(ev.fecha) + '">' +
           '<div class="evento-head"><div class="evento-hora">' + esc(fmtHorario(ev)) + '</div>' +
           '<div class="evento-head-right">' + badge +
+          (esGerencia ? '<button type="button" class="btn-editar" data-editar="' + ev.id + '" aria-label="Editar evento" title="Editar evento">&#9998;</button>' : '') +
           (esGerencia ? '<button type="button" class="btn-eliminar" data-eliminar="' + ev.id + '" aria-label="Eliminar evento" title="Eliminar evento">&times;</button>' : '') +
           '</div></div>' +
+          (ev.etiqueta ? '<span class="etiqueta-badge" style="background:' + esc(colorEt) + '22;color:' + esc(colorEt) + ';">' + esc(ev.etiqueta) + '</span>' : '') +
           '<div class="evento-ubi">📍 <a href="' + mapsUrl(ev.ubicacion) + '" target="_blank" rel="noopener">' + esc(ev.ubicacion) + '</a></div>' +
           (ev.vehiculo ? '<div class="evento-vehiculo">🚗 ' + esc(ev.vehiculo) + '</div>' : '') +
           (ev.observaciones ? '<div class="evento-obs">' + esc(ev.observaciones) + '</div>' : '') +
@@ -562,6 +694,13 @@
 
   /* ---------- Acciones gerencia ---------- */
   function wireGerenciaBotones(){
+    document.querySelectorAll('[data-editar]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var eventoId = btn.getAttribute('data-editar');
+        var ev = eventosCache.filter(function(e){ return e.id === eventoId; })[0];
+        if (ev) abrirFormulario(null, ev);
+      });
+    });
     document.querySelectorAll('[data-asignar]').forEach(function(btn){
       btn.addEventListener('click', function(){
         var eventoId = btn.getAttribute('data-asignar');
@@ -631,27 +770,126 @@
     });
   }
 
-  /* ---------- Alta de evento (gerencia) ---------- */
-  function abrirFormulario(fechaPrefill){
+  /* ---------- Alta / edición de evento (gerencia) ---------- */
+  function abrirFormulario(fechaPrefill, eventoParaEditar){
     document.getElementById('formMsg').style.display = 'none';
-    document.getElementById('inpFecha').value = fechaPrefill || hoyIso;
-    document.getElementById('inpHorarioInicio').value = '';
-    document.getElementById('inpHorarioFin').value = '';
-    document.getElementById('inpUbicacion').value = '';
-    document.getElementById('inpObservaciones').value = '';
-    document.getElementById('selVehiculo').value = '';
+    eventoIdEditando = eventoParaEditar ? eventoParaEditar.id : null;
+
+    document.getElementById('sheetTitulo').textContent = eventoParaEditar ? 'Editar evento' : 'Nuevo evento';
+    document.getElementById('btnCrearEvento').textContent = eventoParaEditar ? 'Guardar cambios' : 'Crear evento';
+    document.getElementById('recurrenciaBlock').style.display = eventoParaEditar ? 'none' : '';
+    document.getElementById('chkRepetir').checked = false;
+    document.getElementById('repetirHastaBlock').style.display = 'none';
+    document.getElementById('inpRepetirHasta').value = '';
+
+    document.getElementById('inpFecha').value = eventoParaEditar ? eventoParaEditar.fecha : (fechaPrefill || hoyIso);
+    document.getElementById('inpHorarioInicio').value = eventoParaEditar ? (eventoParaEditar.horarioInicio || '') : '';
+    document.getElementById('inpHorarioFin').value = eventoParaEditar ? (eventoParaEditar.horarioFin || '') : '';
+    document.getElementById('inpUbicacion').value = eventoParaEditar ? eventoParaEditar.ubicacion : '';
+    document.getElementById('inpObservaciones').value = eventoParaEditar ? (eventoParaEditar.observaciones || '') : '';
     document.getElementById('sheetOverlay').style.display = 'flex';
 
+    poblarSelectEtiquetas(eventoParaEditar ? eventoParaEditar.etiqueta : '');
+
     var sel = document.getElementById('selVehiculo');
-    if (sel.options.length <= 1) {
-      cargarFlota().then(function(flota){
+    var vehiculoDeseado = eventoParaEditar ? (eventoParaEditar.vehiculo || '') : '';
+    cargarFlota().then(function(flota){
+      if (sel.options.length <= 1) {
         sel.innerHTML = '<option value="">— Ninguno —</option>' +
           flota.map(function(v){ var lbl = etiquetaVehiculo(v); return '<option value="' + esc(lbl) + '">' + esc(lbl) + '</option>'; }).join('');
-      });
-    }
+      }
+      sel.value = vehiculoDeseado;
+      if (sel.value !== vehiculoDeseado && vehiculoDeseado) {
+        // El vehículo guardado ya no está en la flota vigente: lo agregamos igual para no perderlo.
+        var opt = document.createElement('option');
+        opt.value = vehiculoDeseado;
+        opt.textContent = vehiculoDeseado;
+        sel.appendChild(opt);
+        sel.value = vehiculoDeseado;
+      }
+    });
   }
   function cerrarFormulario(){
     document.getElementById('sheetOverlay').style.display = 'none';
+    eventoIdEditando = null;
+  }
+
+  /* ---------- Gestión de etiquetas (gerencia) ---------- */
+  function renderListaEtiquetas(){
+    var cont = document.getElementById('listaEtiquetas');
+    cargarEtiquetas(true).then(function(etiquetas){
+      if (!etiquetas.length) {
+        cont.innerHTML = '<p style="font-size:12.5px;color:var(--gris-medio);margin:8px 0;">Todavía no creaste ninguna etiqueta.</p>';
+        return;
+      }
+      cont.innerHTML = etiquetas.map(function(e){
+        return '<div class="etiqueta-fila">' +
+          '<span class="nom"><span class="swatch" style="background:' + esc(e.color) + ';"></span>' + esc(e.nombre) + '</span>' +
+          '<button type="button" class="btn-eliminar" data-eliminar-etiqueta="' + esc(e.nombre) + '" title="Eliminar etiqueta">&times;</button>' +
+          '</div>';
+      }).join('');
+      cont.querySelectorAll('[data-eliminar-etiqueta]').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          var nombre = btn.getAttribute('data-eliminar-etiqueta');
+          if (!confirm('¿Eliminar la etiqueta "' + nombre + '"? Los eventos que ya la tienen la conservan como texto, pero pierden el color.')) return;
+          llamar('eliminarEtiquetaEvento', { nombre: nombre }).then(function(){
+            renderListaEtiquetas();
+            poblarSelectEtiquetas(document.getElementById('selEtiqueta').value, true);
+          });
+        });
+      });
+    });
+  }
+  function abrirEtiquetasManager(){
+    document.getElementById('etiquetaMsg').style.display = 'none';
+    document.getElementById('inpNuevaEtiquetaNombre').value = '';
+    document.getElementById('inpNuevaEtiquetaColor').value = '#1565D8';
+    document.getElementById('etiquetasOverlay').style.display = 'flex';
+    renderListaEtiquetas();
+  }
+  function cerrarEtiquetasManager(){
+    document.getElementById('etiquetasOverlay').style.display = 'none';
+  }
+
+  /* ---------- Filtros (vendedor / vehículo) ---------- */
+  function poblarFiltros(eventos){
+    var selV = document.getElementById('filtroVendedor');
+    var valV = selV.value;
+    cargarVendedores().then(function(vendedores){
+      selV.innerHTML = '<option value="">Todos</option>' +
+        vendedores.map(function(v){ return '<option value="' + esc(v.nombre) + '">' + esc(v.nombre) + '</option>'; }).join('');
+      selV.value = valV;
+    });
+
+    var selVe = document.getElementById('filtroVehiculo');
+    var valVe = selVe.value;
+    var vehiculos = [];
+    eventos.forEach(function(ev){
+      if (ev.vehiculo && vehiculos.indexOf(ev.vehiculo) === -1) vehiculos.push(ev.vehiculo);
+    });
+    vehiculos.sort();
+    selVe.innerHTML = '<option value="">Todos</option>' +
+      vehiculos.map(function(v){ return '<option value="' + esc(v) + '">' + esc(v) + '</option>'; }).join('');
+    selVe.value = valVe;
+  }
+
+  function aplicarFiltros(eventos){
+    var vendedor = normalize(document.getElementById('filtroVendedor').value);
+    var vehiculo = document.getElementById('filtroVehiculo').value;
+    return eventos.filter(function(ev){
+      if (vehiculo && ev.vehiculo !== vehiculo) return false;
+      if (vendedor) {
+        var tiene = (ev.asignaciones || []).some(function(a){ return normalize(a.vendedor) === vendedor; });
+        if (!tiene) return false;
+      }
+      return true;
+    });
+  }
+
+  function renderizarConFiltros(){
+    var filtrados = aplicarFiltros(eventosCache);
+    renderGrid(filtrados);
+    renderEventos(filtrados);
   }
 
   if (esGerencia) {
@@ -664,6 +902,33 @@
       if (e.target === document.getElementById('sheetOverlay')) cerrarFormulario();
     });
 
+    document.getElementById('chkRepetir').addEventListener('change', function(){
+      document.getElementById('repetirHastaBlock').style.display = this.checked ? '' : 'none';
+    });
+
+    document.getElementById('btnGestionarEtiquetas').addEventListener('click', abrirEtiquetasManager);
+    document.getElementById('btnCerrarEtiquetas').addEventListener('click', cerrarEtiquetasManager);
+    document.getElementById('etiquetasOverlay').addEventListener('click', function(e){
+      if (e.target === document.getElementById('etiquetasOverlay')) cerrarEtiquetasManager();
+    });
+    document.getElementById('btnCrearEtiqueta').addEventListener('click', function(){
+      var msgEl = document.getElementById('etiquetaMsg');
+      msgEl.style.display = 'none';
+      var nombre = document.getElementById('inpNuevaEtiquetaNombre').value.trim();
+      var color = document.getElementById('inpNuevaEtiquetaColor').value;
+      if (!nombre) { msgEl.textContent = 'Ingresá un nombre.'; msgEl.style.display = 'block'; return; }
+      var btn = document.getElementById('btnCrearEtiqueta');
+      btn.disabled = true;
+      llamar('crearEtiquetaEvento', { nombre: nombre, color: color })
+        .then(function(){
+          document.getElementById('inpNuevaEtiquetaNombre').value = '';
+          renderListaEtiquetas();
+          poblarSelectEtiquetas(document.getElementById('selEtiqueta').value, true);
+        })
+        .catch(function(e){ msgEl.textContent = e.message || 'No se pudo crear la etiqueta.'; msgEl.style.display = 'block'; })
+        .finally(function(){ btn.disabled = false; });
+    });
+
     document.getElementById('btnCrearEvento').addEventListener('click', function(){
       var msgEl = document.getElementById('formMsg');
       msgEl.style.display = 'none';
@@ -673,24 +938,54 @@
       var ubicacion = document.getElementById('inpUbicacion').value.trim();
       var vehiculo = document.getElementById('selVehiculo').value;
       var observaciones = document.getElementById('inpObservaciones').value.trim();
+      var etiqueta = document.getElementById('selEtiqueta').value;
       if (!fecha) { msgEl.textContent = 'Ingresá la fecha.'; msgEl.style.display = 'block'; return; }
       if (!ubicacion) { msgEl.textContent = 'Ingresá la ubicación.'; msgEl.style.display = 'block'; return; }
 
-      var btn = document.getElementById('btnCrearEvento');
-      btn.disabled = true;
-      btn.textContent = 'Creando…';
-      llamar('crearEventoCalendario', {
+      var editando = eventoIdEditando;
+      var params = {
         fecha: fecha, horarioInicio: horarioInicio, horarioFin: horarioFin,
-        ubicacion: ubicacion, vehiculo: vehiculo, observaciones: observaciones, creadoPor: 'Gerencia'
-      })
-        .then(function(){
+        ubicacion: ubicacion, vehiculo: vehiculo, observaciones: observaciones, etiqueta: etiqueta
+      };
+
+      var btn = document.getElementById('btnCrearEvento');
+      var accion;
+      if (editando) {
+        params.eventoId = editando;
+        accion = 'editarEventoCalendario';
+        btn.textContent = 'Guardando…';
+      } else {
+        params.creadoPor = 'Gerencia';
+        var repetir = document.getElementById('chkRepetir').checked;
+        var repetirHasta = document.getElementById('inpRepetirHasta').value;
+        if (repetir && repetirHasta) params.repetirHasta = repetirHasta;
+        accion = 'crearEventoCalendario';
+        btn.textContent = 'Creando…';
+      }
+      btn.disabled = true;
+
+      llamar(accion, params)
+        .then(function(data){
           cerrarFormulario();
+          if (data.creados && data.creados.length > 1) {
+            toast('Se crearon ' + data.creados.length + ' eventos (repetición semanal).');
+            data.creados.forEach(function(c){ mostrarConflictos(c.conflictos); });
+          } else {
+            mostrarConflictos(data.conflictos);
+          }
           return cargar();
         })
-        .catch(function(e){ msgEl.textContent = e.message || 'No se pudo crear el evento.'; msgEl.style.display = 'block'; })
-        .finally(function(){ btn.disabled = false; btn.textContent = 'Crear evento'; });
+        .catch(function(e){ msgEl.textContent = e.message || 'No se pudo guardar el evento.'; msgEl.style.display = 'block'; })
+        .finally(function(){ btn.disabled = false; btn.textContent = editando ? 'Guardar cambios' : 'Crear evento'; });
     });
+
+    document.getElementById('filtroVendedor').addEventListener('change', renderizarConFiltros);
+  } else {
+    // Los vendedores no ven quién más está asignado a cada evento, así que tampoco
+    // tiene sentido ofrecerles filtrar por vendedor — solo por vehículo.
+    document.getElementById('filtroVendedorWrap').style.display = 'none';
   }
+  document.getElementById('filtroVehiculo').addEventListener('change', renderizarConFiltros);
 
   document.getElementById('btnMesPrev').addEventListener('click', function(){ cambiarMes(-1); });
   document.getElementById('btnMesNext').addEventListener('click', function(){ cambiarMes(1); });
@@ -705,8 +1000,8 @@
         if (data && data.error) throw new Error(data.error);
         eventosCache = data.eventos || [];
         document.getElementById('estadoMsg').classList.add('oculto');
-        renderGrid(eventosCache);
-        renderEventos(eventosCache);
+        poblarFiltros(eventosCache);
+        renderizarConFiltros();
       })
       .catch(function(){
         var estadoEl = document.getElementById('estadoMsg');
