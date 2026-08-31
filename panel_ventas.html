@@ -320,6 +320,12 @@
       </div>
 
       <div class="tcard">
+        <h2>Mi conversión por origen</h2>
+        <div id="misLeadsConversionList"></div>
+        <p class="note">De tus leads de cada canal, qué porcentaje terminó en venta este mes.</p>
+      </div>
+
+      <div class="tcard">
         <h2>Cómo se componen mis ventas</h2>
         <div class="pie-wrap">
           <div class="pie-chart" id="ventasPieChart"></div>
@@ -620,6 +626,18 @@
           '<div class="bar-track"><div class="bar-fill ' + (colorClass||'') + '" style="width:' + pct + '%"></div></div></div>';
       }).join('');
     }
+    // Para métricas que ya son un porcentaje (conversión): la barra usa el
+    // propio % como escala 0-100, no relativo al máximo del conjunto.
+    function barListPct(arr){
+      if (!arr || !arr.length) return '<p class="note">Sin datos.</p>';
+      return arr.map(function(x){
+        var pct = x.total ? Math.round((x.conv / x.total) * 100) : 0;
+        var cls = pct >= 50 ? 'verde' : (pct >= 25 ? 'ambar' : 'rojo');
+        return '<div class="bar-row"><div class="top"><span class="name">' + x.n + '</span>' +
+          '<span class="count">' + pct + '% (' + x.conv + '/' + x.total + ')</span></div>' +
+          '<div class="bar-track"><div class="bar-fill ' + cls + '" style="width:' + Math.max(pct, 4) + '%"></div></div></div>';
+      }).join('');
+    }
 
     function fmtUSD(n){ return 'USD ' + Number(n || 0).toLocaleString('es-AR'); }
 
@@ -765,8 +783,21 @@
         misLeadsDetalle.forEach(function(x){ var o = x.o || 'Sin dato'; origenMap[o] = (origenMap[o] || 0) + 1; });
         var origenArr = Object.keys(origenMap).map(function(k){ return { n:k, c:origenMap[k] }; }).sort(function(a,b){ return b.c - a.c; });
         document.getElementById('misLeadsOrigenList').innerHTML = barList(origenArr);
+
+        var convMap = {};
+        misLeadsDetalle.forEach(function(x){
+          var o = x.o || 'Sin dato';
+          if (!convMap[o]) convMap[o] = { total: 0, conv: 0 };
+          convMap[o].total++;
+          if (x.x) convMap[o].conv++;
+        });
+        var convArr = Object.keys(convMap).map(function(k){
+          return { n:k, total:convMap[k].total, conv:convMap[k].conv };
+        }).sort(function(a,b){ return b.total - a.total; });
+        document.getElementById('misLeadsConversionList').innerHTML = barListPct(convArr);
       } else {
         document.getElementById('misLeadsOrigenList').innerHTML = '<p class="note">Sin detalle de leads disponible en la foto actual.</p>';
+        document.getElementById('misLeadsConversionList').innerHTML = '<p class="note">Sin detalle de leads disponible en la foto actual.</p>';
       }
 
       // Ventas: torta EV/DM + por modelo
