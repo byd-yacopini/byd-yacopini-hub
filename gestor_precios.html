@@ -350,12 +350,17 @@
   </div>
 
   <div class="toolbar">
-    <button class="primary" onclick="generarListas()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>Generar listas (HTML)</button>
     <button onclick="generarPdfVendedores()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>PDF Vendedores</button>
     <button onclick="generarPdfGerencia()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>PDF Gerencia</button>
     <button onclick="exportarDatos()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Exportar datos (.json)</button>
     <button onclick="document.getElementById('import-input').click()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Importar datos</button>
     <input type="file" id="import-input" accept=".json" style="display:none" onchange="importarDatos(event)">
+  </div>
+
+  <div class="panel">
+    <h2>Vigencia</h2>
+    <input type="text" id="inpVigencia" placeholder="Ej: 02 de septiembre de 2026" onchange="actualizarVigencia(this.value)" style="width:100%;max-width:340px;padding:9px 12px;border:1px solid var(--gris-claro);border-radius:8px;font-family:inherit;font-size:13.5px;color:var(--carbon);">
+    <p class="hint">Se muestra arriba de todo en la Lista de Precios de gerencia y de vendedores.</p>
   </div>
 
   <div class="panel">
@@ -402,11 +407,12 @@
   <div class="panel">
     <h2>Guardado</h2>
     <p class="hint" style="margin-top:0">
-      Esta app guarda tu trabajo en el navegador automáticamente. "Generar listas (HTML)" descarga los dos
-      archivos HTML (vendedores y gerencia) listos para subir a tu carpeta de Google Drive o compartir por WhatsApp.
+      Cada cambio se guarda solo, directo en el servidor, apenas salís del campo que editaste — ya no hace falta
+      descargar nada ni subirlo a mano a Drive. La Lista de Precios de gerencia y de vendedores se actualiza sola
+      en un plazo de hasta 5 minutos.
       "PDF Vendedores" y "PDF Gerencia" abren el diálogo de impresión del navegador — elegí "Guardar como PDF"
       ahí para descargarlo en ese formato, ya configurado en hoja horizontal para que la tabla entre completa.
-      Si el navegador bloquea la ventana o la segunda descarga, permitilo desde el aviso que aparece arriba de la página.
+      "Exportar datos" es un respaldo aparte por si necesitás recuperar todo en otro momento.
     </p>
     <button onclick="exportarDatos()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Descargar datos (respaldo .json)</button>
   </div>
@@ -423,7 +429,21 @@ let tabActual = 'vendedores';
 let htmlVendedores = '';
 let htmlGerencia = '';
 
-const STORAGE_KEY = 'byd_yacopini_lista_precios_v1';
+const TABLERO_API_URL = 'https://script.google.com/macros/s/AKfycbzTYBoM56BBMj2B-8hUG_MIuOh7r5qG4qq2sGlTRM-y6QyFm0XHqgE6XUG5OQB022iy/exec';
+const TABLERO_API_KEY = 'i4uH92SO1sFyNYi8PJ2dsGb9LDM-Xoq3';
+
+function llamarBackend(action, params){
+  params = params || {};
+  var url = TABLERO_API_URL + '?key=' + encodeURIComponent(TABLERO_API_KEY) + '&action=' + action;
+  Object.keys(params).forEach(function(k){
+    var v = params[k];
+    url += '&' + k + '=' + encodeURIComponent(v === undefined || v === null ? '' : v);
+  });
+  return fetch(url, {cache:'no-store'}).then(function(r){ return r.json(); }).then(function(data){
+    if (data && data.error) throw new Error(data.error);
+    return data;
+  });
+}
 
 function datosIniciales(){
   return {
@@ -452,34 +472,28 @@ function cid(){
 }
 
 function cargarDatos(){
-  try{
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if(raw){
-      const parsed = JSON.parse(raw);
-      modelos = parsed.modelos || [];
-      accesorios = parsed.accesorios || [];
-      if(modelos.length === 0 && accesorios.length === 0){
-        const init = datosIniciales();
-        modelos = init.modelos;
-        accesorios = init.accesorios;
-      }
-      setStatus('Cargado del navegador', 'info');
-    } else {
-      const init = datosIniciales();
-      modelos = init.modelos;
-      accesorios = init.accesorios;
-      setStatus('Datos iniciales', 'info');
-    }
-  } catch(e){
+  setStatus('Cargando...', 'info');
+  llamarBackend('listarListaPrecios').then(function(data){
+    modelos = data.modelos || [];
+    accesorios = data.accesorios || [];
+    document.getElementById('inpVigencia').value = data.vigencia || '';
+    renderModelos();
+    renderAccesorios();
+    setStatus('Cargado del servidor', 'ok');
+  }).catch(function(){
     const init = datosIniciales();
     modelos = init.modelos;
     accesorios = init.accesorios;
-  }
+    renderModelos();
+    renderAccesorios();
+    setStatus('Sin conexión — mostrando datos de ejemplo', 'info');
+  });
 }
 
-function guardarLocal(){
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({modelos, accesorios, guardado: new Date().toISOString()}));
-  setStatus('Guardado en navegador', 'ok');
+function actualizarVigencia(valor){
+  llamarBackend('guardarVigenciaListaPrecios', { vigencia: valor })
+    .then(function(){ setStatus('Vigencia guardada', 'ok'); })
+    .catch(function(){ setStatus('Error al guardar la vigencia', 'info'); });
 }
 
 function setStatus(texto, tipo){
@@ -519,30 +533,42 @@ function renderModelos(){
   });
 }
 
+function guardarModeloEnServidor(m){
+  llamarBackend('guardarModeloPrecio', {
+    id: m.id || '', categoria: m.categoria, nombre: m.nombre,
+    lista: m.lista || 0, flete: m.flete || 0, patentamiento: m.patentamiento || 0,
+    web: m.web || 0, pisoGerencia: m.pisoGerencia || 0
+  }).then(res => {
+    if (!m.id) m.id = res.id;
+    setStatus('Guardado', 'ok');
+  }).catch(() => setStatus('Error al guardar — reintentá', 'info'));
+}
+
 function actualizarModelo(id, campo, valor){
   const m = modelos.find(x => x.id === id);
   if(!m) return;
   if(campo === 'nombre' || campo === 'categoria'){
     m[campo] = valor;
   } else {
-    m[campo] = valor === '' ? null : Number(valor);
+    m[campo] = valor === '' ? 0 : Number(valor);
   }
-  guardarLocal();
   if(campo === 'lista' || campo === 'flete' || campo === 'patentamiento' || campo === 'web' || campo === 'pisoGerencia'){
     renderModelos();
   }
+  guardarModeloEnServidor(m);
 }
 
 function agregarModelo(){
-  modelos.push({id: cid(), categoria:'EV', nombre:'Nuevo modelo', lista:0, flete:0, patentamiento:0, web:0, pisoGerencia:0});
+  const nuevo = {id:'', categoria:'EV', nombre:'Nuevo modelo', lista:0, flete:0, patentamiento:0, web:0, pisoGerencia:0};
+  modelos.push(nuevo);
   renderModelos();
-  guardarLocal();
+  guardarModeloEnServidor(nuevo);
 }
 
 function eliminarModelo(id){
   modelos = modelos.filter(x => x.id !== id);
   renderModelos();
-  guardarLocal();
+  llamarBackend('eliminarModeloPrecio', {id}).catch(() => mostrarToast('No se pudo eliminar en el servidor'));
 }
 
 // ============ RENDER TABLA ACCESORIOS ============
@@ -560,23 +586,30 @@ function renderAccesorios(){
   });
 }
 
+function guardarAccesorioEnServidor(a){
+  llamarBackend('guardarAccesorioPrecio', { id: a.id || '', nombre: a.nombre, precio: a.precio })
+    .then(res => { if (!a.id) a.id = res.id; setStatus('Guardado', 'ok'); })
+    .catch(() => setStatus('Error al guardar — reintentá', 'info'));
+}
+
 function actualizarAccesorio(id, campo, valor){
   const a = accesorios.find(x => x.id === id);
   if(!a) return;
   a[campo] = valor;
-  guardarLocal();
+  guardarAccesorioEnServidor(a);
 }
 
 function agregarAccesorio(){
-  accesorios.push({id: cid(), nombre:'Nuevo accesorio', precio:''});
+  const nuevo = {id:'', nombre:'Nuevo accesorio', precio:''};
+  accesorios.push(nuevo);
   renderAccesorios();
-  guardarLocal();
+  guardarAccesorioEnServidor(nuevo);
 }
 
 function eliminarAccesorio(id){
   accesorios = accesorios.filter(x => x.id !== id);
   renderAccesorios();
-  guardarLocal();
+  llamarBackend('eliminarAccesorioPrecio', {id}).catch(() => mostrarToast('No se pudo eliminar en el servidor'));
 }
 
 function escapeAttr(str){
@@ -613,12 +646,18 @@ function importarDatos(event){
   reader.onload = function(e){
     try{
       const data = JSON.parse(e.target.result);
-      modelos = data.modelos || [];
-      accesorios = data.accesorios || [];
-      renderModelos();
-      renderAccesorios();
-      guardarLocal();
-      mostrarToast('Datos importados correctamente');
+      const nuevosModelos = data.modelos || [];
+      const nuevosAcc = data.accesorios || [];
+      mostrarToast('Importando ' + nuevosModelos.length + ' modelos y ' + nuevosAcc.length + ' accesorios...');
+      Promise.all(nuevosModelos.map(m => llamarBackend('guardarModeloPrecio', {
+        id: m.id && m.id.indexOf('M-') === 0 ? m.id : '', categoria: m.categoria, nombre: m.nombre,
+        lista: m.lista || 0, flete: m.flete || 0, patentamiento: m.patentamiento || 0, web: m.web || 0, pisoGerencia: m.pisoGerencia || 0
+      })))
+        .then(() => Promise.all(nuevosAcc.map(a => llamarBackend('guardarAccesorioPrecio', {
+          id: a.id && a.id.indexOf('A-') === 0 ? a.id : '', nombre: a.nombre, precio: a.precio
+        }))))
+        .then(() => { mostrarToast('Datos importados correctamente'); cargarDatos(); })
+        .catch(() => mostrarToast('Error al importar algunos datos'));
     } catch(err){
       mostrarToast('Error al leer el archivo');
     }
@@ -1177,20 +1216,6 @@ function generarPdfGerencia(){
   generarPdfDesdeHtml(htmlGerencia, `lista_precios_gerencia_${fecha}.pdf`);
 }
 
-function generarListas(){
-  htmlVendedores = generarHtmlCompleto('vendedores');
-  htmlGerencia = generarHtmlCompleto('gerencia');
-  const fecha = new Date().toISOString().slice(0,10);
-  descargarHtml(htmlVendedores, `lista_precios_vendedores_${fecha}.html`);
-  setTimeout(() => {
-    // Nombre fijo (sin fecha) para la de Gerencia: así al subirla a Drive
-    // siempre reemplaza al archivo anterior en vez de crear duplicados,
-    // y el sync automático no tiene ninguna duda de cuál es la última.
-    descargarHtml(htmlGerencia, 'Lista precios gerencia.html');
-  }, 300);
-  mostrarToast('Descargando las dos listas (vendedores y gerencia)');
-}
-
 function mostrarToast(msg){
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -1200,8 +1225,6 @@ function mostrarToast(msg){
 
 // ============ INIT ============
 cargarDatos();
-renderModelos();
-renderAccesorios();
 </script>
 
 <a id="hubBackBtn" href="./index.html" style="position:fixed;bottom:18px;left:18px;z-index:999999;
