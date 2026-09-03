@@ -638,6 +638,17 @@
           <tbody id="gpTablaAccesorios"></tbody>
         </table>
         <button type="button" class="cfg-add-btn" id="gpAddAccesorio">+ Agregar accesorio</button>
+        <h2 style="margin-top:22px">Promociones (vehículos en oferta por VIN)</h2>
+        <div class="cfg-table-wrap">
+        <table class="cfg-table-modelos">
+          <thead><tr>
+            <th class="left">Categoría</th><th class="left">Modelo</th><th class="left">VIN</th><th class="left">Color</th><th>Lleno</th><th>Web</th><th>Piso</th><th>Promo</th><th>Ahorro (texto)</th><th></th>
+          </tr></thead>
+          <tbody id="gpTablaPromos"></tbody>
+        </table>
+        </div>
+        <button type="button" class="cfg-add-btn" id="gpAddPromo">+ Agregar promoción</button>
+        <p class="note">Los precios de Promociones son texto libre (ej: "USD 27.000"). "Ahorro" es el texto que se muestra abajo del precio promo (ej: "Ahorrás USD 500").</p>
         <div class="config-msg" id="gpMsg"></div>
       </div>
 
@@ -684,6 +695,7 @@
     });
 var gpModelos = [];
 var gpAccesorios = [];
+var gpPromos = [];
 function escAttr(str){ return String(str == null ? "" : str).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 function fmtGp(n){ if (n === null || n === undefined || isNaN(n)) return "—"; return "USD " + Math.round(n).toLocaleString("es-AR"); }
 function calcLleno(m){ return (m.lista || 0) + (m.flete || 0) + (m.patentamiento || 0); }
@@ -722,10 +734,12 @@ function cargarGestor(){
     .then(function(data){
       gpModelos = data.modelos || [];
       gpAccesorios = data.accesorios || [];
+      gpPromos = data.promos || [];
       var vig = document.getElementById("gpVigencia");
       if (vig) vig.value = data.vigencia || "";
       renderGpModelos();
       renderGpAccesorios();
+      renderGpPromos();
     }).catch(function(){ gpSetMsg("No se pudo cargar. Probá recargar la página."); });
 }
 function guardarModeloEnServidor(m){
@@ -832,7 +846,67 @@ document.querySelectorAll(".cfgsub-tab").forEach(function(tab){
     document.getElementById("cfgsub-" + tab.getAttribute("data-sub")).classList.add("active");
   });
 });
+function filaPromo(p){
+  return "<tr data-id=\"" + (p.id||"") + "\">" +
+    "<td class=\"left\"><select data-campo=\"tagCat\"><option value=\"ev\"" + (p.tagCat==="ev"?" selected":"") + ">EV</option><option value=\"dm\"" + (p.tagCat==="dm"?" selected":"") + ">DM</option></select></td>" +
+    "<td class=\"left\"><input type=\"text\" data-campo=\"nombre\" value=\"" + escAttr(p.nombre) + "\"></td>" +
+    "<td class=\"left\"><input type=\"text\" data-campo=\"vin\" value=\"" + escAttr(p.vin) + "\"></td>" +
+    "<td class=\"left\"><input type=\"text\" data-campo=\"color\" value=\"" + escAttr(p.color) + "\"></td>" +
+    "<td><input type=\"text\" data-campo=\"lleno\" value=\"" + escAttr(p.lleno) + "\"></td>" +
+    "<td><input type=\"text\" data-campo=\"web\" value=\"" + escAttr(p.web) + "\"></td>" +
+    "<td><input type=\"text\" data-campo=\"piso\" value=\"" + escAttr(p.piso) + "\"></td>" +
+    "<td><input type=\"text\" data-campo=\"promo\" value=\"" + escAttr(p.promo) + "\"></td>" +
+    "<td><input type=\"text\" data-campo=\"ahorro\" value=\"" + escAttr(p.ahorro) + "\"></td>" +
+    "<td style=\"text-align:center\"><button type=\"button\" class=\"cfg-icon-btn cfg-del-promo\" title=\"Eliminar\">&times;</button></td>" +
+    "</tr>";
+}
+function renderGpPromos(){ document.getElementById("gpTablaPromos").innerHTML = gpPromos.map(filaPromo).join(""); }
+function guardarPromoEnServidor(p){
+  var url = TABLERO_API_URL + "?key=" + encodeURIComponent(TABLERO_API_KEY) + "&action=guardarPromoPrecio" +
+    "&id=" + encodeURIComponent(p.id || "") + "&tagCat=" + encodeURIComponent(p.tagCat) + "&nombre=" + encodeURIComponent(p.nombre) +
+    "&vin=" + encodeURIComponent(p.vin) + "&color=" + encodeURIComponent(p.color) + "&lleno=" + encodeURIComponent(p.lleno) +
+    "&web=" + encodeURIComponent(p.web) + "&piso=" + encodeURIComponent(p.piso) + "&promo=" + encodeURIComponent(p.promo) + "&ahorro=" + encodeURIComponent(p.ahorro);
+  fetch(url, {cache:"no-store"}).then(function(r){ return r.json(); }).then(function(res){
+    if (!p.id && res && res.id) p.id = res.id;
+    gpSetMsg("Guardado — se refleja en la Lista de Precios en unos minutos.");
+  }).catch(function(){ gpSetMsg("Error al guardar — reintentá."); });
+}
+function actualizarPromo(id, campo, valor){
+  var p = gpPromos.filter(function(x){ return x.id === id; })[0];
+  if (!p) return;
+  p[campo] = valor;
+  guardarPromoEnServidor(p);
+}
+function eliminarPromo(id){
+  gpPromos = gpPromos.filter(function(x){ return x.id !== id; });
+  renderGpPromos();
+  fetch(TABLERO_API_URL + "?key=" + encodeURIComponent(TABLERO_API_KEY) + "&action=eliminarPromoPrecio&id=" + encodeURIComponent(id), {cache:"no-store"})
+    .catch(function(){ gpSetMsg("No se pudo eliminar en el servidor."); });
+}
+var gpTablaPromosEl = document.getElementById("gpTablaPromos");
+if (gpTablaPromosEl) {
+  gpTablaPromosEl.addEventListener("change", function(e){
+    var input = e.target.closest("input,select");
+    if (!input) return;
+    var tr = input.closest("tr");
+    actualizarPromo(tr.getAttribute("data-id"), input.getAttribute("data-campo"), input.value);
+  });
+  gpTablaPromosEl.addEventListener("click", function(e){
+    var btn = e.target.closest(".cfg-del-promo");
+    if (!btn) return;
+    var tr = btn.closest("tr");
+    eliminarPromo(tr.getAttribute("data-id"));
+  });
+}
+var gpAddPromoBtn = document.getElementById("gpAddPromo");
+if (gpAddPromoBtn) gpAddPromoBtn.addEventListener("click", function(){
+  var nuevo = { id:"", tagCat:"ev", nombre:"Nuevo modelo", vin:"", color:"", lleno:"", web:"", piso:"", promo:"", ahorro:"" };
+  gpPromos.push(nuevo);
+  renderGpPromos();
+  guardarPromoEnServidor(nuevo);
+});
 cargarGestor();
+
 
     cargarConfig();
   })();
