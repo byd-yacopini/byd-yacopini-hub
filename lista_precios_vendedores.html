@@ -215,13 +215,32 @@
 <div class="app">
   <div class="title-block">
     <h1>Lista de Precios</h1>
-    <p>Valores de referencia para el equipo de ventas. Piso de venta: límite mínimo autorizado para cerrar una operación.</p>
+    <p>Valores de referencia para el equipo de ventas: los campos que gerencia haya habilitado en Configuración.</p>
   </div>
   <div class="legend">
     <div class="item"><span class="dot" style="background:var(--azul-ev)"></span>EV &mdash; Eléctrico</div>
     <div class="item"><span class="dot" style="background:var(--verde-dm)"></span>DM &mdash; Híbrido enchufable</div>
-    <div class="item"><span class="dot" style="background:var(--rojo-fondo);border:1px solid var(--rojo-piso)"></span>Piso de Venta</div>
   </div>
+  <style>
+    .view-tabs{ display:flex; gap:8px; padding:0 20px; margin-top:14px; }
+    .view-tab{ flex:1; padding:10px; border-radius:8px; border:1px solid var(--gris-claro); background:var(--blanco); color:var(--gris-oscuro); font-weight:700; font-size:13px; cursor:pointer; font-family:inherit; }
+    .view-tab.active{ background:var(--negro); color:#fff; border-color:var(--negro); }
+    .view-panel{ display:none; }
+    .view-panel.active{ display:block; }
+    .config-card{ margin:20px; background:var(--blanco); border:1px solid var(--gris-claro); border-radius:12px; padding:20px; }
+    .config-card h2{ font-size:15px; font-weight:800; margin:0 0 8px; }
+    .config-card .note{ font-size:12px; color:var(--gris-medio); line-height:1.5; margin:0 0 16px; }
+    .config-row{ display:flex; align-items:center; justify-content:space-between; padding:12px 0; border-bottom:1px solid var(--gris-fondo); font-size:13.5px; color:var(--carbon); font-weight:600; }
+    .config-row:last-of-type{ border-bottom:none; }
+    .config-switch{ position:relative; display:inline-block; width:42px; height:24px; flex:none; }
+    .config-switch input{ opacity:0; width:0; height:0; }
+    .config-slider{ position:absolute; cursor:pointer; inset:0; background:var(--gris-claro); border-radius:24px; transition:.2s; }
+    .config-slider:before{ content:""; position:absolute; height:18px; width:18px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.2s; }
+    .config-switch input:checked + .config-slider{ background:var(--negro); }
+    .config-switch input:checked + .config-slider:before{ transform:translateX(18px); }
+    .config-msg{ margin-top:14px; font-size:12px; color:var(--gris-oscuro); min-height:16px; }
+  </style>
+  <div id="view-precios" class="view-panel active">
 
   <div class="cat-block">
     <div class="cat-head"><span class="cat-pill ev">EV</span><span class="cat-title">Eléctricos</span></div>
@@ -243,20 +262,14 @@
         <div class="lleno-label">Precio Lleno</div>
         <div class="lleno-val">USD 25.350</div>
       </div>
-      <details class="model-detail-secondary">
-        <summary>Ver más precios</summary>
+      <div class="model-detail-secondary">
         <div class="detail-grid">
           <div><span>Prom. Web</span><b>USD 24.151</b></div>
           <div><span>Web</span><b>USD 22.951</b></div>
           <div><span>Prom. Piso</span><b>USD 22.741</b></div>
         </div>
-        <div class="floor-row floor-row-single">
-          <div class="floor-box venta">
-            <div class="floor-label">Piso Venta</div>
-            <div class="floor-val">USD 22.531</div>
-          </div>
-        </div>
-      </details>
+        
+      </div>
     </div>
 
     <div class="model-card ev">
@@ -276,20 +289,14 @@
         <div class="lleno-label">Precio Lleno</div>
         <div class="lleno-val">USD 26.380</div>
       </div>
-      <details class="model-detail-secondary">
-        <summary>Ver más precios</summary>
+      <div class="model-detail-secondary">
         <div class="detail-grid">
           <div><span>Prom. Web</span><b>USD 25.880</b></div>
           <div><span>Web</span><b>USD 25.380</b></div>
           <div><span>Prom. Piso</span><b>USD 25.155</b></div>
         </div>
-        <div class="floor-row floor-row-single">
-          <div class="floor-box venta">
-            <div class="floor-label">Piso Venta</div>
-            <div class="floor-val">USD 24.930</div>
-          </div>
-        </div>
-      </details>
+        
+      </div>
     </div>
 
     <div class="model-card ev">
@@ -309,20 +316,14 @@
         <div class="lleno-label">Precio Lleno</div>
         <div class="lleno-val">USD 33.590</div>
       </div>
-      <details class="model-detail-secondary">
-        <summary>Ver más precios</summary>
+      <div class="model-detail-secondary">
         <div class="detail-grid">
           <div><span>Prom. Web</span><b>USD 32.950</b></div>
           <div><span>Web</span><b>USD 32.310</b></div>
           <div><span>Prom. Piso</span><b>USD 31.980</b></div>
         </div>
-        <div class="floor-row floor-row-single">
-          <div class="floor-box venta">
-            <div class="floor-label">Piso Venta</div>
-            <div class="floor-val">USD 31.650</div>
-          </div>
-        </div>
-      </details>
+        
+      </div>
     </div>
   </div>
 
@@ -346,20 +347,14 @@
         <div class="lleno-label">Precio Lleno</div>
         <div class="lleno-val">USD 35.650</div>
       </div>
-      <details class="model-detail-secondary">
-        <summary>Ver más precios</summary>
+      <div class="model-detail-secondary">
         <div class="detail-grid">
           <div><span>Prom. Web</span><b>USD 35.140</b></div>
           <div><span>Web</span><b>USD 34.630</b></div>
           <div><span>Prom. Piso</span><b>USD 34.440</b></div>
         </div>
-        <div class="floor-row floor-row-single">
-          <div class="floor-box venta">
-            <div class="floor-label">Piso Venta</div>
-            <div class="floor-val">USD 34.250</div>
-          </div>
-        </div>
-      </details>
+        
+      </div>
     </div>
 
     <div class="model-card dm">
@@ -379,20 +374,14 @@
         <div class="lleno-label">Precio Lleno</div>
         <div class="lleno-val">USD 37.195</div>
       </div>
-      <details class="model-detail-secondary">
-        <summary>Ver más precios</summary>
+      <div class="model-detail-secondary">
         <div class="detail-grid">
           <div><span>Prom. Web</span><b>USD 36.131</b></div>
           <div><span>Web</span><b>USD 35.066</b></div>
           <div><span>Prom. Piso</span><b>USD 34.183</b></div>
         </div>
-        <div class="floor-row floor-row-single">
-          <div class="floor-box venta">
-            <div class="floor-label">Piso Venta</div>
-            <div class="floor-val">USD 33.300</div>
-          </div>
-        </div>
-      </details>
+        
+      </div>
     </div>
 
     <div class="model-card dm">
@@ -412,20 +401,14 @@
         <div class="lleno-label">Precio Lleno</div>
         <div class="lleno-val">USD 39.255</div>
       </div>
-      <details class="model-detail-secondary">
-        <summary>Ver más precios</summary>
+      <div class="model-detail-secondary">
         <div class="detail-grid">
           <div><span>Prom. Web</span><b>USD 38.505</b></div>
           <div><span>Web</span><b>USD 37.755</b></div>
           <div><span>Prom. Piso</span><b>USD 37.343</b></div>
         </div>
-        <div class="floor-row floor-row-single">
-          <div class="floor-box venta">
-            <div class="floor-label">Piso Venta</div>
-            <div class="floor-val">USD 36.930</div>
-          </div>
-        </div>
-      </details>
+        
+      </div>
     </div>
 
     <div class="model-card dm">
@@ -445,20 +428,14 @@
         <div class="lleno-label">Precio Lleno</div>
         <div class="lleno-val">USD 62.630</div>
       </div>
-      <details class="model-detail-secondary">
-        <summary>Ver más precios</summary>
+      <div class="model-detail-secondary">
         <div class="detail-grid">
           <div><span>Prom. Web</span><b>USD 61.030</b></div>
           <div><span>Web</span><b>USD 59.430</b></div>
           <div><span>Prom. Piso</span><b>USD 58.080</b></div>
         </div>
-        <div class="floor-row floor-row-single">
-          <div class="floor-box venta">
-            <div class="floor-label">Piso Venta</div>
-            <div class="floor-val">USD 56.730</div>
-          </div>
-        </div>
-      </details>
+        
+      </div>
     </div>
 
     <div class="model-card dm">
@@ -478,20 +455,14 @@
         <div class="lleno-label">Precio Lleno</div>
         <div class="lleno-val">USD 50.270</div>
       </div>
-      <details class="model-detail-secondary">
-        <summary>Ver más precios</summary>
+      <div class="model-detail-secondary">
         <div class="detail-grid">
           <div><span>Prom. Web</span><b>USD 49.070</b></div>
           <div><span>Web</span><b>USD 47.870</b></div>
           <div><span>Prom. Piso</span><b>USD 46.820</b></div>
         </div>
-        <div class="floor-row floor-row-single">
-          <div class="floor-box venta">
-            <div class="floor-label">Piso Venta</div>
-            <div class="floor-val">USD 45.770</div>
-          </div>
-        </div>
-      </details>
+        
+      </div>
     </div>
   </div>
   <div class="accesorios">
@@ -512,8 +483,10 @@
     </div>
   </div>
 
+  </div>
+
   <div class="footer">
-    Piso de venta: valor mínimo autorizado para el cierre de la operación. Ante consultas fuera de este rango, contactar a gerencia.<br>
+    Ante consultas de precio fuera de estos valores, contactar a gerencia.<br>
     BYD Yacopini &middot; Equipo de Ventas
   </div>
 </div>
