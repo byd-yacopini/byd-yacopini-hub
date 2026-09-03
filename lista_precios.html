@@ -243,6 +243,30 @@
     .config-switch input:checked + .config-slider{ background:var(--negro); }
     .config-switch input:checked + .config-slider:before{ transform:translateX(18px); }
     .config-msg{ margin-top:14px; font-size:12px; color:var(--gris-oscuro); min-height:16px; }
+    .cfgsub-tabs{ display:flex; gap:8px; margin:-4px 0 18px; }
+    .cfgsub-tab{ flex:1; padding:8px; border-radius:8px; border:1px solid var(--gris-claro); background:var(--gris-fondo); color:var(--gris-oscuro); font-weight:700; font-size:12.5px; cursor:pointer; font-family:inherit; }
+    .cfgsub-tab.active{ background:var(--negro); color:#fff; border-color:var(--negro); }
+    .cfgsub-panel{ display:none; }
+    .cfgsub-panel.active{ display:block; }
+    .cfgsub-panel h2{ font-size:14px; font-weight:800; margin:0 0 8px; }
+    .cfg-vigencia-input{ width:100%; max-width:340px; padding:9px 12px; border:1px solid var(--gris-claro); border-radius:8px; font-family:inherit; font-size:13.5px; color:var(--carbon); margin-bottom:6px; }
+    .cfg-table-wrap{ overflow-x:auto; }
+    table.cfg-table-modelos, table.cfg-table-accesorios{ width:100%; border-collapse:collapse; font-size:12px; }
+    table.cfg-table-modelos th, table.cfg-table-accesorios th{ text-align:right; font-size:10px; text-transform:uppercase; letter-spacing:0.4px; color:#8A97A3; font-weight:700; padding:6px 5px; border-bottom:2px solid var(--gris-fondo); white-space:nowrap; }
+    table.cfg-table-modelos th.left, table.cfg-table-accesorios th.left{ text-align:left; }
+    table.cfg-table-modelos td, table.cfg-table-accesorios td{ padding:5px; border-bottom:1px solid var(--gris-fondo); text-align:right; vertical-align:middle; }
+    table.cfg-table-modelos td.left, table.cfg-table-accesorios td.left{ text-align:left; }
+    table.cfg-table-modelos input, table.cfg-table-modelos select, table.cfg-table-accesorios input{ width:100%; border:1px solid transparent; background:transparent; font-size:12px; font-family:inherit; padding:5px 4px; border-radius:6px; text-align:right; color:var(--carbon); }
+    table.cfg-table-modelos td.left input, table.cfg-table-accesorios td.left input{ text-align:left; }
+    table.cfg-table-modelos input:hover, table.cfg-table-modelos select:hover, table.cfg-table-accesorios input:hover{ border-color:var(--gris-claro); background:var(--gris-fondo); }
+    table.cfg-table-modelos input:focus, table.cfg-table-modelos select:focus, table.cfg-table-accesorios input:focus{ outline:none; border-color:var(--gris-medio); background:#fff; }
+    table.cfg-table-modelos select{ text-align:left; }
+    td.cfg-calc{ color:var(--gris-oscuro); font-style:italic; background:var(--gris-fondo); }
+    th.cfg-calc{ color:#B5BDC4; }
+    .cfg-icon-btn{ border:none; background:transparent; color:#A32D2D; font-size:15px; padding:4px 8px; cursor:pointer; border-radius:6px; line-height:1; }
+    .cfg-icon-btn:hover{ background:#FCEBEB; }
+    .cfg-add-btn{ margin-top:8px; padding:7px 14px; font-size:12px; font-weight:700; border-radius:8px; border:1px solid var(--gris-claro); background:#fff; color:var(--carbon); cursor:pointer; font-family:inherit; }
+    .cfg-add-btn:hover{ background:var(--gris-fondo); }
   </style>
   <div class="view-tabs">
     <button type="button" class="view-tab active" data-view="precios">Precios</button>
@@ -575,6 +599,11 @@
 
   <div id="view-config" class="view-panel">
     <div class="config-card">
+      <div class="cfgsub-tabs">
+        <button type="button" class="cfgsub-tab active" data-sub="vendedores">Qué ven los vendedores</button>
+        <button type="button" class="cfgsub-tab" data-sub="gestor">Editar precios</button>
+      </div>
+      <div id="cfgsub-vendedores" class="cfgsub-panel active">
       <h2>Qué ven los vendedores</h2>
       <p class="note">Elegí qué campos de precio quedan visibles en la Lista de Precios del equipo de ventas. El Piso de Gerencia nunca se muestra a vendedores, sin importar esta configuración. Los cambios tardan hasta 5 minutos en reflejarse ahí.</p>
       <div class="config-row" data-campo="lista"><span>Lista</span><label class="config-switch"><input type="checkbox"><span class="config-slider"></span></label></div>
@@ -586,6 +615,32 @@
       <div class="config-row" data-campo="pisoVenta"><span>Piso Venta</span><label class="config-switch"><input type="checkbox"><span class="config-slider"></span></label></div>
       <div class="config-row" data-campo="promociones"><span>Promociones (vehículos en oferta por VIN)</span><label class="config-switch"><input type="checkbox"><span class="config-slider"></span></label></div>
       <div class="config-msg" id="configMsg"></div>
+      </div>
+      <div id="cfgsub-gestor" class="cfgsub-panel">
+        <h2>Vigencia</h2>
+        <input type="text" id="gpVigencia" class="cfg-vigencia-input" placeholder="Ej: 02 de septiembre de 2026">
+        <p class="note">Se muestra arriba de todo en la Lista de Precios de gerencia y de vendedores.</p>
+        <h2 style="margin-top:22px">Modelos y versiones</h2>
+        <div class="cfg-table-wrap">
+        <table class="cfg-table-modelos">
+          <thead><tr>
+            <th class="left">Categoría</th><th class="left">Modelo / versión</th><th>Lista</th><th>Flete</th><th>Patentam.</th>
+            <th class="cfg-calc">Lleno</th><th class="cfg-calc">Prom. Web</th><th>Web</th><th class="cfg-calc">Prom. Piso</th><th class="cfg-calc">Piso Venta</th><th>Piso Gerencia</th><th></th>
+          </tr></thead>
+          <tbody id="gpTablaModelos"></tbody>
+        </table>
+        </div>
+        <button type="button" class="cfg-add-btn" id="gpAddModelo">+ Agregar modelo</button>
+        <p class="note">Lleno = Lista + Flete + Patentamiento. Piso Venta = Piso Gerencia + 300. Prom. Web = (Lleno + Web) / 2. Prom. Piso = (Web + Piso Venta) / 2. Piso Gerencia solo aparece en la lista de gerencia.</p>
+        <h2 style="margin-top:22px">Accesorios</h2>
+        <table class="cfg-table-accesorios">
+          <thead><tr><th class="left">Accesorio</th><th>Precio (texto libre)</th><th></th></tr></thead>
+          <tbody id="gpTablaAccesorios"></tbody>
+        </table>
+        <button type="button" class="cfg-add-btn" id="gpAddAccesorio">+ Agregar accesorio</button>
+        <div class="config-msg" id="gpMsg"></div>
+      </div>
+
     </div>
   </div>
 
@@ -627,6 +682,158 @@
           }).catch(function(){ msg.textContent = 'No se pudo guardar. Probá de nuevo.'; });
       });
     });
+var gpModelos = [];
+var gpAccesorios = [];
+function escAttr(str){ return String(str == null ? "" : str).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function fmtGp(n){ if (n === null || n === undefined || isNaN(n)) return "—"; return "USD " + Math.round(n).toLocaleString("es-AR"); }
+function calcLleno(m){ return (m.lista || 0) + (m.flete || 0) + (m.patentamiento || 0); }
+function calcPromWeb(m){ return (calcLleno(m) + (m.web || 0)) / 2; }
+function calcPisoVenta(m){ return (m.pisoGerencia || 0) + 300; }
+function calcPromPiso(m){ return ((m.web || 0) + calcPisoVenta(m)) / 2; }
+function gpSetMsg(texto){ var el = document.getElementById("gpMsg"); if (el) el.textContent = texto; }
+function filaModelo(m){
+  return "<tr data-id=\"" + (m.id||"") + "\">" +
+    "<td class=\"left\"><select data-campo=\"categoria\"><option value=\"EV\"" + (m.categoria==="EV"?" selected":"") + ">EV</option><option value=\"DM\"" + (m.categoria==="DM"?" selected":"") + ">DM</option></select></td>" +
+    "<td class=\"left\"><input type=\"text\" data-campo=\"nombre\" value=\"" + escAttr(m.nombre) + "\"></td>" +
+    "<td><input type=\"number\" data-campo=\"lista\" value=\"" + (m.lista != null ? m.lista : "") + "\"></td>" +
+    "<td><input type=\"number\" data-campo=\"flete\" value=\"" + (m.flete != null ? m.flete : "") + "\"></td>" +
+    "<td><input type=\"number\" data-campo=\"patentamiento\" value=\"" + (m.patentamiento != null ? m.patentamiento : "") + "\"></td>" +
+    "<td class=\"cfg-calc\">" + fmtGp(calcLleno(m)) + "</td>" +
+    "<td class=\"cfg-calc\">" + fmtGp(calcPromWeb(m)) + "</td>" +
+    "<td><input type=\"number\" data-campo=\"web\" value=\"" + (m.web != null ? m.web : "") + "\"></td>" +
+    "<td class=\"cfg-calc\">" + fmtGp(calcPromPiso(m)) + "</td>" +
+    "<td class=\"cfg-calc\">" + fmtGp(calcPisoVenta(m)) + "</td>" +
+    "<td><input type=\"number\" data-campo=\"pisoGerencia\" value=\"" + (m.pisoGerencia != null ? m.pisoGerencia : "") + "\"></td>" +
+    "<td style=\"text-align:center\"><button type=\"button\" class=\"cfg-icon-btn cfg-del-modelo\" title=\"Eliminar\">&times;</button></td>" +
+    "</tr>";
+}
+function filaAccesorio(a){
+  return "<tr data-id=\"" + (a.id||"") + "\">" +
+    "<td class=\"left\"><input type=\"text\" data-campo=\"nombre\" value=\"" + escAttr(a.nombre) + "\"></td>" +
+    "<td><input type=\"text\" data-campo=\"precio\" value=\"" + escAttr(a.precio) + "\"></td>" +
+    "<td style=\"text-align:center\"><button type=\"button\" class=\"cfg-icon-btn cfg-del-acc\" title=\"Eliminar\">&times;</button></td>" +
+    "</tr>";
+}
+function renderGpModelos(){ document.getElementById("gpTablaModelos").innerHTML = gpModelos.map(filaModelo).join(""); }
+function renderGpAccesorios(){ document.getElementById("gpTablaAccesorios").innerHTML = gpAccesorios.map(filaAccesorio).join(""); }
+function cargarGestor(){
+  fetch(TABLERO_API_URL + "?key=" + encodeURIComponent(TABLERO_API_KEY) + "&action=listarListaPrecios", {cache:"no-store"})
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      gpModelos = data.modelos || [];
+      gpAccesorios = data.accesorios || [];
+      var vig = document.getElementById("gpVigencia");
+      if (vig) vig.value = data.vigencia || "";
+      renderGpModelos();
+      renderGpAccesorios();
+    }).catch(function(){ gpSetMsg("No se pudo cargar. Probá recargar la página."); });
+}
+function guardarModeloEnServidor(m){
+  var url = TABLERO_API_URL + "?key=" + encodeURIComponent(TABLERO_API_KEY) + "&action=guardarModeloPrecio" +
+    "&id=" + encodeURIComponent(m.id || "") + "&categoria=" + encodeURIComponent(m.categoria) + "&nombre=" + encodeURIComponent(m.nombre) +
+    "&lista=" + encodeURIComponent(m.lista || 0) + "&flete=" + encodeURIComponent(m.flete || 0) + "&patentamiento=" + encodeURIComponent(m.patentamiento || 0) +
+    "&web=" + encodeURIComponent(m.web || 0) + "&pisoGerencia=" + encodeURIComponent(m.pisoGerencia || 0);
+  fetch(url, {cache:"no-store"}).then(function(r){ return r.json(); }).then(function(res){
+    if (!m.id && res && res.id) m.id = res.id;
+    gpSetMsg("Guardado — se refleja en la Lista de Precios en unos minutos.");
+  }).catch(function(){ gpSetMsg("Error al guardar — reintentá."); });
+}
+function actualizarModelo(id, campo, valor){
+  var m = gpModelos.filter(function(x){ return x.id === id; })[0];
+  if (!m) return;
+  if (campo === "nombre" || campo === "categoria") { m[campo] = valor; }
+  else { m[campo] = valor === "" ? 0 : Number(valor); }
+  if (campo !== "nombre" && campo !== "categoria") { renderGpModelos(); }
+  guardarModeloEnServidor(m);
+}
+function eliminarModelo(id){
+  gpModelos = gpModelos.filter(function(x){ return x.id !== id; });
+  renderGpModelos();
+  fetch(TABLERO_API_URL + "?key=" + encodeURIComponent(TABLERO_API_KEY) + "&action=eliminarModeloPrecio&id=" + encodeURIComponent(id), {cache:"no-store"})
+    .catch(function(){ gpSetMsg("No se pudo eliminar en el servidor."); });
+}
+function guardarAccesorioEnServidor(a){
+  var url = TABLERO_API_URL + "?key=" + encodeURIComponent(TABLERO_API_KEY) + "&action=guardarAccesorioPrecio" +
+    "&id=" + encodeURIComponent(a.id || "") + "&nombre=" + encodeURIComponent(a.nombre) + "&precio=" + encodeURIComponent(a.precio);
+  fetch(url, {cache:"no-store"}).then(function(r){ return r.json(); }).then(function(res){
+    if (!a.id && res && res.id) a.id = res.id;
+    gpSetMsg("Guardado — se refleja en la Lista de Precios en unos minutos.");
+  }).catch(function(){ gpSetMsg("Error al guardar — reintentá."); });
+}
+function actualizarAccesorio(id, campo, valor){
+  var a = gpAccesorios.filter(function(x){ return x.id === id; })[0];
+  if (!a) return;
+  a[campo] = valor;
+  guardarAccesorioEnServidor(a);
+}
+function eliminarAccesorio(id){
+  gpAccesorios = gpAccesorios.filter(function(x){ return x.id !== id; });
+  renderGpAccesorios();
+  fetch(TABLERO_API_URL + "?key=" + encodeURIComponent(TABLERO_API_KEY) + "&action=eliminarAccesorioPrecio&id=" + encodeURIComponent(id), {cache:"no-store"})
+    .catch(function(){ gpSetMsg("No se pudo eliminar en el servidor."); });
+}
+var gpTablaModelosEl = document.getElementById("gpTablaModelos");
+if (gpTablaModelosEl) {
+  gpTablaModelosEl.addEventListener("change", function(e){
+    var input = e.target.closest("input,select");
+    if (!input) return;
+    var tr = input.closest("tr");
+    actualizarModelo(tr.getAttribute("data-id"), input.getAttribute("data-campo"), input.value);
+  });
+  gpTablaModelosEl.addEventListener("click", function(e){
+    var btn = e.target.closest(".cfg-del-modelo");
+    if (!btn) return;
+    var tr = btn.closest("tr");
+    eliminarModelo(tr.getAttribute("data-id"));
+  });
+}
+var gpAddModeloBtn = document.getElementById("gpAddModelo");
+if (gpAddModeloBtn) gpAddModeloBtn.addEventListener("click", function(){
+  var nuevo = { id:"", categoria:"EV", nombre:"Nuevo modelo", lista:0, flete:0, patentamiento:0, web:0, pisoGerencia:0 };
+  gpModelos.push(nuevo);
+  renderGpModelos();
+  guardarModeloEnServidor(nuevo);
+});
+var gpTablaAccesoriosEl = document.getElementById("gpTablaAccesorios");
+if (gpTablaAccesoriosEl) {
+  gpTablaAccesoriosEl.addEventListener("change", function(e){
+    var input = e.target.closest("input");
+    if (!input) return;
+    var tr = input.closest("tr");
+    actualizarAccesorio(tr.getAttribute("data-id"), input.getAttribute("data-campo"), input.value);
+  });
+  gpTablaAccesoriosEl.addEventListener("click", function(e){
+    var btn = e.target.closest(".cfg-del-acc");
+    if (!btn) return;
+    var tr = btn.closest("tr");
+    eliminarAccesorio(tr.getAttribute("data-id"));
+  });
+}
+var gpAddAccesorioBtn = document.getElementById("gpAddAccesorio");
+if (gpAddAccesorioBtn) gpAddAccesorioBtn.addEventListener("click", function(){
+  var nuevo = { id:"", nombre:"Nuevo accesorio", precio:"" };
+  gpAccesorios.push(nuevo);
+  renderGpAccesorios();
+  guardarAccesorioEnServidor(nuevo);
+});
+var gpVigenciaInput = document.getElementById("gpVigencia");
+if (gpVigenciaInput) {
+  gpVigenciaInput.addEventListener("change", function(){
+    fetch(TABLERO_API_URL + "?key=" + encodeURIComponent(TABLERO_API_KEY) + "&action=guardarVigenciaListaPrecios&vigencia=" + encodeURIComponent(gpVigenciaInput.value), {cache:"no-store"})
+      .then(function(){ gpSetMsg("Vigencia guardada."); })
+      .catch(function(){ gpSetMsg("Error al guardar la vigencia."); });
+  });
+}
+document.querySelectorAll(".cfgsub-tab").forEach(function(tab){
+  tab.addEventListener("click", function(){
+    document.querySelectorAll(".cfgsub-tab").forEach(function(t){ t.classList.remove("active"); });
+    document.querySelectorAll(".cfgsub-panel").forEach(function(p){ p.classList.remove("active"); });
+    tab.classList.add("active");
+    document.getElementById("cfgsub-" + tab.getAttribute("data-sub")).classList.add("active");
+  });
+});
+cargarGestor();
+
     cargarConfig();
   })();
   </script>
