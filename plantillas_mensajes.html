@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BYD Yacopini · Plantillas de Mensajes</title>
+<style>
+  :root{
+    --negro:#0A0A0A;
+    --carbon:#2A2A2A;
+    --gris-oscuro:#4A4A4A;
+    --gris-medio:#8C8C8C;
+    --gris-claro:#D4D4D4;
+    --gris-fondo:#F2F2F2;
+    --blanco:#FFFFFF;
+    --whatsapp:#25D366;
+    --whatsapp-dark:#1DA851;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0;
+    background:var(--gris-fondo);
+    color:var(--carbon);
+    font-family:'Segoe UI', Arial, Helvetica, sans-serif;
+  }
+  .app{
+    max-width:760px;
+    margin:0 auto;
+    padding:24px 24px 80px;
+  }
+  .app-topbar{
+    background:var(--negro);
+    margin:-24px -24px 24px;
+    padding:20px 24px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .app-topbar svg{ height:36px; width:auto; display:block; }
+  .app-header{ margin-bottom:20px; }
+  .app-header h1{ font-size:22px; font-weight:800; color:var(--negro); margin:0 0 4px; }
+  .app-header p{ font-size:13px; color:#5A6B7A; margin:0; }
+
+  button{
+    font-family:inherit;
+    font-size:13px;
+    font-weight:700;
+    border-radius:8px;
+    border:1px solid var(--gris-claro);
+    background:var(--blanco);
+    color:var(--carbon);
+    padding:9px 16px;
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    transition:all .15s ease;
+  }
+  button:hover{ background:var(--gris-fondo); }
+  button:active{ transform:scale(0.98); }
+  button.primary{ background:var(--negro); color:var(--blanco); border-color:var(--negro); }
+  button.primary:hover{ background:#2A2A2A; }
+  button.whatsapp{ background:var(--whatsapp); color:#fff; border-color:var(--whatsapp); width:100%; justify-content:center; padding:13px; font-size:14px; }
+  button.whatsapp:hover{ background:var(--whatsapp-dark); }
+  button.small{ padding:5px 10px; font-size:12px; }
+
+  .panel{
+    background:var(--blanco);
+    border:1px solid var(--gris-claro);
+    border-radius:12px;
+    padding:18px 20px;
+    margin-bottom:16px;
+  }
+  .panel h2{ font-size:14px; font-weight:800; color:var(--negro); margin:0 0 4px; }
+  .panel .cat-count{ font-size:11px; color:var(--gris-medio); font-weight:600; margin:0 0 12px; }
+
+  .field{ margin-bottom:12px; }
+  .field label{ display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; color:var(--gris-medio); margin-bottom:5px; }
+  .field input, .field textarea{
+    width:100%;
+    border:1px solid var(--gris-claro);
+    border-radius:8px;
+    padding:9px 11px;
+    font-family:inherit;
+    font-size:13.5px;
+    color:var(--carbon);
+    background:var(--blanco);
+  }
+  .field input:focus, .field textarea:focus{ outline:none; border-color:var(--gris-oscuro); }
+  .field textarea{ resize:vertical; line-height:1.5; }
+
+  /* ---- Chips de categoría (vendedor) ---- */
+  .chip-row{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px; }
+  .chip{
+    padding:8px 14px;
+    border-radius:20px;
+    border:1px solid var(--gris-claro);
+    background:var(--blanco);
+    font-size:12.5px;
+    font-weight:700;
+    color:var(--carbon);
+    cursor:pointer;
+  }
+  .chip.active{ background:var(--negro); color:#fff; border-color:var(--negro); }
+
+  /* ---- Tarjetas de plantilla para elegir (vendedor) ---- */
+  .tpl-pick-card{
+    background:var(--blanco);
+    border:1px solid var(--gris-claro);
+    border-radius:10px;
+    padding:12px 14px;
+    margin-bottom:8px;
+    cursor:pointer;
+  }
+  .tpl-pick-card:hover{ border-color:var(--gris-oscuro); }
+  .tpl-pick-card.active{ border-color:var(--whatsapp); box-shadow:0 0 0 2px rgba(37,211,102,0.25); }
+  .tpl-pick-card .tt{ font-size:13.5px; font-weight:700; color:var(--negro); margin-bottom:3px; }
+  .tpl-pick-card .tp{ font-size:12px; color:var(--gris-medio); line-height:1.4; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+
+  .preview-box{
+    background:var(--gris-fondo);
+    border:1px solid var(--gris-claro);
+    border-radius:10px;
+    padding:14px;
+    font-size:13.5px;
+    line-height:1.6;
+    white-space:pre-wrap;
+    color:var(--carbon);
+    margin-bottom:14px;
+    min-height:60px;
+  }
+  .var-missing{ background:#FCEBEB; color:#A32D2D; padding:1px 4px; border-radius:4px; }
+
+  .empty-note{ font-size:12.5px; color:var(--gris-medio); padding:8px 0; }
+
+  /* ---- Gestor (gerencia) ---- */
+  .tpl-edit-card{
+    border:1px solid var(--gris-claro);
+    border-radius:10px;
+    padding:12px 14px;
+    margin-bottom:10px;
+    position:relative;
+  }
+  .tpl-edit-card input.tpl-titulo{
+    width:100%;
+    border:1px solid transparent;
+    background:transparent;
+    font-size:13.5px;
+    font-weight:700;
+    font-family:inherit;
+    padding:5px 4px;
+    border-radius:6px;
+    color:var(--negro);
+    margin-bottom:4px;
+  }
+  .tpl-edit-card textarea.tpl-mensaje{
+    width:100%;
+    border:1px solid transparent;
+    background:var(--gris-fondo);
+    font-size:12.5px;
+    font-family:inherit;
+    padding:8px 9px;
+    border-radius:6px;
+    color:var(--carbon);
+    line-height:1.5;
+    resize:vertical;
+  }
+  .tpl-edit-card input.tpl-titulo:hover, .tpl-edit-card textarea.tpl-mensaje:hover{ border-color:var(--gris-claro); }
+  .tpl-edit-card input.tpl-titulo:focus, .tpl-edit-card textarea.tpl-mensaje:focus{ outline:none; border-color:var(--gris-oscuro); background:var(--blanco); }
+  .tpl-del-btn{
+    position:absolute;
+    top:8px; right:8px;
+    border:none;
+    background:transparent;
+    color:#A32D2D;
+    font-size:16px;
+    padding:4px 7px;
+    cursor:pointer;
+    border-radius:6px;
+    line-height:1;
+  }
+  .tpl-del-btn:hover{ background:#FCEBEB; }
+  .add-row-btn{ margin-top:2px; }
+
+  .toast{
+    position:fixed;
+    bottom:24px;
+    left:50%;
+    transform:translateX(-50%);
+    background:var(--negro);
+    color:var(--blanco);
+    padding:12px 20px;
+    border-radius:10px;
+    font-size:13px;
+    font-weight:600;
+    box-shadow:0 4px 14px rgba(0,0,0,0.18);
+    z-index:1100;
+    display:none;
+  }
+  .toast.show{ display:block; }
+
+  .note{ font-size:11.5px; color:#8A97A3; margin:6px 0 0; line-height:1.5; }
+</style>
+</head>
+<body class="gate-locked">
+<div id="bydGate" style="position:fixed;inset:0;z-index:999999;background:#0A0A0A;display:flex;align-items:center;justify-content:center;padding:24px;opacity:1;">
+  <form id="bydGateForm" style="width:100%;max-width:300px;text-align:center;font-family:Arial,sans-serif;">
+    <div style="color:#fff;font-weight:800;font-size:16px;margin-bottom:4px;">BYD Yacopini</div>
+    <div style="color:#8C8C8C;font-size:12px;margin-bottom:18px;">Acceso interno &middot; Gerencia</div>
+    <input id="bydGatePass" type="password" inputmode="numeric" placeholder="Clave" autocomplete="off" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid #4A4A4A;background:#2A2A2A;color:#fff;font-size:16px;text-align:center;box-sizing:border-box;">
+    <button type="submit" style="width:100%;margin-top:10px;padding:12px;border-radius:10px;border:none;background:#1565D8;color:#fff;font-weight:700;font-size:14px;">Entrar</button>
+    <div id="bydGateError" style="color:#E85555;font-size:12px;margin-top:10px;display:none;">Clave incorrecta</div>
+  </form>
+</div>
+<style>
+  body.gate-locked > *:not(#bydGate){display:none !important;}
+  #bydGate{ transition:opacity .25s ease; }
+  #bydGate.fadeOut{ opacity:0; }
+</style>
+<script>
+(function(){
+  var HASH = "a734aecec77bc8826bec68f0264b70228ab419e52a8fcdf05016ebee0465f257";
+  var body = document.body;
+  function unlock(){ var g=document.getElementById('bydGate'); if(g){ g.classList.add('fadeOut'); setTimeout(function(){ body.classList.remove('gate-locked'); g.remove(); }, 220); } else { body.classList.remove('gate-locked'); } }
+  if (sessionStorage.getItem('bydGateOk') === '1' || sessionStorage.getItem('bydVendorOk') === '1') { unlock(); }
+  else {
+    document.getElementById('bydGateForm').addEventListener('submit', function(e){
+      e.preventDefault();
+      var val = document.getElementById('bydGatePass').value;
+      crypto.subtle.digest('SHA-256', new TextEncoder().encode(val)).then(function(buf){
+        var hex = Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+        if (hex === HASH) { sessionStorage.setItem('bydGateOk','1'); unlock(); }
+        else { document.getElementById('bydGateError').style.display = 'block'; document.getElementById('bydGatePass').value = ''; document.getElementById('bydGatePass').focus(); }
+      });
+    });
+  }
+})();
+</script>
+
+<div class="app-topbar">
+  <svg viewBox="12 4 529 102" xmlns="http://www.w3.org/2000/svg" aria-label="BYD Yacopini">
+    <defs><style>.st0{fill:#FFFFFF;}</style></defs>
+    <path class="st0" d="M162.93,19.18c-8.06-12.16-21.88-14.53-31.23-14.75-8.23-.19-43.9-.23-64.67-.24-40.91-.03-17.51-.01-54.36-.01v19.54c43.75,0,95.68-.1,118.41.25,4.06.06,8.08.47,11.27,3.3,2.97,2.64,4.02,6.79,2.69,10.4-2.14,5.83-8.07,7.28-13.96,7.37-9.01.14-33.77.19-52.24.22-45.3.06-25.68.03-66.16.03v19.49c43.72,0,95.76-.09,118.41.25,7.06.1,14.53,2.56,14.53,10.43s-7.46,10.45-14.53,10.56c-22.59.33-74.66.24-118.41.24v19.53c43.88,0,101.32.16,119.03-.25,9.35-.22,23.18-2.59,31.23-14.75,7.56-11.41,5.71-26.27-4.22-35.8,9.93-9.54,11.78-24.39,4.21-35.8"/>
+    <path class="st0" d="M520.08,15.93c-13.35-9.58-27.85-10.94-39.61-11.21-11.58-.27-29.05-.39-44.5-.45-37.67-.15-15.02-.08-50.91-.08v19.6c38.19,0,64.97-.32,94.46.52,8.66.24,17.95,1.16,26.31,6.96,7.92,5.5,12.62,14.26,12.62,23.72s-4.57,18.24-12.49,23.74c-8.36,5.81-17.65,6.72-26.31,6.96-29.49.83-56.27.51-94.46.51l-.13,19.59c38.41,0,66.03.14,95.41-.54,11.76-.27,26.26-1.63,39.61-11.21,12.67-9.09,20.33-23.36,20.33-39.05s-7.67-29.97-20.33-39.05"/>
+    <path class="st0" d="M227.22,48.06c-10.23-.2-13.49-3.54-13.56-13.73-.07-9.42-.02-20.58-.02-30.14h-22.56c0,9.67-.19,29.24.19,38.7.74,18.38,6.77,24.11,25.55,24.75,13.02.44,23.36.29,41.36.28v-19.69c-14.43,0-20.31.04-30.96-.16"/>
+    <path class="st0" d="M339.04,34.68c-.07,9.92-3.3,13.18-13.56,13.38-4.89.09-17.75.14-28.33.16h0s-.1.01-.1.01c-10.81,0-22.34-.02-29.1-.02v57.57h26.52v-37.88c.81,0,1.68,0,2.58,0h0s.1,0,.1,0v.02c13.8,0,31.04-.06,37.55-.26,19.93-.61,26-6.23,26.73-24.78.1-2.48.16-5.62.19-9.06V4.18h-22.56c0,9.8.04,20.81-.03,30.5"/>
+  </svg>
+</div>
+
+<div class="app">
+
+  <!-- ============ VISTA GERENCIA: GESTOR ============ -->
+  <div id="viewGestor" style="display:none;">
+    <div class="app-header">
+      <h1>Gestor de Plantillas de Mensajes</h1>
+      <p>Cargá los mensajes que van a poder usar los vendedores por WhatsApp, organizados por situación.</p>
+    </div>
+    <p class="note" style="margin-bottom:16px;">Podés usar <b>{cliente}</b>, <b>{vendedor}</b> y <b>{modelo}</b> en el texto — el vendedor los completa antes de copiar el mensaje.</p>
+    <div id="gestorCategorias"></div>
+    <div class="toast" id="gestorToast"></div>
+  </div>
+
+  <!-- ============ VISTA VENDEDOR: HERRAMIENTA ============ -->
+  <div id="viewVendedor" style="display:none;">
+    <div class="app-header">
+      <h1>Plantillas de Mensajes</h1>
+      <p>Elegí la situación con tu cliente, completá los datos y copiá el mensaje para WhatsApp.</p>
+    </div>
+
+    <div class="chip-row" id="vCategoriaChips"></div>
+
+    <div id="vTemplateList"></div>
+
+    <div class="panel" id="vFormPanel" style="display:none;">
+      <h2 id="vFormTitulo">Completá los datos</h2>
+      <div class="field"><label>Cliente</label><input type="text" id="vCliente" placeholder="Nombre del cliente"></div>
+      <div class="field"><label>Vendedor</label><input type="text" id="vVendedor" placeholder="Tu nombre"></div>
+      <div class="field"><label>Modelo</label><input type="text" id="vModelo" placeholder="Ej: Dolphin Mini GS"></div>
+      <label style="display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; color:var(--gris-medio); margin-bottom:5px;">Mensaje</label>
+      <div class="preview-box" id="vPreview"></div>
+      <button type="button" class="whatsapp" id="vCopyBtn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        Copiar mensaje
+      </button>
+    </div>
+
+    <div class="toast" id="vToast"></div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  var TABLERO_API_URL = 'https://script.google.com/macros/s/AKfycbzTYBoM56BBMj2B-8hUG_MIuOh7r5qG4qq2sGlTRM-y6QyFm0XHqgE6XUG5OQB022iy/exec';
+  var TABLERO_API_KEY = 'i4uH92SO1sFyNYi8PJ2dsGb9LDM-Xoq3';
+
+  function llamarBackend(action, params){
+    params = params || {};
+    var url = TABLERO_API_URL + '?key=' + encodeURIComponent(TABLERO_API_KEY) + '&action=' + action;
+    Object.keys(params).forEach(function(k){
+      var v = params[k];
+      url += '&' + k + '=' + encodeURIComponent(v === undefined || v === null ? '' : v);
+    });
+    return fetch(url, {cache:'no-store'}).then(function(r){ return r.json(); }).then(function(data){
+      if (data && data.error) throw new Error(data.error);
+      return data;
+    });
+  }
+
+  function escAttr(str){
+    return String(str == null ? '' : str).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function escHtml(str){
+    return String(str == null ? '' : str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  var esGerencia = sessionStorage.getItem('bydGateOk') === '1';
+  var plantillas = [];
+  var categorias = [];
+
+  function cargar(){
+    llamarBackend('listarPlantillasMensajes').then(function(data){
+      plantillas = data.plantillas || [];
+      categorias = data.categorias || [];
+      if (esGerencia) { renderGestor(); } else { renderVendedorChips(); }
+    }).catch(function(){
+      var el = document.getElementById(esGerencia ? 'gestorToast' : 'vToast');
+      if (el) { el.textContent = 'No se pudo cargar. Probá recargar la página.'; el.classList.add('show'); }
+    });
+  }
+
+  // ============ VISTA GERENCIA ============
+  function renderGestor(){
+    var wrap = document.getElementById('gestorCategorias');
+    wrap.innerHTML = categorias.map(function(cat){
+      var items = plantillas.filter(function(p){ return p.categoria === cat; });
+      return '<div class="panel" data-cat="' + escAttr(cat) + '">' +
+        '<h2>' + escHtml(cat) + '</h2>' +
+        '<p class="cat-count">' + items.length + ' plantilla(s)</p>' +
+        '<div class="tpl-list" data-list="' + escAttr(cat) + '">' + items.map(filaGestorCard).join('') + '</div>' +
+        '<button type="button" class="add-row-btn small tpl-add-btn" data-cat="' + escAttr(cat) + '">+ Agregar plantilla</button>' +
+        '</div>';
+    }).join('');
+
+    wrap.querySelectorAll('.tpl-edit-card').forEach(function(card){
+      var id = card.getAttribute('data-id');
+      var tituloInput = card.querySelector('.tpl-titulo');
+      var mensajeInput = card.querySelector('.tpl-mensaje');
+      [tituloInput, mensajeInput].forEach(function(inp){
+        inp.addEventListener('change', function(){
+          var p = plantillas.filter(function(x){ return x.id === id; })[0];
+          if (!p) return;
+          p.titulo = tituloInput.value;
+          p.mensaje = mensajeInput.value;
+          guardarPlantillaEnServidor(p);
+        });
+      });
+      card.querySelector('.tpl-del-btn').addEventListener('click', function(){
+        eliminarPlantilla(id);
+      });
+    });
+
+    wrap.querySelectorAll('.tpl-add-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var cat = btn.getAttribute('data-cat');
+        var nuevo = { id: '', categoria: cat, titulo: 'Nueva plantilla', mensaje: 'Hola {cliente}, soy {vendedor}...' };
+        plantillas.push(nuevo);
+        renderGestor();
+        guardarPlantillaEnServidor(nuevo);
+      });
+    });
+  }
+
+  function filaGestorCard(p){
+    return '<div class="tpl-edit-card" data-id="' + escAttr(p.id) + '">' +
+      '<input type="text" class="tpl-titulo" value="' + escAttr(p.titulo) + '">' +
+      '<textarea class="tpl-mensaje" rows="3">' + escHtml(p.mensaje) + '</textarea>' +
+      '<button type="button" class="tpl-del-btn" title="Eliminar">&times;</button>' +
+      '</div>';
+  }
+
+  function gestorToast(msg){
+    var el = document.getElementById('gestorToast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(window.__gestorToastT);
+    window.__gestorToastT = setTimeout(function(){ el.classList.remove('show'); }, 2200);
+  }
+
+  function guardarPlantillaEnServidor(p){
+    llamarBackend('guardarPlantillaMensaje', { id: p.id || '', categoria: p.categoria, titulo: p.titulo, mensaje: p.mensaje })
+      .then(function(res){
+        if (!p.id && res && res.id) { p.id = res.id; renderGestor(); }
+        gestorToast('Guardado');
+      }).catch(function(){ gestorToast('Error al guardar — reintentá'); });
+  }
+
+  function eliminarPlantilla(id){
+    plantillas = plantillas.filter(function(x){ return x.id !== id; });
+    renderGestor();
+    llamarBackend('eliminarPlantillaMensaje', { id: id }).catch(function(){ gestorToast('No se pudo eliminar en el servidor'); });
+  }
+
+  // ============ VISTA VENDEDOR ============
+  var categoriaActiva = null;
+  var plantillaActiva = null;
+
+  function renderVendedorChips(){
+    var wrap = document.getElementById('vCategoriaChips');
+    wrap.innerHTML = categorias.map(function(cat){
+      return '<button type="button" class="chip" data-cat="' + escAttr(cat) + '">' + escHtml(cat) + '</button>';
+    }).join('');
+    wrap.querySelectorAll('.chip').forEach(function(chip){
+      chip.addEventListener('click', function(){
+        categoriaActiva = chip.getAttribute('data-cat');
+        wrap.querySelectorAll('.chip').forEach(function(c){ c.classList.remove('active'); });
+        chip.classList.add('active');
+        plantillaActiva = null;
+        document.getElementById('vFormPanel').style.display = 'none';
+        renderVendedorLista();
+      });
+    });
+    if (categorias.length) { wrap.querySelector('.chip').click(); }
+  }
+
+  function renderVendedorLista(){
+    var listWrap = document.getElementById('vTemplateList');
+    var items = plantillas.filter(function(p){ return p.categoria === categoriaActiva; });
+    if (!items.length) {
+      listWrap.innerHTML = '<p class="empty-note">Todavía no hay plantillas cargadas en esta categoría.</p>';
+      return;
+    }
+    listWrap.innerHTML = items.map(function(p){
+      return '<div class="tpl-pick-card" data-id="' + escAttr(p.id) + '">' +
+        '<div class="tt">' + escHtml(p.titulo) + '</div>' +
+        '<div class="tp">' + escHtml(p.mensaje) + '</div>' +
+        '</div>';
+    }).join('');
+    listWrap.querySelectorAll('.tpl-pick-card').forEach(function(card){
+      card.addEventListener('click', function(){
+        listWrap.querySelectorAll('.tpl-pick-card').forEach(function(c){ c.classList.remove('active'); });
+        card.classList.add('active');
+        plantillaActiva = items.filter(function(p){ return p.id === card.getAttribute('data-id'); })[0];
+        mostrarFormVendedor();
+      });
+    });
+  }
+
+  function mostrarFormVendedor(){
+    if (!plantillaActiva) return;
+    var panel = document.getElementById('vFormPanel');
+    panel.style.display = 'block';
+    document.getElementById('vFormTitulo').textContent = plantillaActiva.titulo;
+    var vend = document.getElementById('vVendedor');
+    if (!vend.value) { vend.value = sessionStorage.getItem('bydVendorNombre') || ''; }
+    actualizarPreview();
+    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function resolverMensaje(texto, cliente, vendedor, modelo){
+    var faltan = [];
+    var out = texto;
+    function reemplazar(token, valor, etiqueta){
+      if (out.indexOf(token) === -1) return;
+      if (valor) { out = out.split(token).join(valor); }
+      else { faltan.push(etiqueta); }
+    }
+    reemplazar('{cliente}', cliente, 'cliente');
+    reemplazar('{vendedor}', vendedor, 'vendedor');
+    reemplazar('{modelo}', modelo, 'modelo');
+    return { texto: out, faltan: faltan };
+  }
+
+  function actualizarPreview(){
+    if (!plantillaActiva) return;
+    var cliente = document.getElementById('vCliente').value.trim();
+    var vendedor = document.getElementById('vVendedor').value.trim();
+    var modelo = document.getElementById('vModelo').value.trim();
+    var res = resolverMensaje(plantillaActiva.mensaje, cliente, vendedor, modelo);
+    document.getElementById('vPreview').textContent = res.texto;
+  }
+
+  ['vCliente', 'vVendedor', 'vModelo'].forEach(function(id){
+    document.getElementById(id).addEventListener('input', actualizarPreview);
+  });
+
+  function vToast(msg){
+    var el = document.getElementById('vToast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(window.__vToastT);
+    window.__vToastT = setTimeout(function(){ el.classList.remove('show'); }, 2200);
+  }
+
+  document.getElementById('vCopyBtn').addEventListener('click', function(){
+    var texto = document.getElementById('vPreview').textContent;
+    if (!texto) return;
+    function fallback(){
+      var ta = document.createElement('textarea');
+      ta.value = texto;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); } catch (e) {}
+      document.body.removeChild(ta);
+      vToast('Mensaje copiado');
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(texto).then(function(){ vToast('Mensaje copiado'); }).catch(fallback);
+    } else {
+      fallback();
+    }
+  });
+
+  // ============ INIT ============
+  function initApp(){
+    if (esGerencia) {
+      document.getElementById('viewGestor').style.display = 'block';
+    } else {
+      document.getElementById('viewVendedor').style.display = 'block';
+    }
+    cargar();
+  }
+
+  if (document.body.classList.contains('gate-locked')) {
+    var obs = new MutationObserver(function(){
+      if (!document.body.classList.contains('gate-locked')) { obs.disconnect(); initApp(); }
+    });
+    obs.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  } else {
+    initApp();
+  }
+})();
+</script>
+
+<a id="hubBackBtn" href="./index.html" style="position:fixed;bottom:18px;left:18px;z-index:999999;
+  width:44px;height:44px;border-radius:50%;background:#0A0A0A;color:#fff;display:flex;
+  align-items:center;justify-content:center;text-decoration:none;font-family:Arial,sans-serif;
+  font-size:20px;box-shadow:0 2px 8px rgba(0,0,0,0.35);" aria-label="Volver al inicio">&#8592;</a>
+<script>
+(function(){
+  var b=document.getElementById('hubBackBtn');
+  if(b && sessionStorage.getItem('bydVendorOk')==='1' && sessionStorage.getItem('bydGateOk')!=='1'){ b.href='./panel_ventas.html'; }
+})();
+</script>
+</body>
+</html>
