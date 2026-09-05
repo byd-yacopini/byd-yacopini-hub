@@ -62,6 +62,7 @@
   button.primary:hover{ background:#2A2A2A; }
   button.whatsapp{ background:var(--whatsapp); color:#fff; border-color:var(--whatsapp); width:100%; justify-content:center; padding:13px; font-size:14px; }
   button.whatsapp:hover{ background:var(--whatsapp-dark); }
+  button.whatsapp.done{ background:var(--whatsapp-dark); }
   button.small{ padding:5px 10px; font-size:12px; }
 
   .panel{
@@ -89,47 +90,43 @@
   .field input:focus, .field textarea:focus{ outline:none; border-color:var(--gris-oscuro); }
   .field textarea{ resize:vertical; line-height:1.5; }
 
-  /* ---- Chips de categoría (vendedor) ---- */
-  .chip-row{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px; }
-  .chip{
-    padding:8px 14px;
-    border-radius:20px;
+  /* ---- Filtros + resultados (vendedor) ---- */
+  select.field-select{
+    width:100%;
     border:1px solid var(--gris-claro);
-    background:var(--blanco);
-    font-size:12.5px;
-    font-weight:700;
-    color:var(--carbon);
-    cursor:pointer;
-  }
-  .chip.active{ background:var(--negro); color:#fff; border-color:var(--negro); }
-
-  /* ---- Tarjetas de plantilla para elegir (vendedor) ---- */
-  .tpl-pick-card{
-    background:var(--blanco);
-    border:1px solid var(--gris-claro);
-    border-radius:10px;
-    padding:12px 14px;
-    margin-bottom:8px;
-    cursor:pointer;
-  }
-  .tpl-pick-card:hover{ border-color:var(--gris-oscuro); }
-  .tpl-pick-card.active{ border-color:var(--whatsapp); box-shadow:0 0 0 2px rgba(37,211,102,0.25); }
-  .tpl-pick-card .tt{ font-size:13.5px; font-weight:700; color:var(--negro); margin-bottom:3px; }
-  .tpl-pick-card .tp{ font-size:12px; color:var(--gris-medio); line-height:1.4; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
-
-  .preview-box{
-    background:var(--gris-fondo);
-    border:1px solid var(--gris-claro);
-    border-radius:10px;
-    padding:14px;
+    border-radius:8px;
+    padding:10px 11px;
+    font-family:inherit;
     font-size:13.5px;
-    line-height:1.6;
-    white-space:pre-wrap;
     color:var(--carbon);
-    margin-bottom:14px;
-    min-height:60px;
+    background:var(--blanco) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238C8C8C' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 11px center;
+    background-size:14px;
+    padding-right:32px;
+    appearance:none;
+    -webkit-appearance:none;
   }
-  .var-missing{ background:#FCEBEB; color:#A32D2D; padding:1px 4px; border-radius:4px; }
+  select.field-select:focus{ outline:none; border-color:var(--gris-oscuro); }
+
+  .divider{
+    display:flex; align-items:center; gap:10px;
+    margin:22px 0 14px;
+    font-size:11px; font-weight:700; letter-spacing:0.5px; text-transform:uppercase; color:var(--gris-medio);
+  }
+  .divider::before, .divider::after{ content:""; flex:1; height:1px; background:var(--gris-claro); }
+
+  .result-card{
+    background:var(--blanco);
+    border:1px solid var(--gris-claro);
+    border-radius:12px;
+    padding:16px 18px;
+    margin-bottom:12px;
+  }
+  .result-card .tt{ font-size:13px; font-weight:800; color:var(--negro); margin-bottom:8px; }
+  .result-card .msg{
+    font-size:13.5px; line-height:1.6; color:var(--carbon);
+    white-space:pre-wrap; margin-bottom:12px;
+  }
+  .result-card mark{ background:rgba(37,211,102,0.28); border-radius:4px; padding:0 2px; font-weight:600; }
 
   .empty-note{ font-size:12.5px; color:var(--gris-medio); padding:8px 0; }
 
@@ -264,25 +261,18 @@
   <div id="viewVendedor" style="display:none;">
     <div class="app-header">
       <h1>Plantillas de Mensajes</h1>
-      <p>Elegí la situación con tu cliente, completá los datos y copiá el mensaje para WhatsApp.</p>
+      <p>Completá los datos y elegí, entre las plantillas de esa situación, la que más te sirva.</p>
     </div>
 
-    <div class="chip-row" id="vCategoriaChips"></div>
-
-    <div id="vTemplateList"></div>
-
-    <div class="panel" id="vFormPanel" style="display:none;">
-      <h2 id="vFormTitulo">Completá los datos</h2>
+    <div class="panel">
+      <div class="field"><label>Tipo de plantilla</label><select class="field-select" id="vCategoria"></select></div>
+      <div class="field"><label>Tipo de vehículo</label><select class="field-select" id="vModelo"><option value="">Elegí un modelo…</option></select></div>
       <div class="field"><label>Cliente</label><input type="text" id="vCliente" placeholder="Nombre del cliente"></div>
-      <div class="field"><label>Vendedor</label><input type="text" id="vVendedor" placeholder="Tu nombre"></div>
-      <div class="field"><label>Modelo</label><input type="text" id="vModelo" placeholder="Ej: Dolphin Mini GS"></div>
-      <label style="display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; color:var(--gris-medio); margin-bottom:5px;">Mensaje</label>
-      <div class="preview-box" id="vPreview"></div>
-      <button type="button" class="whatsapp" id="vCopyBtn">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-        Copiar mensaje
-      </button>
+      <div class="field" style="margin-bottom:0;"><label>Vendedor</label><input type="text" id="vVendedor" placeholder="Tu nombre"></div>
     </div>
+
+    <div class="divider">Plantillas de esta situación</div>
+    <div id="vResultList"></div>
 
     <div class="toast" id="vToast"></div>
   </div>
@@ -317,12 +307,22 @@
   var esGerencia = sessionStorage.getItem('bydGateOk') === '1';
   var plantillas = [];
   var categorias = [];
+  var modelosDisponibles = [];
 
   function cargar(){
-    llamarBackend('listarPlantillasMensajes').then(function(data){
+    var pedidos = [llamarBackend('listarPlantillasMensajes')];
+    pedidos.push(esGerencia ? Promise.resolve(null) : llamarBackend('listarListaPrecios').catch(function(){ return null; }));
+    Promise.all(pedidos).then(function(res){
+      var data = res[0];
       plantillas = data.plantillas || [];
       categorias = data.categorias || [];
-      if (esGerencia) { renderGestor(); } else { renderVendedorChips(); }
+      if (esGerencia) {
+        renderGestor();
+      } else {
+        var lp = res[1];
+        modelosDisponibles = lp ? (lp.modelos || []).map(function(m){ return m.nombre; }) : [];
+        renderVendedorFiltros();
+      }
     }).catch(function(){
       var el = document.getElementById(esGerencia ? 'gestorToast' : 'vToast');
       if (el) { el.textContent = 'No se pudo cargar. Probá recargar la página.'; el.classList.add('show'); }
@@ -402,87 +402,89 @@
   }
 
   // ============ VISTA VENDEDOR ============
-  var categoriaActiva = null;
-  var plantillaActiva = null;
+  function renderVendedorFiltros(){
+    var catSel = document.getElementById('vCategoria');
+    catSel.innerHTML = categorias.map(function(cat){ return '<option>' + escHtml(cat) + '</option>'; }).join('');
 
-  function renderVendedorChips(){
-    var wrap = document.getElementById('vCategoriaChips');
-    wrap.innerHTML = categorias.map(function(cat){
-      return '<button type="button" class="chip" data-cat="' + escAttr(cat) + '">' + escHtml(cat) + '</button>';
-    }).join('');
-    wrap.querySelectorAll('.chip').forEach(function(chip){
-      chip.addEventListener('click', function(){
-        categoriaActiva = chip.getAttribute('data-cat');
-        wrap.querySelectorAll('.chip').forEach(function(c){ c.classList.remove('active'); });
-        chip.classList.add('active');
-        plantillaActiva = null;
-        document.getElementById('vFormPanel').style.display = 'none';
-        renderVendedorLista();
-      });
-    });
-    if (categorias.length) { wrap.querySelector('.chip').click(); }
-  }
+    var modSel = document.getElementById('vModelo');
+    modSel.innerHTML = '<option value="">Elegí un modelo…</option>' +
+      modelosDisponibles.map(function(m){ return '<option>' + escHtml(m) + '</option>'; }).join('');
 
-  function renderVendedorLista(){
-    var listWrap = document.getElementById('vTemplateList');
-    var items = plantillas.filter(function(p){ return p.categoria === categoriaActiva; });
-    if (!items.length) {
-      listWrap.innerHTML = '<p class="empty-note">Todavía no hay plantillas cargadas en esta categoría.</p>';
-      return;
-    }
-    listWrap.innerHTML = items.map(function(p){
-      return '<div class="tpl-pick-card" data-id="' + escAttr(p.id) + '">' +
-        '<div class="tt">' + escHtml(p.titulo) + '</div>' +
-        '<div class="tp">' + escHtml(p.mensaje) + '</div>' +
-        '</div>';
-    }).join('');
-    listWrap.querySelectorAll('.tpl-pick-card').forEach(function(card){
-      card.addEventListener('click', function(){
-        listWrap.querySelectorAll('.tpl-pick-card').forEach(function(c){ c.classList.remove('active'); });
-        card.classList.add('active');
-        plantillaActiva = items.filter(function(p){ return p.id === card.getAttribute('data-id'); })[0];
-        mostrarFormVendedor();
-      });
-    });
-  }
-
-  function mostrarFormVendedor(){
-    if (!plantillaActiva) return;
-    var panel = document.getElementById('vFormPanel');
-    panel.style.display = 'block';
-    document.getElementById('vFormTitulo').textContent = plantillaActiva.titulo;
     var vend = document.getElementById('vVendedor');
     if (!vend.value) { vend.value = sessionStorage.getItem('bydVendorNombre') || ''; }
-    actualizarPreview();
-    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    [catSel, modSel].forEach(function(el){ el.addEventListener('change', renderVendedorResultados); });
+    ['vCliente', 'vVendedor'].forEach(function(id){ document.getElementById(id).addEventListener('input', renderVendedorResultados); });
+
+    renderVendedorResultados();
   }
 
-  function resolverMensaje(texto, cliente, vendedor, modelo){
-    var faltan = [];
-    var out = texto;
-    function reemplazar(token, valor, etiqueta){
-      if (out.indexOf(token) === -1) return;
-      if (valor) { out = out.split(token).join(valor); }
-      else { faltan.push(etiqueta); }
-    }
-    reemplazar('{cliente}', cliente, 'cliente');
-    reemplazar('{vendedor}', vendedor, 'vendedor');
-    reemplazar('{modelo}', modelo, 'modelo');
-    return { texto: out, faltan: faltan };
+  function resolverConMarcas(tpl, cliente, vendedor, modelo){
+    var out = escHtml(tpl);
+    out = out.split('{cliente}').join('<mark>' + escHtml(cliente || '(cliente)') + '</mark>');
+    out = out.split('{vendedor}').join('<mark>' + escHtml(vendedor || '(vendedor)') + '</mark>');
+    out = out.split('{modelo}').join('<mark>' + escHtml(modelo || '(modelo)') + '</mark>');
+    return out;
+  }
+  function resolverPlano(tpl, cliente, vendedor, modelo){
+    var out = tpl;
+    out = out.split('{cliente}').join(cliente || '(cliente)');
+    out = out.split('{vendedor}').join(vendedor || '(vendedor)');
+    out = out.split('{modelo}').join(modelo || '(modelo)');
+    return out;
   }
 
-  function actualizarPreview(){
-    if (!plantillaActiva) return;
+  function renderVendedorResultados(){
+    var categoria = document.getElementById('vCategoria').value;
+    var modelo = document.getElementById('vModelo').value;
     var cliente = document.getElementById('vCliente').value.trim();
     var vendedor = document.getElementById('vVendedor').value.trim();
-    var modelo = document.getElementById('vModelo').value.trim();
-    var res = resolverMensaje(plantillaActiva.mensaje, cliente, vendedor, modelo);
-    document.getElementById('vPreview').textContent = res.texto;
-  }
+    var wrap = document.getElementById('vResultList');
+    var items = plantillas.filter(function(p){ return p.categoria === categoria; });
 
-  ['vCliente', 'vVendedor', 'vModelo'].forEach(function(id){
-    document.getElementById(id).addEventListener('input', actualizarPreview);
-  });
+    if (!items.length) {
+      wrap.innerHTML = '<p class="empty-note">Todavía no hay plantillas cargadas en esta categoría.</p>';
+      return;
+    }
+
+    wrap.innerHTML = items.map(function(p){
+      return '<div class="result-card">' +
+        '<div class="tt">' + escHtml(p.titulo) + '</div>' +
+        '<div class="msg" data-plain="' + escAttr(resolverPlano(p.mensaje, cliente, vendedor, modelo)) + '">' + resolverConMarcas(p.mensaje, cliente, vendedor, modelo) + '</div>' +
+        '<button type="button" class="whatsapp copy-btn">' +
+        '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>' +
+        ' Copiar mensaje</button>' +
+        '</div>';
+    }).join('');
+
+    wrap.querySelectorAll('.copy-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var msgEl = btn.previousElementSibling;
+        var texto = msgEl.getAttribute('data-plain');
+        function fallback(){
+          var ta = document.createElement('textarea');
+          ta.value = texto;
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.select();
+          try { document.execCommand('copy'); } catch (e) {}
+          document.body.removeChild(ta);
+          done();
+        }
+        function done(){
+          btn.classList.add('done');
+          btn.lastChild.textContent = ' Copiado';
+          setTimeout(function(){ btn.classList.remove('done'); btn.lastChild.textContent = ' Copiar mensaje'; }, 1600);
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(texto).then(done).catch(fallback);
+        } else {
+          fallback();
+        }
+      });
+    });
+  }
 
   function vToast(msg){
     var el = document.getElementById('vToast');
@@ -491,27 +493,6 @@
     clearTimeout(window.__vToastT);
     window.__vToastT = setTimeout(function(){ el.classList.remove('show'); }, 2200);
   }
-
-  document.getElementById('vCopyBtn').addEventListener('click', function(){
-    var texto = document.getElementById('vPreview').textContent;
-    if (!texto) return;
-    function fallback(){
-      var ta = document.createElement('textarea');
-      ta.value = texto;
-      ta.style.position = 'fixed';
-      ta.style.opacity = '0';
-      document.body.appendChild(ta);
-      ta.select();
-      try { document.execCommand('copy'); } catch (e) {}
-      document.body.removeChild(ta);
-      vToast('Mensaje copiado');
-    }
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(texto).then(function(){ vToast('Mensaje copiado'); }).catch(fallback);
-    } else {
-      fallback();
-    }
-  });
 
   // ============ INIT ============
   function initApp(){
