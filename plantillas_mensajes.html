@@ -179,6 +179,10 @@
   .tpl-del-btn:hover{ background:#FCEBEB; }
   .add-row-btn{ margin-top:2px; }
 
+  .tabs{ display:flex; gap:8px; margin-bottom:18px; }
+  .tab-btn{ flex:1; justify-content:center; }
+  .tab-btn.active{ background:var(--negro); color:var(--blanco); border-color:var(--negro); }
+
   .toast{
     position:fixed;
     bottom:24px;
@@ -249,12 +253,32 @@
   <!-- ============ VISTA GERENCIA: GESTOR ============ -->
   <div id="viewGestor" style="display:none;">
     <div class="app-header">
-      <h1>Gestor de Plantillas de Mensajes</h1>
-      <p>Cargá los mensajes que van a poder usar los vendedores por WhatsApp, organizados por situación.</p>
+      <h1>Plantillas de Mensajes</h1>
+      <p>Gestioná las plantillas o armá un mensaje para copiar, igual que los vendedores.</p>
     </div>
-    <p class="note" style="margin-bottom:16px;">Podés usar <b>{cliente}</b>, <b>{vendedor}</b> y <b>{modelo}</b> en el texto — el vendedor los completa antes de copiar el mensaje.</p>
-    <div id="gestorCategorias"></div>
-    <div class="toast" id="gestorToast"></div>
+
+    <div class="tabs" id="gestorTabs">
+      <button type="button" class="tab-btn active" data-tab="edit">Gestor</button>
+      <button type="button" class="tab-btn" data-tab="use">Usar plantillas</button>
+    </div>
+
+    <div id="gestorTabEdit">
+      <p class="note" style="margin-bottom:16px;">Podés usar <b>{cliente}</b>, <b>{vendedor}</b> y <b>{modelo}</b> en el texto — el vendedor los completa antes de copiar el mensaje.</p>
+      <div id="gestorCategorias"></div>
+      <div class="toast" id="gestorToast"></div>
+    </div>
+
+    <div id="gestorTabUse" style="display:none;">
+      <div class="panel">
+        <div class="field"><label>Tipo de plantilla</label><select class="field-select" id="gCategoria"></select></div>
+        <div class="field"><label>Tipo de vehículo</label><select class="field-select" id="gModelo"><option value="">Elegí un modelo…</option></select></div>
+        <div class="field"><label>Cliente</label><input type="text" id="gCliente" placeholder="Nombre del cliente"></div>
+        <div class="field" style="margin-bottom:0;"><label>Vendedor</label><input type="text" id="gVendedor" placeholder="Nombre del vendedor"></div>
+      </div>
+      <div class="divider">Plantillas de esta situación</div>
+      <div id="gResultList"></div>
+      <div class="toast" id="gToast"></div>
+    </div>
   </div>
 
   <!-- ============ VISTA VENDEDOR: HERRAMIENTA ============ -->
@@ -310,18 +334,20 @@
   var modelosDisponibles = [];
 
   function cargar(){
-    var pedidos = [llamarBackend('listarPlantillasMensajes')];
-    pedidos.push(esGerencia ? Promise.resolve(null) : llamarBackend('listarListaPrecios').catch(function(){ return null; }));
-    Promise.all(pedidos).then(function(res){
+    Promise.all([
+      llamarBackend('listarPlantillasMensajes'),
+      llamarBackend('listarListaPrecios').catch(function(){ return null; })
+    ]).then(function(res){
       var data = res[0];
       plantillas = data.plantillas || [];
       categorias = data.categorias || [];
+      var lp = res[1];
+      modelosDisponibles = lp ? (lp.modelos || []).map(function(m){ return m.nombre; }) : [];
       if (esGerencia) {
         renderGestor();
+        renderFiltros('g');
       } else {
-        var lp = res[1];
-        modelosDisponibles = lp ? (lp.modelos || []).map(function(m){ return m.nombre; }) : [];
-        renderVendedorFiltros();
+        renderFiltros('v');
       }
     }).catch(function(){
       var el = document.getElementById(esGerencia ? 'gestorToast' : 'vToast');
@@ -330,7 +356,23 @@
   }
 
   // ============ VISTA GERENCIA ============
+  var gestorTabsWired = false;
+  function wireGestorTabs(){
+    if (gestorTabsWired) return;
+    gestorTabsWired = true;
+    document.querySelectorAll('#gestorTabs .tab-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        document.querySelectorAll('#gestorTabs .tab-btn').forEach(function(b){ b.classList.remove('active'); });
+        btn.classList.add('active');
+        var tab = btn.getAttribute('data-tab');
+        document.getElementById('gestorTabEdit').style.display = tab === 'edit' ? 'block' : 'none';
+        document.getElementById('gestorTabUse').style.display = tab === 'use' ? 'block' : 'none';
+      });
+    });
+  }
+
   function renderGestor(){
+    wireGestorTabs();
     var wrap = document.getElementById('gestorCategorias');
     wrap.innerHTML = categorias.map(function(cat){
       var items = plantillas.filter(function(p){ return p.categoria === cat; });
@@ -401,22 +443,22 @@
     llamarBackend('eliminarPlantillaMensaje', { id: id }).catch(function(){ gestorToast('No se pudo eliminar en el servidor'); });
   }
 
-  // ============ VISTA VENDEDOR ============
-  function renderVendedorFiltros(){
-    var catSel = document.getElementById('vCategoria');
+  // ============ FILTROS + RESULTADOS (vendedor y gerencia) ============
+  function renderFiltros(prefix){
+    var catSel = document.getElementById(prefix + 'Categoria');
     catSel.innerHTML = categorias.map(function(cat){ return '<option>' + escHtml(cat) + '</option>'; }).join('');
 
-    var modSel = document.getElementById('vModelo');
+    var modSel = document.getElementById(prefix + 'Modelo');
     modSel.innerHTML = '<option value="">Elegí un modelo…</option>' +
       modelosDisponibles.map(function(m){ return '<option>' + escHtml(m) + '</option>'; }).join('');
 
-    var vend = document.getElementById('vVendedor');
+    var vend = document.getElementById(prefix + 'Vendedor');
     if (!vend.value) { vend.value = sessionStorage.getItem('bydVendorNombre') || ''; }
 
-    [catSel, modSel].forEach(function(el){ el.addEventListener('change', renderVendedorResultados); });
-    ['vCliente', 'vVendedor'].forEach(function(id){ document.getElementById(id).addEventListener('input', renderVendedorResultados); });
+    [catSel, modSel].forEach(function(el){ el.addEventListener('change', function(){ renderResultados(prefix); }); });
+    [prefix + 'Cliente', prefix + 'Vendedor'].forEach(function(id){ document.getElementById(id).addEventListener('input', function(){ renderResultados(prefix); }); });
 
-    renderVendedorResultados();
+    renderResultados(prefix);
   }
 
   function resolverConMarcas(tpl, cliente, vendedor, modelo){
@@ -434,12 +476,12 @@
     return out;
   }
 
-  function renderVendedorResultados(){
-    var categoria = document.getElementById('vCategoria').value;
-    var modelo = document.getElementById('vModelo').value;
-    var cliente = document.getElementById('vCliente').value.trim();
-    var vendedor = document.getElementById('vVendedor').value.trim();
-    var wrap = document.getElementById('vResultList');
+  function renderResultados(prefix){
+    var categoria = document.getElementById(prefix + 'Categoria').value;
+    var modelo = document.getElementById(prefix + 'Modelo').value;
+    var cliente = document.getElementById(prefix + 'Cliente').value.trim();
+    var vendedor = document.getElementById(prefix + 'Vendedor').value.trim();
+    var wrap = document.getElementById(prefix + 'ResultList');
     var items = plantillas.filter(function(p){ return p.categoria === categoria; });
 
     if (!items.length) {
