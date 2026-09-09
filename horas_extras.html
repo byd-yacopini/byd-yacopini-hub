@@ -664,8 +664,7 @@ function generarHtmlComprobantePdf(mov){
     '<div class="section"><h2>Saldo acumulado del vendedor</h2><div class="saldo-box">' + escapeHtml(saldoTexto(mov.saldo)) + '</div></div>' +
     '<div class="section"><h2>Emitido por</h2><div class="field"><div class="v">Nicolas Manna &middot; Gte Ventas</div></div></div>' +
     '<div class="footer">Comprobante interno de horas extras &middot; Yacopini BYD Godoy Cruz (ARG092511).</div>' +
-    '</div><script>(function(){var b=document.getElementById('hubBackBtn');if(b && sessionStorage.getItem('bydJefeOk')==='1'){b.href='./panel_jefe.html';}})();</script>
-</body></html>';
+    '</div></body></html>';
 }
 
 function generarPdfDesdeHtml(contenido, nombreArchivo, btn){
@@ -850,5 +849,6 @@ loadVendedores();
   width:44px;height:44px;border-radius:50%;background:#0A0A0A;color:#fff;display:flex;
   align-items:center;justify-content:center;text-decoration:none;font-family:Arial,sans-serif;
   font-size:20px;box-shadow:0 2px 8px rgba(0,0,0,0.35);" aria-label="Volver al inicio">&#8592;</a>
+<script>(function(){var b=document.getElementById('hubBackBtn');if(b && sessionStorage.getItem('bydJefeOk')==='1'){b.href='./panel_jefe.html';}})();</script>
 </body>
 </html>
