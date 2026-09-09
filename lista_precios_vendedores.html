@@ -590,7 +590,8 @@
 <script>
 (function(){
   var b=document.getElementById('hubBackBtn');
-  if(b && sessionStorage.getItem('bydGateOk')==='1' && sessionStorage.getItem('bydVendorOk')!=='1'){ b.href='./index.html'; }
+  if(b && sessionStorage.getItem('bydJefeOk')==='1'){ b.href='./panel_jefe.html'; }
+  else if(b && sessionStorage.getItem('bydGateOk')==='1' && sessionStorage.getItem('bydVendorOk')!=='1'){ b.href='./index.html'; }
 })();
 </script>
 </body>

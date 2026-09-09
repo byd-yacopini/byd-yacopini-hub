@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>BYD Yacopini · Panel de Jefe</title>
+<meta name="theme-color" content="#0A0A0A">
+<style>
+  :root{
+    --negro:#0A0A0A;
+    --carbon:#2A2A2A;
+    --gris-oscuro:#4A4A4A;
+    --gris-medio:#8C8C8C;
+    --gris-claro:#D4D4D4;
+    --gris-fondo:#F2F2F2;
+    --blanco:#FFFFFF;
+    --azul-ev:#1565D8;
+    --verde-dm:#388E3C;
+    --ambar:#D89614;
+    --morado:#6A3FA0;
+    --rojo:#C0392B;
+    --oro:#B8901F;
+    --plata:#6B7280;
+    --bronce:#A15A2E;
+    --verde:#388E3C;
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    background:var(--gris-fondo);
+    color:var(--carbon);
+    font-family:'Segoe UI', Arial, Helvetica, sans-serif;
+    padding-bottom: calc(env(safe-area-inset-bottom) + 30px);
+  }
+  .topbar{
+    background:var(--negro);
+    padding: calc(env(safe-area-inset-top) + 18px) 20px 14px;
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+  .topbar svg{ height:24px; width:auto; display:block; }
+  .topbar .greeting{ color:var(--blanco); font-size:13px; font-weight:700; line-height:1.3; }
+  .topbar .subtitle{ color:var(--gris-claro); font-size:11px; letter-spacing:0.4px; }
+  .topbar .spacer{ flex:1; }
+  .logout-btn{
+    background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); color:#fff;
+    font-size:11px; font-weight:700; padding:7px 11px; border-radius:20px; white-space:nowrap;
+  }
+
+  .tabs{ display:flex; gap:0; background:var(--negro); padding:0 12px 12px; overflow-x:auto; }
+  .main-select-wrap{ background:var(--negro); padding:2px 12px 14px; }
+  .main-select{
+    width:100%; background:rgba(255,255,255,0.08); color:#fff; border:1px solid rgba(255,255,255,0.2);
+    border-radius:10px; padding:12px 14px; font-size:14px; font-weight:700; font-family:inherit;
+    -webkit-appearance:none; appearance:none;
+  }
+  .main-select option{ background:#1a1a1a; color:#fff; }
+
+  .wrap{ max-width:680px; margin:0 auto; padding:16px; }
+  .mainview{ display:none; }
+  .mainview.active{ display:block; }
+  .section{ display:none; }
+  .section.active{ display:block; }
+
+  h1{ font-size:19px; font-weight:800; color:var(--negro); margin:4px 0 4px; }
+  .lead{ font-size:13px; color:var(--gris-oscuro); margin:0 0 20px; }
+
+  .card{
+    display:flex; align-items:center; gap:14px; background:var(--blanco); border-radius:14px;
+    padding:16px 16px; margin-bottom:12px; text-decoration:none; color:inherit;
+    box-shadow:0 1px 3px rgba(0,0,0,0.08); border:1px solid var(--gris-claro);
+    transition:transform .12s ease, box-shadow .12s ease;
+  }
+  .card:active{ transform:scale(0.98); box-shadow:0 1px 2px rgba(0,0,0,0.06); }
+  .icon{ flex:0 0 46px; width:46px; height:46px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:var(--blanco); }
+  .icon svg{ width:22px; height:22px; }
+  .icon.precios{ background:linear-gradient(135deg,#1565D8,#0E4AA8); }
+  .icon.creditos{ background:linear-gradient(135deg,#388E3C,#256B29); }
+  .icon.cotizador{ background:linear-gradient(135deg,#6A3FA0,#4A2670); }
+  .icon.remitos{ background:linear-gradient(135deg,#C81E3A,#8C1428); }
+  .icon.fichas{ background:linear-gradient(135deg,#0A0A0A,#2A2A2A); }
+  .icon.horas{ background:linear-gradient(135deg,#1565D8,#0D3E86); }
+  .card-body{ flex:1; min-width:0; }
+  .card-body .t{ font-size:15px; font-weight:700; color:var(--negro); margin:0 0 2px; }
+  .card-body .d{ font-size:12.5px; color:var(--gris-oscuro); margin:0; }
+  .chev{ flex:0 0 auto; color:var(--gris-medio); font-size:18px; }
+  .footer-note{ font-size:11px; color:var(--gris-medio); text-align:center; margin-top:24px; line-height:1.5; }
+  .install-hint{
+    background:#FFF7E6; border:1px solid #F0D48A; color:#7A5A00; font-size:12px; border-radius:10px;
+    padding:10px 12px; margin-bottom:18px; display:none;
+  }
+  .install-hint.show{ display:block; }
+
+  .kpi-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:16px; }
+  .kpi{ background:var(--blanco); border:1px solid var(--gris-claro); border-radius:12px; padding:14px; }
+  .kpi .n{ font-size:24px; font-weight:800; color:var(--negro); }
+  .kpi .l{ font-size:11px; color:var(--gris-medio); font-weight:600; margin-top:2px; }
+
+  .tcard{ background:var(--blanco); border-radius:14px; padding:16px 18px; margin-bottom:14px; border:1px solid var(--gris-claro); }
+  .tcard h2{ font-size:12px; text-transform:uppercase; letter-spacing:0.5px; color:var(--gris-medio); font-weight:700; margin:0 0 14px; }
+
+  .progress-row{ display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--gris-fondo); flex-wrap:wrap; }
+  .progress-row:last-child{ border-bottom:none; }
+  .progress-row .pname{ flex:0 0 128px; font-size:12px; font-weight:600; color:var(--carbon); }
+  .progress-row .ptrack{ flex:1; height:9px; background:var(--gris-fondo); border-radius:6px; overflow:hidden; }
+  .progress-row .pfill{ height:100%; border-radius:6px; background:var(--azul-ev); }
+  .progress-row .pfill.verde{ background:var(--verde-dm); }
+  .progress-row .pfill.ambar{ background:var(--ambar); }
+  .progress-row .pfill.rojo{ background:var(--rojo); }
+  .progress-row .pval{ flex:0 0 52px; text-align:right; font-size:11.5px; font-weight:700; color:var(--gris-oscuro); }
+  .progress-row .prow-pct{ flex:0 0 100%; text-align:right; margin-top:2px; }
+  .pct-badge{ font-size:10.5px; font-weight:700; padding:2px 7px; border-radius:10px; margin-top:4px; display:inline-block; white-space:nowrap; }
+  .pct-badge.up{ background:rgba(56,142,60,.12); color:#388E3C; }
+  .pct-badge.down{ background:rgba(192,57,43,.12); color:#C0392B; }
+  .pct-badge.neutral{ background:rgba(140,140,140,.12); color:#8C8C8C; }
+
+  .date-filter-bar{ display:flex; flex-wrap:wrap; align-items:flex-end; gap:10px; background:var(--blanco); border:1px solid var(--gris-claro); border-radius:10px; padding:10px 12px; margin-bottom:16px; }
+  .date-filter-bar .df-field{ display:flex; flex-direction:column; gap:3px; }
+  .date-filter-bar label{ font-size:10.5px; font-weight:700; color:var(--gris-oscuro); text-transform:uppercase; letter-spacing:0.3px; }
+  .date-filter-bar select{ border:1px solid var(--gris-claro); border-radius:6px; padding:6px 8px; font-size:12.5px; font-family:inherit; color:var(--carbon); background:var(--blanco); }
+  .date-filter-bar .df-btn{ border:none; border-radius:20px; padding:8px 16px; font-size:12px; font-weight:700; cursor:pointer; }
+  .date-filter-bar .df-btn-primary{ background:var(--azul-ev); color:#fff; }
+  .date-filter-bar .df-btn-secondary{ background:var(--gris-fondo); color:var(--gris-oscuro); }
+  .date-filter-bar .df-note{ flex-basis:100%; font-size:10.5px; color:var(--gris-medio); }
+
+  .note{ font-size:11.5px; color:var(--gris-medio); margin-top:10px; line-height:1.5; }
+  .snapshot-banner{ background:#FFF7E6; border:1px solid #F0D48A; color:#7A5A00; font-size:11.5px; border-radius:10px; padding:10px 12px; margin-bottom:16px; line-height:1.5; }
+  .snapshot-banner.live{ background:#E9F7EF; border:1px solid #A8DFC0; color:#1E6B3C; }
+
+  .pie-wrap{ display:flex; align-items:center; gap:18px; flex-wrap:wrap; }
+  .pie-chart{ width:130px; height:130px; border-radius:50%; flex:0 0 auto; background:var(--gris-fondo); }
+  .pie-legend{ flex:1; min-width:150px; }
+  .pie-legend .item{ display:flex; align-items:center; gap:7px; font-size:12px; padding:5px 0; border-bottom:1px solid var(--gris-fondo); }
+  .pie-legend .item:last-child{ border-bottom:none; }
+  .pie-legend .dot{ width:9px; height:9px; border-radius:50%; flex:0 0 auto; }
+  .pie-legend .name{ flex:1; color:var(--carbon); font-weight:600; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pie-legend .pct{ color:var(--gris-oscuro); font-weight:700; font-size:11.5px; white-space:nowrap; }
+  .pie-legend .cnt{ color:var(--gris-medio); font-size:10.5px; margin-left:3px; white-space:nowrap; }
+
+  .podio{ display:flex; align-items:flex-end; gap:8px; padding:4px 0 6px; }
+  .podio-card{ flex:1; background:var(--blanco); border-radius:14px; padding:14px 10px 12px; text-align:center; box-shadow:0 1px 3px rgba(0,0,0,0.08); position:relative; border:1px solid var(--gris-claro); }
+  .podio-card.p1{ order:2; padding-top:6px; box-shadow:0 4px 14px rgba(184,144,31,0.25); border:1px solid var(--oro); }
+  .podio-card.p2{ order:1; }
+  .podio-card.p3{ order:3; }
+  .podio-medal{ width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800; color:#fff; margin:0 auto 8px; }
+  .p1 .podio-medal{ background:var(--oro); width:34px; height:34px; font-size:14px; }
+  .p2 .podio-medal{ background:var(--plata); }
+  .p3 .podio-medal{ background:var(--bronce); }
+  .podio-avatar{ width:44px; height:44px; border-radius:50%; background:var(--carbon); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:15px; margin:0 auto 8px; }
+  .p1 .podio-avatar{ width:52px; height:52px; font-size:17px; }
+  .podio-nombre{ font-size:12px; font-weight:700; color:var(--negro); line-height:1.25; min-height:30px; display:flex; align-items:center; justify-content:center; }
+  .podio-op{ font-size:22px; font-weight:800; color:var(--negro); margin-top:4px; font-variant-numeric:tabular-nums; }
+  .p1 .podio-op{ font-size:27px; }
+  .podio-op-label{ font-size:9.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--gris-oscuro); font-weight:700; }
+
+  .lista{ padding:4px 0; display:flex; flex-direction:column; gap:8px; }
+  .fila{ background:var(--blanco); border:1px solid var(--gris-claro); border-radius:12px; padding:10px 12px; display:flex; align-items:center; gap:10px; }
+  .fila-pos{ width:22px; text-align:center; font-size:13px; font-weight:800; color:var(--gris-oscuro); flex:none; }
+  .fila-avatar{ width:36px; height:36px; border-radius:50%; background:var(--gris-claro); color:var(--negro); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:12.5px; flex:none; }
+  .fila-info{ flex:1; min-width:0; }
+  .fila-nombre{ font-size:13.5px; font-weight:700; color:var(--negro); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .fila-sucursal{ font-size:11px; color:var(--gris-medio); margin-top:1px; }
+  .fila-metricas{ text-align:right; flex:none; }
+  .fila-op{ font-size:16px; font-weight:800; color:var(--negro); font-variant-numeric:tabular-nums; line-height:1.2; }
+  .fila-monto{ font-size:10.5px; color:var(--gris-oscuro); font-variant-numeric:tabular-nums; }
+  .fila-trend{ display:inline-flex; align-items:center; gap:2px; font-size:10.5px; font-weight:700; margin-top:2px; }
+  .fila-trend.up{ color:var(--verde); }
+  .fila-trend.down{ color:var(--rojo); }
+  .fila-trend.flat{ color:var(--gris-medio); }
+</style>
+<style>
+/* DESKTOP-RESPONSIVE-V1 */
+@media (min-width: 900px){
+  .topbar{ padding-left:max(24px, calc((100% - 1440px)/2)); padding-right:max(24px, calc((100% - 1440px)/2)); }
+  .tabs{ padding-left:max(12px, calc((100% - 1440px)/2)); padding-right:max(12px, calc((100% - 1440px)/2)); }
+  .main-select-wrap{ padding-left:max(12px, calc((100% - 1440px)/2)); padding-right:max(12px, calc((100% - 1440px)/2)); }
+  .wrap{ max-width:1440px; padding:24px; }
+  .kpi-grid{ grid-template-columns:repeat(auto-fit, minmax(160px,1fr)); }
+  .section.active{ column-count:2; column-gap:20px; }
+  .section.active > .kpi-grid{ column-span:all; }
+  .tcard{ break-inside:avoid-column; margin-bottom:20px; }
+  #view-herramientas{ column-count:2; column-gap:20px; }
+  #view-herramientas h1, #view-herramientas .lead, #view-herramientas .footer-note{ column-span:all; }
+  #view-herramientas .card{ break-inside:avoid-column; padding:20px 18px; }
+  .card:hover{ box-shadow:0 4px 12px rgba(0,0,0,0.12); transform:translateY(-2px); }
+}
+</style>
+</head>
+<body class="gate-locked">
+
+<div id="bydGate" style="position:fixed;inset:0;z-index:999999;background:#0A0A0A;display:flex;align-items:center;justify-content:center;padding:24px;opacity:1;">
+  <form id="bydGateForm" style="width:100%;max-width:300px;text-align:center;font-family:Arial,sans-serif;">
+    <svg viewBox="12 4 529 102" xmlns="http://www.w3.org/2000/svg" style="width:200px;height:auto;max-width:100%;display:block;margin:0 auto 14px;">
+      <defs><style>.st0{fill:#FFFFFF;}</style></defs>
+      <path class="st0" d="M162.93,19.18c-8.06-12.16-21.88-14.53-31.23-14.75-8.23-.19-43.9-.23-64.67-.24-40.91-.03-17.51-.01-54.36-.01v19.54c43.75,0,95.68-.1,118.41.25,4.06.06,8.08.47,11.27,3.3,2.97,2.64,4.02,6.79,2.69,10.4-2.14,5.83-8.07,7.28-13.96,7.37-9.01.14-33.77.19-52.24.22-45.3.06-25.68.03-66.16.03v19.49c43.72,0,95.76-.09,118.41.25,7.06.1,14.53,2.56,14.53,10.43s-7.46,10.45-14.53,10.56c-22.59.33-74.66.24-118.41.24v19.53c43.88,0,101.32.16,119.03-.25,9.35-.22,23.18-2.59,31.23-14.75,7.56-11.41,5.71-26.27-4.22-35.8,9.93-9.54,11.78-24.39,4.21-35.8"/>
+      <path class="st0" d="M520.08,15.93c-13.35-9.58-27.85-10.94-39.61-11.21-11.58-.27-29.05-.39-44.5-.45-37.67-.15-15.02-.08-50.91-.08v19.6c38.19,0,64.97-.32,94.46.52,8.66.24,17.95,1.16,26.31,6.96,7.92,5.5,12.62,14.26,12.62,23.72s-4.57,18.24-12.49,23.74c-8.36,5.81-17.65,6.72-26.31,6.96-29.49.83-56.27.51-94.46.51l-.13,19.59c38.41,0,66.03.14,95.41-.54,11.76-.27,26.26-1.63,39.61-11.21,12.67-9.09,20.33-23.36,20.33-39.05s-7.67-29.97-20.33-39.05"/>
+      <path class="st0" d="M227.22,48.06c-10.23-.2-13.49-3.54-13.56-13.73-.07-9.42-.02-20.58-.02-30.14h-22.56c0,9.67-.19,29.24.19,38.7.74,18.38,6.77,24.11,25.55,24.75,13.02.44,23.36.29,41.36.28v-19.69c-14.43,0-20.31.04-30.96-.16"/>
+      <path class="st0" d="M339.04,34.68c-.07,9.92-3.3,13.18-13.56,13.38-4.89.09-17.75.14-28.33.16h0s-.1.01-.1.01c-10.81,0-22.34-.02-29.1-.02v57.57h26.52v-37.88c.81,0,1.68,0,2.58,0h0s.1,0,.1,0v.02c13.8,0,31.04-.06,37.55-.26,19.93-.61,26-6.23,26.73-24.78.1-2.48.16-5.62.19-9.06V4.18h-22.56c0,9.8.04,20.81-.03,30.5"/>
+    </svg>
+    <div style="color:#fff;font-weight:800;font-size:16px;margin-bottom:4px;">BYD Yacopini</div>
+    <div style="color:#8C8C8C;font-size:12px;margin-bottom:18px;">Panel de Jefe &middot; Acceso con código personal</div>
+    <input id="bydVendorCode" type="password" inputmode="numeric" pattern="[0-9]*" placeholder="Código personal" autocomplete="off" autocapitalize="off" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid #4A4A4A;background:#2A2A2A;color:#fff;font-size:16px;text-align:center;box-sizing:border-box;">
+    <button type="submit" id="bydVendorSubmit" style="width:100%;margin-top:10px;padding:12px;border-radius:10px;border:none;background:#1565D8;color:#fff;font-weight:700;font-size:14px;">Entrar</button>
+    <div id="bydVendorError" style="color:#E85555;font-size:12px;margin-top:10px;display:none;"></div>
+    <div id="bydVendorNotConfigured" style="color:#D89614;font-size:12px;margin-top:14px;line-height:1.5;display:none;">
+      El acceso todavía no está configurado.<br>Pedile a gerencia que active la planilla de códigos.
+    </div>
+  </form>
+</div>
+<style>
+  body.gate-locked > *:not(#bydGate){ display:none !important; }
+  #bydGate{ transition:opacity .25s ease; }
+  #bydGate.fadeOut{ opacity:0; }
+</style>
+
+<div class="topbar">
+  <svg viewBox="12 4 529 102" xmlns="http://www.w3.org/2000/svg" style="height:30px;width:auto;display:block;">
+    <defs><style>.st0{fill:#FFFFFF;}</style></defs>
+    <path class="st0" d="M162.93,19.18c-8.06-12.16-21.88-14.53-31.23-14.75-8.23-.19-43.9-.23-64.67-.24-40.91-.03-17.51-.01-54.36-.01v19.54c43.75,0,95.68-.1,118.41.25,4.06.06,8.08.47,11.27,3.3,2.97,2.64,4.02,6.79,2.69,10.4-2.14,5.83-8.07,7.28-13.96,7.37-9.01.14-33.77.19-52.24.22-45.3.06-25.68.03-66.16.03v19.49c43.72,0,95.76-.09,118.41.25,7.06.1,14.53,2.56,14.53,10.43s-7.46,10.45-14.53,10.56c-22.59.33-74.66.24-118.41.24v19.53c43.88,0,101.32.16,119.03-.25,9.35-.22,23.18-2.59,31.23-14.75,7.56-11.41,5.71-26.27-4.22-35.8,9.93-9.54,11.78-24.39,4.21-35.8"/>
+    <path class="st0" d="M520.08,15.93c-13.35-9.58-27.85-10.94-39.61-11.21-11.58-.27-29.05-.39-44.5-.45-37.67-.15-15.02-.08-50.91-.08v19.6c38.19,0,64.97-.32,94.46.52,8.66.24,17.95,1.16,26.31,6.96,7.92,5.5,12.62,14.26,12.62,23.72s-4.57,18.24-12.49,23.74c-8.36,5.81-17.65,6.72-26.31,6.96-29.49.83-56.27.51-94.46.51l-.13,19.59c38.41,0,66.03.14,95.41-.54,11.76-.27,26.26-1.63,39.61-11.21,12.67-9.09,20.33-23.36,20.33-39.05s-7.67-29.97-20.33-39.05"/>
+    <path class="st0" d="M227.22,48.06c-10.23-.2-13.49-3.54-13.56-13.73-.07-9.42-.02-20.58-.02-30.14h-22.56c0,9.67-.19,29.24.19,38.7.74,18.38,6.77,24.11,25.55,24.75,13.02.44,23.36.29,41.36.28v-19.69c-14.43,0-20.31.04-30.96-.16"/>
+    <path class="st0" d="M339.04,34.68c-.07,9.92-3.3,13.18-13.56,13.38-4.89.09-17.75.14-28.33.16h0s-.1.01-.1.01c-10.81,0-22.34-.02-29.1-.02v57.57h26.52v-37.88c.81,0,1.68,0,2.58,0h0s.1,0,.1,0v.02c13.8,0,31.04-.06,37.55-.26,19.93-.61,26-6.23,26.73-24.78.1-2.48.16-5.62.19-9.06V4.18h-22.56c0,9.8.04,20.81-.03,30.5"/>
+  </svg>
+  <div>
+    <div class="greeting" id="greeting">Hola</div>
+    <div class="subtitle">Panel de Jefe</div>
+  </div>
+  <div class="spacer"></div>
+  <button type="button" class="logout-btn" id="logoutBtn">Salir</button>
+</div>
+
+<div class="main-select-wrap">
+  <select id="mainViewSelect" class="main-select">
+    <option value="tablero">Tablero General</option>
+    <option value="herramientas">Herramientas</option>
+  </select>
+</div>
+
+<div class="wrap">
+
+  <div id="installHint" class="install-hint">
+    Instalá esto como app: tocá el botón de compartir/menú del navegador y elegí
+    <strong>"Agregar a pantalla de inicio"</strong>.
+  </div>
+
+  <!-- ============ VISTA: TABLERO GENERAL ============ -->
+  <div class="mainview active" id="view-tablero">
+
+    <div class="snapshot-banner" id="dataBanner">Cargando datos…</div>
+    <div class="date-filter-bar" id="dateFilterBar">
+      <div class="df-field"><label for="dfMes">Mes</label><select id="dfMes"></select></div>
+      <div class="df-field"><label for="dfAnio">Año</label><select id="dfAnio"></select></div>
+      <button type="button" id="dfAplicar" class="df-btn df-btn-primary">Aplicar</button>
+      <button type="button" id="dfHoy" class="df-btn df-btn-secondary">Mes actual</button>
+      <div class="df-note" id="dfNote"></div>
+    </div>
+
+    <div class="section active" id="tab-general">
+      <div class="kpi-grid">
+        <div class="kpi"><div class="n" id="kpiLeadsTotal">–</div><div class="l">Leads BYD (mes)</div></div>
+        <div class="kpi"><div class="n" id="kpiSolicitudesTotal">–</div><div class="l">Solicitudes (mes)</div></div>
+        <div class="kpi"><div class="n" id="kpiEntregasTotal">–</div><div class="l">Entregas (mes)</div></div>
+        <div class="kpi"><div class="n" id="kpiConversionGeneral">–</div><div class="l">Tasa de conversión de leads</div><div class="pct-badge neutral" id="kpiConversionGeneralPct"></div></div>
+      </div>
+
+      <div class="tcard">
+        <h2>Avance vs. objetivo · <span id="mesLabel"></span></h2>
+        <div id="objetivosList"></div>
+        <p class="note" id="objetivosNote"></p>
+      </div>
+
+      <div class="tcard">
+        <h2>Ranking de Vendedores — operaciones (mes)</h2>
+        <div class="podio" id="rankingPodio"></div>
+        <div class="lista" id="rankingLista"></div>
+      </div>
+
+      <div class="tcard">
+        <h2>Solicitudes por tipo — DM / EV (mes)</h2>
+        <div class="pie-wrap">
+          <div class="pie-chart" id="tipoPieChartGeneral"></div>
+          <div class="pie-legend" id="tipoPieLegendGeneral"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============ VISTA: HERRAMIENTAS ============ -->
+  <div class="mainview" id="view-herramientas">
+    <h1>Herramientas</h1>
+    <p class="lead">Todas las herramientas disponibles, listas para usar.</p>
+
+    <a class="card" href="./lista_precios_vendedores.html">
+      <div class="icon precios"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2v20M17 5.5c0-1.93-2.24-3.5-5-3.5s-5 1.57-5 3.5S9.24 9 12 9s5 1.57 5 3.5-2.24 3.5-5 3.5-5-1.57-5-3.5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="card-body">
+        <p class="t">Lista de Precios</p>
+        <p class="d">Precios y piso de venta vigentes</p>
+      </div>
+      <div class="chev">›</div>
+    </a>
+
+    <a class="card" href="./calculadora_creditos.html">
+      <div class="icon creditos"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="7" cy="7" r="3" stroke="#fff" stroke-width="2"/><circle cx="17" cy="17" r="3" stroke="#fff" stroke-width="2"/><path d="M18 6L6 18" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></div>
+      <div class="card-body">
+        <p class="t">Calculadora de Créditos</p>
+        <p class="d">Entidad, línea, plazo y datero para el cliente</p>
+      </div>
+      <div class="chev">›</div>
+    </a>
+
+    <a class="card" href="./cotizador_operaciones.html">
+      <div class="icon cotizador"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="16" rx="2" stroke="#fff" stroke-width="2"/><path d="M7 9h10M7 13h6M7 17h4" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></div>
+      <div class="card-body">
+        <p class="t">Cotizador de Operaciones</p>
+        <p class="d">Armá la operación: 0km, usado y saldo en vivo</p>
+      </div>
+      <div class="chev">›</div>
+    </a>
+
+    <a class="card" href="./remitos_test_drive.html">
+      <div class="icon remitos"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 13h13l3-5H6L3 13z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><path d="M3 13v5h16v-5" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><circle cx="7" cy="18" r="1.5" fill="#fff"/><circle cx="16" cy="18" r="1.5" fill="#fff"/></svg></div>
+      <div class="card-body">
+        <p class="t">Remitos de Test Drive</p>
+        <p class="d">Registrá solicitudes y devoluciones, y mirá el acumulado por vendedor</p>
+      </div>
+      <div class="chev">›</div>
+    </a>
+
+    <a class="card" href="./fichas_tecnicas.html">
+      <div class="icon fichas"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 4h9l5 5v11a1 1 0 01-1 1H6a1 1 0 01-1-1V5a1 1 0 011-1z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><path d="M9 12h6M9 16h4" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></div>
+      <div class="card-body">
+        <p class="t">Fichas Técnicas de Modelos</p>
+        <p class="d">Consultá y compartí la ficha técnica de cada modelo</p>
+      </div>
+      <div class="chev">›</div>
+    </a>
+
+    <a class="card" href="./horas_extras.html">
+      <div class="icon horas"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" stroke="#fff" stroke-width="2"/><path d="M12 7v5l3.5 2" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="card-body">
+        <p class="t">Horas Extras</p>
+        <p class="d">Carga y acumulado de horas extras por persona</p>
+      </div>
+      <div class="chev">›</div>
+    </a>
+
+    <a class="card" href="./objetivos_vendedores.html">
+      <div class="icon" style="background:linear-gradient(135deg,#D89614,#8A6300);"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" stroke="#fff" stroke-width="2"/><circle cx="12" cy="12" r="5" stroke="#fff" stroke-width="2"/><circle cx="12" cy="12" r="1.3" fill="#fff"/></svg></div>
+      <div class="card-body">
+        <p class="t">Objetivos de Vendedores</p>
+        <p class="d">Metas mensuales de solicitudes por vendedor</p>
+      </div>
+      <div class="chev">›</div>
+    </a>
+
+    <a class="card" href="./ranking_vendedores.html">
+      <div class="icon" style="background:linear-gradient(135deg,#B8901F,#8A6A16);"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 01-10 0V4z" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 6H4a1 1 0 00-1 1v1a4 4 0 004 4M17 6h3a1 1 0 011 1v1a4 4 0 01-4 4" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="card-body">
+        <p class="t">Ranking de Vendedores</p>
+        <p class="d">Quién va liderando el mes en operaciones</p>
+      </div>
+      <div class="chev">›</div>
+    </a>
+
+    <a class="card" href="./calendario.html">
+      <div class="icon" style="background:linear-gradient(135deg,#6A3FA0,#402464);"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="5" width="16" height="15" rx="2" stroke="#fff" stroke-width="2"/><path d="M4 9h16M8 3v4M16 3v4" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg></div>
+      <div class="card-body">
+        <p class="t">Calendario</p>
+        <p class="d">Mirá los eventos del mes y postulate a los que quieras ir</p>
+      </div>
+      <div class="chev">›</div>
+    </a>
+
+    <a class="card" href="./plantillas_mensajes.html">
+      <div class="icon" style="background:linear-gradient(135deg,#25D366,#1DA851);"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="card-body">
+        <p class="t">Plantillas de Mensajes</p>
+        <p class="d">Mensajes listos para empezar o retomar por WhatsApp</p>
+      </div>
+      <div class="chev">›</div>
+    </a>
+
+    <p class="footer-note">
+      Panel de Jefe · BYD Yacopini
+    </p>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  // ---------------------------------------------------------------------
+  // Mismo Sheet de códigos que usa panel_ventas.html. La columna "ROL"
+  // decide a dónde va cada código: Vendedor se queda en panel_ventas.html,
+  // Gerencia entra directo al Tablero completo (index.html), y Jefe se
+  // queda acá (todas las herramientas, sin las pantallas de configuración,
+  // más este resumen general de métricas).
+  // ---------------------------------------------------------------------
+  var CODIGOS_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSqiPilcsX2Me2tLPndCa5GUkjaRl_b4ljUnmZBIHIEtjy_uL3bEZUrZbm76ZNIdZYNNHceWwCxONPq/pub?gid=0&single=true&output=csv';
+
+  function normalize(s){
+    return (s || '').toString().normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim().replace(/\s+/g, ' ');
+  }
+
+  function parseCSV(text){
+    var rows = [];
+    var row = [];
+    var field = '';
+    var inQuotes = false;
+    for (var i = 0; i < text.length; i++){
+      var c = text[i];
+      if (inQuotes){
+        if (c === '"'){
+          if (text[i+1] === '"'){ field += '"'; i++; }
+          else { inQuotes = false; }
+        } else { field += c; }
+      } else {
+        if (c === '"'){ inQuotes = true; }
+        else if (c === ','){ row.push(field); field = ''; }
+        else if (c === '\r'){ /* skip */ }
+        else if (c === '\n'){ row.push(field); rows.push(row); row = []; field = ''; }
+        else { field += c; }
+      }
+    }
+    if (field.length || row.length){ row.push(field); rows.push(row); }
+    return rows.filter(function(r){ return r.some(function(c){ return c.trim() !== ''; }); });
+  }
+
+  function normalizeRol(raw){
+    var n = normalize(raw);
+    if (n.indexOf('gerencia') !== -1) return 'gerencia';
+    if (n.indexOf('jefe') !== -1) return 'jefe';
+    return 'vendedor';
+  }
+
+  function findVendorByCode(rows, code){
+    if (!rows.length) return null;
+    var header = rows[0].map(normalize);
+    var idxVendedor = header.findIndex(function(h){ return h.indexOf('vendedor') !== -1; });
+    var idxCodigo = header.findIndex(function(h){ return h.indexOf('codigo') !== -1; });
+    var idxRol = header.findIndex(function(h){ return h.indexOf('rol') !== -1; });
+    if (idxVendedor === -1 || idxCodigo === -1) return null;
+    var normCode = normalize(code);
+    for (var i = 1; i < rows.length; i++){
+      var r = rows[i];
+      if (normalize(r[idxCodigo]) === normCode && normCode !== ''){
+        return {
+          nombre: (r[idxVendedor] || '').trim(),
+          rol: idxRol !== -1 ? normalizeRol(r[idxRol]) : 'vendedor'
+        };
+      }
+    }
+    return null;
+  }
+
+  var body = document.body;
+  function doUnlock(){
+    var g = document.getElementById('bydGate');
+    if (g){ g.classList.add('fadeOut'); setTimeout(function(){ body.classList.remove('gate-locked'); g.remove(); initApp(); }, 220); }
+    else { body.classList.remove('gate-locked'); initApp(); }
+  }
+
+  var jefeOk = sessionStorage.getItem('bydJefeOk') === '1' && sessionStorage.getItem('bydVendorNombre');
+  var gerenciaOk = sessionStorage.getItem('bydGateOk') === '1';
+  var vendedorOk = !jefeOk && sessionStorage.getItem('bydVendorOk') === '1' && sessionStorage.getItem('bydVendorNombre');
+
+  if (jefeOk || gerenciaOk){
+    doUnlock();
+  } else if (vendedorOk){
+    location.href = './panel_ventas.html';
+  } else {
+    var form = document.getElementById('bydGateForm');
+    var submitBtn = document.getElementById('bydVendorSubmit');
+    var input = document.getElementById('bydVendorCode');
+    var errorEl = document.getElementById('bydVendorError');
+    var notConfiguredEl = document.getElementById('bydVendorNotConfigured');
+
+    if (!CODIGOS_SHEET_CSV_URL){
+      input.style.display = 'none';
+      submitBtn.style.display = 'none';
+      notConfiguredEl.style.display = 'block';
+    } else {
+      form.addEventListener('submit', function(e){
+        e.preventDefault();
+        var code = input.value.trim();
+        if (!code) return;
+        errorEl.style.display = 'none';
+        submitBtn.textContent = 'Verificando…';
+        submitBtn.disabled = true;
+        fetch(CODIGOS_SHEET_CSV_URL + (CODIGOS_SHEET_CSV_URL.indexOf('?') === -1 ? '?' : '&') + 'nocache=' + Date.now())
+          .then(function(r){ if (!r.ok) throw new Error('fetch-failed'); return r.text(); })
+          .then(function(text){
+            var rows = parseCSV(text);
+            var info = findVendorByCode(rows, code);
+            submitBtn.textContent = 'Entrar';
+            submitBtn.disabled = false;
+            if (info && info.nombre){
+              if (info.rol === 'gerencia'){
+                sessionStorage.setItem('bydGateOk', '1');
+                location.href = './index.html';
+              } else if (info.rol === 'jefe'){
+                sessionStorage.setItem('bydVendorOk', '1');
+                sessionStorage.setItem('bydVendorNombre', info.nombre);
+                sessionStorage.setItem('bydJefeOk', '1');
+                doUnlock();
+              } else {
+                sessionStorage.setItem('bydVendorOk', '1');
+                sessionStorage.setItem('bydVendorNombre', info.nombre);
+                location.href = './panel_ventas.html';
+              }
+            } else {
+              errorEl.textContent = 'Código incorrecto.';
+              errorEl.style.display = 'block';
+              input.value = '';
+              input.focus();
+            }
+          })
+          .catch(function(){
+            submitBtn.textContent = 'Entrar';
+            submitBtn.disabled = false;
+            errorEl.textContent = 'No se pudo verificar el código. Probá de nuevo en un momento.';
+            errorEl.style.display = 'block';
+          });
+      });
+    }
+  }
+
+  document.getElementById('logoutBtn').addEventListener('click', function(){
+    sessionStorage.removeItem('bydVendorOk');
+    sessionStorage.removeItem('bydVendorNombre');
+    sessionStorage.removeItem('bydJefeOk');
+    location.reload();
+  });
+
+  // ---- App: se inicializa una sola vez, después del desbloqueo ----
+  function initApp(){
+
+    var MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    var PIE_COLORS = ['#1565D8','#388E3C','#D89614','#6A3FA0','#C0392B','#0E7C86','#B8860B','#5B7F9E','#8C8C8C','#D46A6A'];
+    var FIXED_PIE_COLORS = { 'EV':'#8C8C8C', 'DM':'#1A1A1A' };
+    function colorForKey(key, i){ return FIXED_PIE_COLORS[key] || PIE_COLORS[i % PIE_COLORS.length]; }
+
+    function fmtUSD_K(n){
+      var sign = n < 0 ? '-' : '';
+      return sign + 'USD ' + Math.round(Math.abs(n || 0)).toLocaleString('es-AR');
+    }
+
+    function setPctBadge(elId, change, isPoints){
+      var el = document.getElementById(elId);
+      if (!el) return;
+      if (change === null || change === undefined){
+        el.className = 'pct-badge neutral';
+        el.textContent = 'sin dato mes pasado';
+        return;
+      }
+      var cls = change > 0 ? 'up' : (change < 0 ? 'down' : 'neutral');
+      var sign = change > 0 ? '+' : '';
+      el.className = 'pct-badge ' + cls;
+      el.textContent = sign + change + (isPoints ? ' pts' : '%') + ' vs mes pasado';
+    }
+
+    function renderPieInto(chartElId, legendElId, items){
+      var chartEl = document.getElementById(chartElId);
+      var legendEl = document.getElementById(legendElId);
+      var total = items.reduce(function(a,x){ return a + x.c; }, 0);
+      if (!total){
+        chartEl.style.background = 'var(--gris-fondo)';
+        legendEl.innerHTML = '<p class="note">Sin datos para este filtro.</p>';
+        return;
+      }
+      var acc = 0;
+      var stops = items.map(function(x, i){
+        var start = (acc / total) * 360;
+        acc += x.c;
+        var end = (acc / total) * 360;
+        var color = colorForKey(x.n, i);
+        return color + ' ' + start.toFixed(2) + 'deg ' + end.toFixed(2) + 'deg';
+      });
+      chartEl.style.background = 'conic-gradient(' + stops.join(', ') + ')';
+      legendEl.innerHTML = items.map(function(x, i){
+        var pct = Math.round((x.c / total) * 100);
+        var color = colorForKey(x.n, i);
+        return '<div class="item"><span class="dot" style="background:' + color + '"></span>' +
+          '<span class="name">' + x.n + '</span>' +
+          '<span class="pct">' + pct + '%</span><span class="cnt">(' + x.c + ')</span></div>';
+      }).join('');
+    }
+
+    function iniciales(nombre){
+      var partes = (nombre || '').trim().split(/\s+/).filter(Boolean);
+      if (!partes.length) return '?';
+      if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase();
+      return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
+    }
+    function medalClass(pos){ return pos === 0 ? 'p1' : (pos === 1 ? 'p2' : 'p3'); }
+    function renderRankingVendedores(ranking){
+      var podioEl = document.getElementById('rankingPodio');
+      var listaEl = document.getElementById('rankingLista');
+      if (!ranking || !ranking.length){
+        podioEl.innerHTML = '';
+        listaEl.innerHTML = '<p class="note">Sin operaciones cargadas este mes todavía.</p>';
+        return;
+      }
+      var top3 = ranking.slice(0, 3);
+      var resto = ranking.slice(3);
+      podioEl.innerHTML = top3.map(function(v, i){
+        return '<div class="podio-card ' + medalClass(i) + '">' +
+          '<div class="podio-medal">' + (i + 1) + '</div>' +
+          '<div class="podio-avatar">' + iniciales(v.nombre) + '</div>' +
+          '<div class="podio-nombre">' + v.nombre + '</div>' +
+          '<div class="podio-op">' + v.operaciones + '</div>' +
+          '<div class="podio-op-label">operaciones</div>' +
+          '</div>';
+      }).join('');
+      listaEl.innerHTML = resto.map(function(v, i){
+        var diff = v.operaciones - v.operacionesPrev;
+        var cls = diff > 0 ? 'up' : (diff < 0 ? 'down' : 'flat');
+        var txt = diff > 0 ? ('▲ +' + diff + ' vs. mes pasado') : (diff < 0 ? ('▼ ' + diff + ' vs. mes pasado') : '— igual que el mes pasado');
+        return '<div class="fila">' +
+          '<div class="fila-pos">' + (i + 4) + '</div>' +
+          '<div class="fila-avatar">' + iniciales(v.nombre) + '</div>' +
+          '<div class="fila-info"><div class="fila-nombre">' + v.nombre + '</div><div class="fila-sucursal">' + (v.sucursal || 'Sin sucursal') + '</div></div>' +
+          '<div class="fila-metricas"><div class="fila-op">' + v.operaciones + '</div><div class="fila-monto">' + fmtUSD_K(v.facturado) + '</div><div class="fila-trend ' + cls + '">' + txt + '</div></div>' +
+          '</div>';
+      }).join('');
+    }
+
+    function renderTableroJefe(d){
+      document.getElementById('mesLabel').textContent = d.periodoMesLabel || (MESES[new Date().getMonth()] + ' ' + new Date().getFullYear());
+
+      document.getElementById('kpiLeadsTotal').textContent = d.leadsTotal != null ? d.leadsTotal : '–';
+      document.getElementById('kpiSolicitudesTotal').textContent = d.solicitudesTotal != null ? d.solicitudesTotal : '–';
+      document.getElementById('kpiEntregasTotal').textContent = d.entregasTotal != null ? d.entregasTotal : '–';
+      document.getElementById('kpiConversionGeneral').textContent = (d.leadsConversionRate != null ? d.leadsConversionRate : 0) + '%';
+      setPctBadge('kpiConversionGeneralPct', d.leadsConversionRateChange, true);
+
+      var objHtml = (d.objetivos||[]).map(function(o){
+        var pct = o.meta ? Math.min(100, Math.round((o.real / o.meta) * 100)) : 0;
+        var color = pct >= 68 ? 'verde' : (pct >= 34 ? 'ambar' : 'rojo');
+        var chg = o.realPctChange;
+        var chgCls = (chg === null || chg === undefined) ? 'neutral' : (chg > 0 ? 'up' : (chg < 0 ? 'down' : 'neutral'));
+        var chgTxt = (chg === null || chg === undefined) ? 'sin dato mes pasado' : ((chg > 0 ? '+' : '') + chg + '% vs mes pasado');
+        return '<div class="progress-row"><div class="pname">' + o.v + '</div>' +
+          '<div class="ptrack"><div class="pfill ' + color + '" style="width:' + pct + '%"></div></div>' +
+          '<div class="pval">' + o.real + ' / ' + o.meta + '</div>' +
+          '<div class="prow-pct"><span class="pct-badge ' + chgCls + '">' + chgTxt + '</span></div></div>';
+      }).join('');
+      document.getElementById('objetivosList').innerHTML = objHtml;
+      var sumConMeta = (d.objetivos||[]).reduce(function(a,o){ return a + o.real; }, 0);
+      var sumGrupos = (d.objetivosGerencia||0) + (d.objetivosSanJuan||0) + (d.objetivosSanRafael||0) + (d.objetivosOtros||0);
+      document.getElementById('objetivosNote').innerHTML =
+        'Meta mensual de solicitudes por vendedor de Mendoza. Estos ' + (d.objetivos||[]).length + ' suman ' + sumConMeta + ' solicitudes; el resto (' + sumGrupos + ') se agrupa por sucursal / gerencia — entre ambos dan el total del mes (' + (d.solicitudesTotal || 0) + ').';
+
+      renderRankingVendedores(d.rankingVendedores || []);
+      renderPieInto('tipoPieChartGeneral', 'tipoPieLegendGeneral', d.solicitudesTipoDMEV || []);
+    }
+
+    // ---- Datos en vivo del Tablero (mismo endpoint que gerencia) ----
+    var TABLERO_API_URL = 'https://script.google.com/macros/s/AKfycbzTYBoM56BBMj2B-8hUG_MIuOh7r5qG4qq2sGlTRM-y6QyFm0XHqgE6XUG5OQB022iy/exec';
+    var TABLERO_API_KEY = 'i4uH92SO1sFyNYi8PJ2dsGb9LDM-Xoq3';
+
+    function setBanner(isLive, generatedAt){
+      var b = document.getElementById('dataBanner');
+      if (isLive){
+        b.classList.add('live');
+        var fechaTxt = '';
+        if (generatedAt){
+          var f = new Date(generatedAt);
+          if (!isNaN(f.getTime())){
+            fechaTxt = f.toLocaleString('es-AR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
+          }
+        }
+        b.textContent = 'Datos en vivo del Tablero' + (fechaTxt ? ' · actualizado ' + fechaTxt : '') + '.';
+      } else {
+        b.classList.remove('live');
+        b.textContent = 'No se pudo conectar con el Tablero en vivo. Probá recargar la página en un momento.';
+      }
+    }
+
+    // ---- FILTRO DE FECHAS ----
+    var currentDesde = '';
+    var currentHasta = '';
+    function pad2(n){ return (n < 10 ? '0' : '') + n; }
+    (function initDateFilter(){
+      var selMes = document.getElementById('dfMes');
+      var selAnio = document.getElementById('dfAnio');
+      var bAplicar = document.getElementById('dfAplicar');
+      var bHoy = document.getElementById('dfHoy');
+      if (!selMes || !selAnio) return;
+      var nowF = new Date();
+      var curY = nowF.getFullYear();
+      selMes.innerHTML = MESES.map(function(m, i){ return '<option value="' + (i+1) + '">' + m + '</option>'; }).join('');
+      selAnio.innerHTML = '';
+      for (var y = curY - 2; y <= curY; y++) {
+        var opt = document.createElement('option');
+        opt.value = String(y);
+        opt.textContent = String(y);
+        selAnio.appendChild(opt);
+      }
+      function setDefaultMesAnio(){
+        selMes.value = String(nowF.getMonth() + 1);
+        selAnio.value = String(curY);
+      }
+      setDefaultMesAnio();
+      bAplicar.addEventListener('click', function(){
+        var y = Number(selAnio.value);
+        var m = Number(selMes.value);
+        var lastDay = new Date(y, m, 0).getDate();
+        currentDesde = y + '-' + pad2(m) + '-01';
+        currentHasta = y + '-' + pad2(m) + '-' + pad2(lastDay);
+        loadPanelData();
+      });
+      bHoy.addEventListener('click', function(){
+        setDefaultMesAnio();
+        currentDesde = '';
+        currentHasta = '';
+        loadPanelData();
+      });
+    })();
+
+    function loadPanelData(){
+      fetch(TABLERO_API_URL + '?key=' + encodeURIComponent(TABLERO_API_KEY) + (currentDesde && currentHasta ? ('&desde=' + encodeURIComponent(currentDesde) + '&hasta=' + encodeURIComponent(currentHasta)) : ''))
+        .then(function(r){ if (!r.ok) throw new Error('bad-status'); return r.json(); })
+        .then(function(liveData){
+          setBanner(true, liveData.generatedAt);
+          renderTableroJefe(liveData);
+          var dfNoteEl = document.getElementById('dfNote');
+          if (dfNoteEl && liveData.periodoDesde) { dfNoteEl.textContent = 'Mostrando: ' + liveData.periodoDesde + ' al ' + liveData.periodoHasta + ' · comparado con ' + liveData.periodoPrevDesde + ' al ' + liveData.periodoPrevHasta; }
+        })
+        .catch(function(){ setBanner(false); renderTableroJefe({}); });
+    }
+    loadPanelData();
+    setInterval(loadPanelData, 5 * 60 * 1000);
+
+    // ---- Navegación: vista principal ----
+    var mainSelect = document.getElementById('mainViewSelect');
+    mainSelect.addEventListener('change', function(){
+      document.querySelectorAll('.mainview').forEach(function(v){ v.classList.remove('active'); });
+      document.getElementById('view-' + mainSelect.value).classList.add('active');
+    });
+
+    document.getElementById('greeting').textContent = 'Hola, ' + (sessionStorage.getItem('bydVendorNombre') || 'Jefe');
+
+    // ---- Instalar como app ----
+    var isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    if (!isStandalone){ document.getElementById('installHint').classList.add('show'); }
+  }
+
+})();
+</script>
+</body>
+</html>

@@ -135,7 +135,8 @@
   // index.html por defecto y cambia a panel_ventas.html si es una sesión
   // de vendedor — mismo patrón que fichas_tecnicas.html.
   var b = document.getElementById('hubBackBtn');
-  if (b && sessionStorage.getItem('bydVendorOk') === '1') { b.href = './panel_ventas.html'; }
+  if (b && sessionStorage.getItem('bydJefeOk') === '1') { b.href = './panel_jefe.html'; }
+  else if (b && sessionStorage.getItem('bydVendorOk') === '1') { b.href = './panel_ventas.html'; }
 })();
 </script>
 <script>
