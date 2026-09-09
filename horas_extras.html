@@ -267,7 +267,7 @@
   var HASH = "a734aecec77bc8826bec68f0264b70228ab419e52a8fcdf05016ebee0465f257";
   var body = document.body;
   function unlock(){ var g=document.getElementById('bydGate'); if(g){ g.classList.add('fadeOut'); setTimeout(function(){ body.classList.remove('gate-locked'); g.remove(); }, 220); } else { body.classList.remove('gate-locked'); } }
-  if (sessionStorage.getItem('bydGateOk') === '1') { unlock(); }
+  if (sessionStorage.getItem('bydGateOk') === '1' || sessionStorage.getItem('bydJefeOk') === '1') { unlock(); }
   else {
     document.getElementById('bydGateForm').addEventListener('submit', function(e){
       e.preventDefault();
@@ -664,7 +664,8 @@ function generarHtmlComprobantePdf(mov){
     '<div class="section"><h2>Saldo acumulado del vendedor</h2><div class="saldo-box">' + escapeHtml(saldoTexto(mov.saldo)) + '</div></div>' +
     '<div class="section"><h2>Emitido por</h2><div class="field"><div class="v">Nicolas Manna &middot; Gte Ventas</div></div></div>' +
     '<div class="footer">Comprobante interno de horas extras &middot; Yacopini BYD Godoy Cruz (ARG092511).</div>' +
-    '</div></body></html>';
+    '</div><script>(function(){var b=document.getElementById('hubBackBtn');if(b && sessionStorage.getItem('bydJefeOk')==='1'){b.href='./panel_jefe.html';}})();</script>
+</body></html>';
 }
 
 function generarPdfDesdeHtml(contenido, nombreArchivo, btn){
