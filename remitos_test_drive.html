@@ -279,7 +279,7 @@
   var HASH = "a734aecec77bc8826bec68f0264b70228ab419e52a8fcdf05016ebee0465f257";
   var body = document.body;
   function unlock(){ var g=document.getElementById('bydGate'); if(g){ g.classList.add('fadeOut'); setTimeout(function(){ body.classList.remove('gate-locked'); g.remove(); }, 220); } else { body.classList.remove('gate-locked'); } }
-  if (sessionStorage.getItem('bydGateOk') === '1') { unlock(); }
+  if (sessionStorage.getItem('bydGateOk') === '1' || sessionStorage.getItem('bydJefeOk') === '1') { unlock(); }
   else {
     document.getElementById('bydGateForm').addEventListener('submit', function(e){
       e.preventDefault();
@@ -829,7 +829,8 @@ function generarHtmlRemitoPdf(r){
       '<div class="firma-col"><div class="firma-line"><div class="cap">Responsable concesionario</div></div><div class="name">Nicolas Manna</div><div class="role">Gte Ventas</div></div>' +
     '</div>' +
     '<div class="footer">Documento de uso interno &middot; Yacopini BYD Godoy Cruz (ARG092511). Presentar ante guardia para el egreso del vehículo.</div>' +
-    '</div></body></html>';
+    '</div><script>(function(){var b=document.getElementById('hubBackBtn');if(b && sessionStorage.getItem('bydJefeOk')==='1'){b.href='./panel_jefe.html';}})();</script>
+</body></html>';
 }
 
 function generarPdfDesdeHtml(contenido, nombreArchivo, btn){
