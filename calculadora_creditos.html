@@ -525,28 +525,6 @@
         .table-scroll { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; min-width: 700px; }
 
-        .btn-secondary-full {
-            width: 100%;
-            margin-top: 14px;
-            padding: 14px;
-            background: var(--blanco);
-            color: var(--carbon);
-            border: 1px solid var(--gris-claro);
-            border-radius: 8px;
-            font-family: inherit;
-            font-size: 13.5px;
-            font-weight: 800;
-            letter-spacing: 0.3px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        .btn-secondary-full:hover { background: var(--gris-fondo); }
-
-        .amort-wrap { margin-top: 14px; }
-        .amort-table { min-width: 480px; }
-        .amort-table th.num, .amort-table td.num { text-align: right; }
-        .amort-table tbody tr:last-child td { font-weight: 800; border-bottom: none; }
-
         thead th {
             text-align: left;
             font-size: 11px;
@@ -1145,28 +1123,6 @@
                     </div>
 
                     <div class="calc-hint-box" id="calc-hint">Elegí entidad, línea de crédito, tipo de crédito, plazo e ingresá el monto para ver la cuota.</div>
-
-                    <button type="button" class="btn-secondary-full" id="btn-toggle-amortizacion" style="display:none;">Ver desglose de cuotas ▾</button>
-                    <div class="amort-wrap" id="amort-wrap" style="display:none;">
-                        <div class="table-card">
-                            <div class="table-scroll">
-                                <table class="amort-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Cuota</th>
-                                            <th class="num">Capital</th>
-                                            <th class="num">Interés</th>
-                                            <th class="num">IVA 21%</th>
-                                            <th class="num">Cuota total</th>
-                                            <th class="num">Saldo</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="amort-tbody"></tbody>
-                                </table>
-                            </div>
-                        </div>
-                        <div class="calc-hint-box" style="padding-top:10px;">Sistema francés: la cuota "pura" (capital + interés) es fija; el IVA se calcula sobre el interés de cada mes, que baja a medida que se cancela capital — por eso la cuota total decrece levemente mes a mes.</div>
-                    </div>
 
                     <button type="button" class="btn-datero" id="btn-emitir-datero" style="display:none;">
                         📄 Emitir Datero (PDF)
@@ -2832,36 +2788,6 @@ window.__FECHA_GENERACION_VENDEDOR__ = "27/7/2026 05:26 p. m.";
         return cuotaBase + ivaMes1;
     }
 
-    // Desglose mes a mes del sistema francés: capital e interés de cada cuota
-    // (la cuota "pura" capital+interés es constante; el IVA se recalcula sobre
-    // el interés de cada mes, que baja a medida que se amortiza capital).
-    function calcularFilasAmortizacion(monto, tnaPct, n){
-        const i = (tnaPct/100) / 12;
-        const cuotaBase = cuotaFrancesa(monto, tnaPct, n);
-        let saldo = monto;
-        const filas = [];
-        for(let mes = 1; mes <= n; mes++){
-            const interes = i === 0 ? 0 : saldo * i;
-            const capital = cuotaBase - interes;
-            const iva = interes * IVA_INTERESES;
-            saldo = (mes === n) ? 0 : saldo - capital;
-            filas.push({ mes, capital, interes, iva, cuotaConIva: cuotaBase + iva, saldo });
-        }
-        return filas;
-    }
-
-    function renderTablaAmortizacion(monto, tnaPct, n){
-        const tbody = document.getElementById('amort-tbody');
-        tbody.innerHTML = calcularFilasAmortizacion(monto, tnaPct, n).map(f =>
-            '<tr><td>' + f.mes + '</td>' +
-            '<td class="num">' + fmtMoney(f.capital) + '</td>' +
-            '<td class="num">' + fmtMoney(f.interes) + '</td>' +
-            '<td class="num">' + fmtMoney(f.iva) + '</td>' +
-            '<td class="num">' + fmtMoney(f.cuotaConIva) + '</td>' +
-            '<td class="num">' + fmtMoney(f.saldo) + '</td></tr>'
-        ).join('');
-    }
-
     // ============ BBDD ============
     function renderBbddTable(){
         if(window.__MODO_VENDEDOR__){
@@ -3252,8 +3178,6 @@ window.__FECHA_GENERACION_VENDEDOR__ = "27/7/2026 05:26 p. m.";
     let estado = { banco:null, linea:null, modalidad:null, plazo:null, pagoQuebranto:'Contado' };
     let ultimaSimulacion = null;
     const btnEmitirDatero = document.getElementById('btn-emitir-datero');
-    const btnToggleAmortizacion = document.getElementById('btn-toggle-amortizacion');
-    const amortWrap = document.getElementById('amort-wrap');
 
     function rebuildBancoOptions(preserve){
         const bancos = [...new Set(creditos.map(c=>c.banco).filter(Boolean))].sort();
@@ -3476,10 +3400,6 @@ window.__FECHA_GENERACION_VENDEDOR__ = "27/7/2026 05:26 p. m.";
             hintEl.textContent = 'Elegí entidad, línea de crédito, tipo de crédito, plazo e ingresá el monto para ver la cuota.';
             ultimaSimulacion = null;
             btnEmitirDatero.style.display = 'none';
-            btnToggleAmortizacion.style.display = 'none';
-            btnToggleAmortizacion.textContent = 'Ver desglose de cuotas ▾';
-            amortWrap.style.display = 'none';
-            document.getElementById('amort-tbody').innerHTML = '';
             return;
         }
 
@@ -3556,9 +3476,6 @@ window.__FECHA_GENERACION_VENDEDOR__ = "27/7/2026 05:26 p. m.";
             totalIntereses: totalIntereses
         };
         btnEmitirDatero.style.display = 'block';
-
-        btnToggleAmortizacion.style.display = 'block';
-        renderTablaAmortizacion(montoAFinanciar, credito.tna, n);
     }
 
     // ============ MODO INVERSO: "¿qué crédito me conviene?" ============
@@ -3741,12 +3658,6 @@ window.__FECHA_GENERACION_VENDEDOR__ = "27/7/2026 05:26 p. m.";
         }
         renderResumenCredito();
         dateroOverlay.classList.add('show');
-    });
-
-    btnToggleAmortizacion.addEventListener('click', ()=>{
-        const abierto = amortWrap.style.display !== 'none';
-        amortWrap.style.display = abierto ? 'none' : 'block';
-        btnToggleAmortizacion.textContent = abierto ? 'Ver desglose de cuotas ▾' : 'Ocultar desglose de cuotas ▲';
     });
 
     document.getElementById('btn-datero-close').addEventListener('click', ()=> dateroOverlay.classList.remove('show'));
