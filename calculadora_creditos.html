@@ -3987,47 +3987,8 @@ window.__FECHA_GENERACION_VENDEDOR__ = "27/7/2026 05:26 p. m.";
             : 'Bonificado');
         field('6. Monto a Financiar', fmtMoney(sim.montoAFinanciar));
         field('7. Cuota Mensual Estimada', fmtMoney(sim.cuota) + '  (TNA ' + sim.tna.toFixed(2) + '% + IVA 21% — valor del 1er mes)');
-        y += 4;
 
-        // Desglose de cuotas (sistema francés): capital, interés e IVA mes a mes
-        sectionTitle('DESGLOSE DE CUOTAS — SISTEMA FRANCÉS');
-        const colCuota = marginLeft, colCapital = 68, colInteres = 100, colIva = 130, colCuotaTotal = 160, colSaldo = pageWidth - marginLeft;
-        function drawTablaAmortHeader(){
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(8);
-            doc.text('Cuota', colCuota, y);
-            doc.text('Capital', colCapital, y, { align: 'right' });
-            doc.text('Interés', colInteres, y, { align: 'right' });
-            doc.text('IVA 21%', colIva, y, { align: 'right' });
-            doc.text('Cuota Total', colCuotaTotal, y, { align: 'right' });
-            doc.text('Saldo', colSaldo, y, { align: 'right' });
-            y += 2;
-            doc.setDrawColor(200,200,200);
-            doc.line(marginLeft, y, pageWidth - marginLeft, y);
-            y += 4;
-            doc.setFont('helvetica', 'normal');
-        }
-        drawTablaAmortHeader();
-        calcularFilasAmortizacion(sim.montoAFinanciar, sim.tna, sim.plazo).forEach(function(f){
-            if(y + 5 > 280){
-                doc.addPage();
-                y = 20;
-                drawTablaAmortHeader();
-            }
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(8);
-            doc.text(String(f.mes), colCuota, y);
-            doc.text(fmtMoney(f.capital), colCapital, y, { align: 'right' });
-            doc.text(fmtMoney(f.interes), colInteres, y, { align: 'right' });
-            doc.text(fmtMoney(f.iva), colIva, y, { align: 'right' });
-            doc.setFont('helvetica', 'bold');
-            doc.text(fmtMoney(f.cuotaConIva), colCuotaTotal, y, { align: 'right' });
-            doc.setFont('helvetica', 'normal');
-            doc.text(fmtMoney(f.saldo), colSaldo, y, { align: 'right' });
-            y += 5;
-        });
-
-        y += 6;
+        y += 8;
         const textoLegal = 'Documento de carácter informativo y orientativo, generado a partir de una simulación con datos ingresados por el vendedor y tasas vigentes al momento de su generación. Los valores, tasas, plazos y entidades aquí mencionados están sujetos en todos los casos a la evaluación y aprobación crediticia de la entidad financiera correspondiente. Este documento no constituye una pre-aprobación, oferta ni compromiso de otorgamiento de crédito por parte de BYD Yacopini ni de la entidad financiera mencionada. BYD Yacopini no se responsabiliza por errores u omisiones en los datos aquí consignados ni por modificaciones posteriores en las tasas o condiciones informadas.';
         doc.setFontSize(7.5);
         doc.setTextColor(130,130,130);
