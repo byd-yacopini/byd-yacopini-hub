@@ -263,6 +263,7 @@
         <div class="kpi"><div class="n" id="kpiSolicitudesTotal">–</div><div class="l">Solicitudes (mes)</div></div>
         <div class="kpi"><div class="n" id="kpiEntregasTotal">–</div><div class="l">Entregas (mes)</div></div>
         <div class="kpi"><div class="n" id="kpiConversionGeneral">–</div><div class="l">Tasa de conversión de leads</div><div class="pct-badge neutral" id="kpiConversionGeneralPct"></div></div>
+        <div class="kpi"><div class="n" id="kpiPruebasPresencialPct">–</div><div class="l">Test drives / clientes presenciales</div></div>
       </div>
 
       <div class="tcard">
@@ -636,6 +637,8 @@
       document.getElementById('kpiEntregasTotal').textContent = d.entregasTotal != null ? d.entregasTotal : '–';
       document.getElementById('kpiConversionGeneral').textContent = (d.leadsConversionRate != null ? d.leadsConversionRate : 0) + '%';
       setPctBadge('kpiConversionGeneralPct', d.leadsConversionRateChange, true);
+      var presencialLeadsJefe = (d.leadsDetalle || []).filter(function(r){ return r.o === 'Presencial'; }).length;
+      document.getElementById('kpiPruebasPresencialPct').textContent = (presencialLeadsJefe > 0 && d.pruebasTotal != null) ? Math.round((d.pruebasTotal / presencialLeadsJefe) * 100) + '%' : '–';
 
       var objHtml = (d.objetivos||[]).map(function(o){
         var pct = o.meta ? Math.min(100, Math.round((o.real / o.meta) * 100)) : 0;

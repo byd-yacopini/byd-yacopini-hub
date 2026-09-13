@@ -680,6 +680,7 @@
           <div class="kpi"><div class="n" id="kpiEntregasTotal">–</div><div class="l">Entregas (mes)</div></div>
           <div class="kpi"><div class="n" id="kpiStockTotal">–</div><div class="l">Stock físico</div></div>
           <div class="kpi"><div class="n" id="kpiPruebasGeneral">–</div><div class="l">Test drives (mes)</div><div class="pct-badge neutral" id="kpiPruebasGeneralPct"></div></div>
+          <div class="kpi"><div class="n" id="kpiPruebasPresencialPct">–</div><div class="l">Test drives / clientes presenciales</div></div>
           <div class="kpi"><div class="n" id="kpiTasacionesGeneral">–</div><div class="l">Tasaciones (mes)</div><div class="pct-badge neutral" id="kpiTasacionesGeneralPct"></div></div>
           <div class="kpi"><div class="n" id="kpiConversionGeneral">–</div><div class="l">Tasa de conversión de leads</div><div class="pct-badge neutral" id="kpiConversionGeneralPct"></div></div>
           <div class="kpi"><div class="n" id="kpiPromedioVentasGeneral">–</div><div class="l">Promedio de ventas por vendedor</div></div>
@@ -775,6 +776,12 @@
           </div>
           <h2>Histórico diario del mes</h2>
           <div class="chart-daily" id="leadsDaily"></div>
+        </div>
+
+        <div class="tcard">
+          <h2>Test drives por forma de recepción</h2>
+          <div id="pruebasOrigenList"></div>
+          <p class="note">De los leads de cada canal (para el vendedor elegido arriba, o todo el concesionario), qué % terminó en un test drive. El cruce lead↔test drive se hace por celular, así que los test drives sin celular cargado o sin lead coincidente quedan en "Sin dato".</p>
         </div>
 
         <div class="tcard">
@@ -1214,6 +1221,16 @@
     document.getElementById('kpiPruebasLeads').textContent = pruebasFiltradas.length;
     document.getElementById('kpiTasacionesLeads').textContent = tasacionesFiltradas.length;
 
+    // Test drives por forma de recepción: de los leads de cada canal (respetando
+    // el filtro de Vendedor de arriba), qué % terminó en un test drive. El
+    // cruce lead↔test drive se hace por celular en el backend.
+    var pruebaOrigenMap = {};
+    pruebasFiltradas.forEach(function(r){ var o = r.o || 'Sin dato'; pruebaOrigenMap[o] = (pruebaOrigenMap[o] || 0) + 1; });
+    var pruebaOrigenArr = Object.keys(convMap).map(function(k){
+      return { n: k, total: convMap[k].total, conv: pruebaOrigenMap[k] || 0 };
+    }).sort(function(a, b){ return b.total - a.total; });
+    document.getElementById('pruebasOrigenList').innerHTML = barListPct(pruebaOrigenArr);
+
     var modeloMap = {};
     pruebasFiltradas.forEach(function(r){ modeloMap[r.m] = (modeloMap[r.m] || 0) + 1; });
     var modeloArr = Object.keys(modeloMap).map(function(k){ return { n:k, c:modeloMap[k] }; })
@@ -1593,6 +1610,8 @@
     document.getElementById('kpiStockTotal').textContent = d.stockTotal;
     document.getElementById('kpiPruebasGeneral').textContent = d.pruebasTotal;
     setPctBadge('kpiPruebasGeneralPct', d.pruebasTotalPctChange);
+    var presencialLeadsGen = (d.leadsDetalle || []).filter(function(r){ return r.o === 'Presencial'; }).length;
+    document.getElementById('kpiPruebasPresencialPct').textContent = presencialLeadsGen > 0 ? Math.round((d.pruebasTotal / presencialLeadsGen) * 100) + '%' : '–';
     document.getElementById('kpiTasacionesGeneral').textContent = d.tasacionesTotal;
     setPctBadge('kpiTasacionesGeneralPct', d.tasacionesTotalPctChange);
 
