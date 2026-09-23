@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>BYD Yacopini &middot; Mi Tarjeta Virtual</title>
+<style>
+  :root{
+    --negro:#0A0A0A;
+    --carbon:#2A2A2A;
+    --gris-oscuro:#4A4A4A;
+    --gris-medio:#8C8C8C;
+    --gris-claro:#D4D4D4;
+    --gris-fondo:#F2F2F2;
+    --blanco:#FFFFFF;
+    --azul-ev:#1565D8;
+    --verde-dm:#388E3C;
+    --ambar:#D89614;
+    --rojo:#C0392B;
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    background:var(--gris-fondo);
+    color:var(--carbon);
+    font-family:'Segoe UI', Arial, Helvetica, sans-serif;
+    padding-bottom:90px;
+  }
+  .topbar{
+    background:var(--negro);
+    padding:18px 20px 14px;
+    display:flex; align-items:center; gap:12px;
+  }
+  .topbar svg{ height:22px; width:auto; display:block; }
+  .topbar .t{ color:#fff; font-size:13px; font-weight:700; }
+  .topbar .s{ color:var(--gris-claro); font-size:10.5px; }
+
+  .wrap{ max-width:460px; margin:0 auto; padding:16px; }
+
+  .switch{ display:flex; gap:8px; background:var(--blanco); border:1px solid var(--gris-claro); border-radius:12px; padding:4px; margin-bottom:16px; }
+  .switch button{
+    flex:1; border:none; background:transparent; padding:10px; border-radius:9px;
+    font-size:13px; font-weight:700; color:var(--gris-oscuro); font-family:inherit;
+  }
+  .switch button.active{ background:var(--negro); color:#fff; }
+
+  .pane{ display:none; }
+  .pane.active{ display:block; }
+
+  /* ---------- EDITOR ---------- */
+  .field{ margin-bottom:14px; }
+  .field label{ display:block; font-size:11.5px; font-weight:700; color:var(--gris-oscuro); text-transform:uppercase; letter-spacing:0.4px; margin-bottom:6px; }
+  .field input[type=text], .field input[type=tel], .field input[type=email], .field select{
+    width:100%; padding:12px 13px; border-radius:10px; border:1px solid var(--gris-claro);
+    background:var(--blanco); font-size:14px; font-family:inherit; color:var(--negro);
+  }
+  .field input:focus, .field select:focus{ outline:none; border-color:var(--azul-ev); }
+  .field input[readonly]{ background:var(--gris-fondo); color:var(--gris-oscuro); }
+  .field .hint{ font-size:11px; color:var(--gris-medio); margin-top:5px; }
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+
+  .photo-picker{
+    display:flex; align-items:center; gap:14px; margin-bottom:18px;
+  }
+  .photo-circle{
+    width:84px; height:84px; border-radius:50%; background:var(--carbon);
+    display:flex; align-items:center; justify-content:center; overflow:hidden;
+    flex:0 0 auto; border:2px dashed var(--gris-claro); cursor:pointer; position:relative;
+  }
+  .photo-circle img{ width:100%; height:100%; object-fit:cover; }
+  .photo-circle .ph{ color:var(--gris-claro); font-size:26px; font-weight:800; }
+  .photo-picker .txt{ font-size:12.5px; color:var(--gris-oscuro); line-height:1.5; }
+  .photo-picker .txt b{ display:block; color:var(--negro); font-size:13.5px; margin-bottom:2px; }
+  .photo-picker input[type=file]{ display:none; }
+
+  .save-btn{
+    width:100%; padding:14px; border:none; border-radius:12px; background:var(--azul-ev);
+    color:#fff; font-size:14.5px; font-weight:800; font-family:inherit; margin-top:6px;
+  }
+  .save-btn:active{ opacity:0.85; }
+  .save-btn:disabled{ opacity:0.6; }
+  .saved-note{ text-align:center; font-size:12px; font-weight:700; margin-top:10px; min-height:16px; }
+
+  .loading-note{ text-align:center; color:var(--gris-medio); font-size:12.5px; padding:20px; }
+
+  /* ---------- TARJETA (vista previa) ---------- */
+  .card-outer{ display:flex; justify-content:center; margin-bottom:18px; }
+  .card{
+    width:100%; max-width:340px; border-radius:20px; overflow:hidden;
+    background:var(--negro); box-shadow:0 10px 28px rgba(0,0,0,0.28);
+  }
+  .card-head{ padding:20px 20px 16px; text-align:center; position:relative; }
+  .card-head .logo{ height:15px; width:auto; opacity:0.9; margin-bottom:14px; }
+  .card-photo{
+    width:92px; height:92px; border-radius:50%; margin:0 auto 12px; overflow:hidden;
+    background:var(--carbon); border:3px solid rgba(255,255,255,0.15);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .card-photo img{ width:100%; height:100%; object-fit:cover; }
+  .card-photo .ph{ color:var(--gris-claro); font-size:28px; font-weight:800; }
+  .card-name{ color:#fff; font-size:19px; font-weight:800; margin:0 0 6px; }
+  .card-cargo{
+    display:inline-block; background:var(--azul-ev); color:#fff; font-size:10.5px; font-weight:800;
+    letter-spacing:0.4px; text-transform:uppercase; padding:5px 12px; border-radius:20px; margin-bottom:6px;
+  }
+  .card-sucursal{ color:var(--gris-claro); font-size:12px; }
+  .card-frase{ color:var(--gris-claro); font-size:11.5px; font-style:italic; margin-top:10px; padding:0 10px; line-height:1.5; }
+
+  .card-body{ background:#fff; padding:16px 18px 18px; }
+  .contact-row{
+    display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid var(--gris-fondo);
+    text-decoration:none; color:var(--negro);
+  }
+  .contact-row:last-child{ border-bottom:none; }
+  .contact-row .ic{
+    width:34px; height:34px; border-radius:9px; background:var(--gris-fondo); flex:0 0 auto;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .contact-row .ic svg{ width:17px; height:17px; }
+  .contact-row .tx{ font-size:13px; }
+  .contact-row .tx small{ display:block; color:var(--gris-medio); font-size:10.5px; text-transform:uppercase; letter-spacing:0.3px; margin-bottom:1px; }
+
+  .card-actions{ display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:16px 18px; background:var(--gris-fondo); }
+  .card-actions a, .card-actions button{
+    display:flex; align-items:center; justify-content:center; gap:7px;
+    padding:12px 8px; border-radius:11px; font-size:12.5px; font-weight:700; font-family:inherit;
+    text-decoration:none; border:none; cursor:pointer;
+  }
+  .act-whatsapp{ background:#25D366; color:#fff; }
+  .act-vcard{ background:var(--negro); color:#fff; }
+  .card-actions svg{ width:15px; height:15px; }
+
+  .empty-note{ text-align:center; color:var(--gris-medio); font-size:12.5px; padding:30px 20px; }
+
+  .share-status{ text-align:center; font-size:12px; font-weight:700; min-height:16px; margin:2px 0 14px; }
+  .share-preview{ max-width:340px; margin:0 auto; }
+  .share-preview-label{ font-size:11.5px; color:var(--gris-medio); margin-bottom:8px; line-height:1.5; }
+  .share-preview-bubble{
+    background:#DCF8C6; color:#111; border-radius:12px; border-top-left-radius:2px;
+    padding:12px 14px; font-size:13px; line-height:1.55; white-space:pre-wrap;
+  }
+</style>
+</head>
+<body class="gate-locked">
+<div id="bydGate" style="position:fixed;inset:0;z-index:999999;background:#0A0A0A;display:flex;align-items:center;justify-content:center;padding:24px;opacity:1;">
+  <form id="bydGateForm" style="width:100%;max-width:300px;text-align:center;font-family:Arial,sans-serif;">
+    <div style="color:#fff;font-weight:800;font-size:16px;margin-bottom:4px;">BYD Yacopini</div>
+    <div style="color:#8C8C8C;font-size:12px;margin-bottom:18px;">Acceso interno &middot; Equipo de Ventas</div>
+    <input id="bydGatePass" type="password" inputmode="numeric" placeholder="Clave" autocomplete="off" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid #4A4A4A;background:#2A2A2A;color:#fff;font-size:16px;text-align:center;box-sizing:border-box;">
+    <button type="submit" style="width:100%;margin-top:10px;padding:12px;border-radius:10px;border:none;background:#1565D8;color:#fff;font-weight:700;font-size:14px;">Entrar</button>
+    <div id="bydGateError" style="color:#E85555;font-size:12px;margin-top:10px;display:none;">Clave incorrecta</div>
+  </form>
+</div>
+<style>
+  body.gate-locked > *:not(#bydGate){display:none !important;}
+  #bydGate{ transition:opacity .25s ease; }
+  #bydGate.fadeOut{ opacity:0; }
+</style>
+<script>
+(function(){
+  var HASH = "a734aecec77bc8826bec68f0264b70228ab419e52a8fcdf05016ebee0465f257";
+  var body = document.body;
+  function unlock(){ var g=document.getElementById('bydGate'); if(g){ g.classList.add('fadeOut'); setTimeout(function(){ body.classList.remove('gate-locked'); g.remove(); }, 220); } else { body.classList.remove('gate-locked'); } }
+  if (sessionStorage.getItem('bydGateOk') === '1' || sessionStorage.getItem('bydJefeOk') === '1' || sessionStorage.getItem('bydVendorOk') === '1') { unlock(); }
+  else {
+    document.getElementById('bydGateForm').addEventListener('submit', function(e){
+      e.preventDefault();
+      var val = document.getElementById('bydGatePass').value;
+      crypto.subtle.digest('SHA-256', new TextEncoder().encode(val)).then(function(buf){
+        var hex = Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+        if (hex === HASH) { sessionStorage.setItem('bydGateOk','1'); unlock(); }
+        else { document.getElementById('bydGateError').style.display = 'block'; document.getElementById('bydGatePass').value = ''; document.getElementById('bydGatePass').focus(); }
+      });
+    });
+  }
+})();
+</script>
+
+  <div class="topbar">
+    <svg viewBox="12 4 529 102" xmlns="http://www.w3.org/2000/svg" aria-label="BYD Yacopini">
+      <defs><style>.st0{fill:#FFFFFF;}</style></defs>
+      <path class="st0" d="M162.93,19.18c-8.06-12.16-21.88-14.53-31.23-14.75-8.23-.19-43.9-.23-64.67-.24-40.91-.03-17.51-.01-54.36-.01v19.54c43.75,0,95.68-.1,118.41.25,4.06.06,8.08.47,11.27,3.3,2.97,2.64,4.02,6.79,2.69,10.4-2.14,5.83-8.07,7.28-13.96,7.37-9.01.14-33.77.19-52.24.22-45.3.06-25.68.03-66.16.03v19.49c43.72,0,95.76-.09,118.41.25,7.06.1,14.53,2.56,14.53,10.43s-7.46,10.45-14.53,10.56c-22.59.33-74.66.24-118.41.24v19.53c43.88,0,101.32.16,119.03-.25,9.35-.22,23.18-2.59,31.23-14.75,7.56-11.41,5.71-26.27-4.22-35.8,9.93-9.54,11.78-24.39,4.21-35.8"/>
+      <path class="st0" d="M520.08,15.93c-13.35-9.58-27.85-10.94-39.61-11.21-11.58-.27-29.05-.39-44.5-.45-37.67-.15-15.02-.08-50.91-.08v19.6c38.19,0,64.97-.32,94.46.52,8.66.24,17.95,1.16,26.31,6.96,7.92,5.5,12.62,14.26,12.62,23.72s-4.57,18.24-12.49,23.74c-8.36,5.81-17.65,6.72-26.31,6.96-29.49.83-56.27.51-94.46.51l-.13,19.59c38.41,0,66.03.14,95.41-.54,11.76-.27,26.26-1.63,39.61-11.21,12.67-9.09,20.33-23.36,20.33-39.05s-7.67-29.97-20.33-39.05"/>
+      <path class="st0" d="M227.22,48.06c-10.23-.2-13.49-3.54-13.56-13.73-.07-9.42-.02-20.58-.02-30.14h-22.56c0,9.67-.19,29.24.19,38.7.74,18.38,6.77,24.11,25.55,24.75,13.02.44,23.36.29,41.36.28v-19.69c-14.43,0-20.31.04-30.96-.16"/>
+      <path class="st0" d="M339.04,34.68c-.07,9.92-3.3,13.18-13.56,13.38-4.89.09-17.75.14-28.33.16h0s-.1.01-.1.01c-10.81,0-22.34-.02-29.1-.02v57.57h26.52v-37.88c.81,0,1.68,0,2.58,0h0s.1,0,.1,0v.02c13.8,0,31.04-.06,37.55-.26,19.93-.61,26-6.23,26.73-24.78.1-2.48.16-5.62.19-9.06V4.18h-22.56c0,9.8.04,20.81-.03,30.5"/>
+    </svg>
+    <div>
+      <div class="t">Mi Tarjeta Virtual</div>
+      <div class="s">Tu presentación profesional para compartir</div>
+    </div>
+  </div>
+
+  <div class="wrap">
+
+    <div class="switch">
+      <button type="button" id="btnTabEditar" class="active">Editar mi tarjeta</button>
+      <button type="button" id="btnTabPreview">Vista previa</button>
+    </div>
+
+    <!-- ================= EDITOR ================= -->
+    <div class="pane active" id="paneEditar">
+
+      <div id="loadingNote" class="loading-note">Cargando tus datos&hellip;</div>
+
+      <div id="formContent" style="display:none;">
+
+        <div class="photo-picker">
+          <div class="photo-circle" id="photoCircle">
+            <span class="ph" id="photoPh">+</span>
+            <img id="photoImg" style="display:none;">
+          </div>
+          <div class="txt">
+            <b>Foto de perfil</b>
+            Tocá el círculo para subir una foto. Se recorta automáticamente en redondo.
+          </div>
+          <input type="file" id="photoInput" accept="image/*">
+        </div>
+
+        <div class="field">
+          <label for="fNombre">Nombre y apellido</label>
+          <input type="text" id="fNombre" placeholder="Ej: Mateo Petry">
+          <div class="hint" id="nombreHint"></div>
+        </div>
+
+        <div class="row2">
+          <div class="field">
+            <label for="fCargo">Cargo</label>
+            <select id="fCargo">
+              <option value="Asesor de Ventas">Asesor de Ventas</option>
+              <option value="Jefe de Ventas">Jefe de Ventas</option>
+              <option value="Gerente Comercial">Gerente Comercial</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="fSucursal">Sucursal</label>
+            <select id="fSucursal">
+              <option>Mendoza</option>
+              <option>San Juan</option>
+              <option>San Rafael</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="fWhatsapp">WhatsApp</label>
+          <input type="tel" id="fWhatsapp" placeholder="Ej: 2615123456 (sin 0 ni 15)">
+          <div class="hint">Se usa para el botón "Escribir por WhatsApp" y para llamar.</div>
+        </div>
+
+        <div class="field">
+          <label for="fEmail">Email</label>
+          <input type="email" id="fEmail" placeholder="nombre@bydyacopini.com">
+        </div>
+
+        <div class="field">
+          <label for="fInstagram">Instagram (opcional)</label>
+          <input type="text" id="fInstagram" placeholder="Ej: mateo.byd (sin @)">
+        </div>
+
+        <div class="field">
+          <label for="fFrase">Frase / especialidad (opcional)</label>
+          <input type="text" id="fFrase" placeholder="Ej: Especialista en vehículos eléctricos BYD">
+        </div>
+
+        <button type="button" class="save-btn" id="btnGuardar">Guardar y ver mi tarjeta</button>
+        <div class="saved-note" id="savedNote"></div>
+      </div>
+    </div>
+
+    <!-- ================= VISTA PREVIA ================= -->
+    <div class="pane" id="panePreview">
+      <div id="cardWrap"></div>
+    </div>
+
+  </div>
+
+<a id="hubBackBtn" href="./panel_ventas.html" style="position:fixed;bottom:18px;left:18px;z-index:999999;
+  width:44px;height:44px;border-radius:50%;background:#0A0A0A;color:#fff;display:flex;
+  align-items:center;justify-content:center;text-decoration:none;font-family:Arial,sans-serif;
+  font-size:20px;box-shadow:0 4px 14px rgba(0,0,0,0.3);">&larr;</a>
+<script>(function(){
+  var b=document.getElementById('hubBackBtn');
+  if(!b) return;
+  if(sessionStorage.getItem('bydJefeOk')==='1'){ b.href='./panel_jefe.html'; }
+  else if(sessionStorage.getItem('bydGateOk')==='1' && sessionStorage.getItem('bydVendorOk')!=='1'){ b.href='./index.html'; }
+})();</script>
+
+<script>
+(function(){
+  var TABLERO_API_URL = 'https://script.google.com/macros/s/AKfycbzTYBoM56BBMj2B-8hUG_MIuOh7r5qG4qq2sGlTRM-y6QyFm0XHqgE6XUG5OQB022iy/exec';
+  var TABLERO_API_KEY = 'i4uH92SO1sFyNYi8PJ2dsGb9LDM-Xoq3';
+
+  function llamarBackend(action, params){
+    params = params || {};
+    var url = TABLERO_API_URL + '?key=' + encodeURIComponent(TABLERO_API_KEY) + '&action=' + action;
+    Object.keys(params).forEach(function(k){
+      var v = params[k];
+      if (v === undefined || v === null) return;
+      url += '&' + k + '=' + encodeURIComponent(v);
+    });
+    return fetch(url, {cache:'no-store'}).then(function(r){ return r.json(); }).then(function(data){
+      if (data && data.error) throw new Error(data.error);
+      return data;
+    });
+  }
+
+  function subirFotoTarjeta(nombre, fotoBase64, fotoMime){
+    return fetch(TABLERO_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ key: TABLERO_API_KEY, action: 'subirFotoTarjeta', nombre: nombre, fotoBase64: fotoBase64, fotoMime: fotoMime })
+    }).then(function(r){ return r.json(); }).then(function(data){
+      if (data && data.error) throw new Error(data.error);
+      return data;
+    });
+  }
+
+  // ---------- Identidad según el login con el que se entró ----------
+  var jefeOk = sessionStorage.getItem('bydJefeOk') === '1' && sessionStorage.getItem('bydVendorNombre');
+  var vendedorOk = !jefeOk && sessionStorage.getItem('bydVendorOk') === '1' && sessionStorage.getItem('bydVendorNombre');
+  var gerenciaOk = sessionStorage.getItem('bydGateOk') === '1' && !jefeOk && !vendedorOk;
+
+  var ROLE, NOMBRE_FIJO, CARGO_DEFAULT;
+  if (jefeOk){ ROLE = 'jefe'; NOMBRE_FIJO = sessionStorage.getItem('bydVendorNombre'); CARGO_DEFAULT = 'Jefe de Ventas'; }
+  else if (vendedorOk){ ROLE = 'vendedor'; NOMBRE_FIJO = sessionStorage.getItem('bydVendorNombre'); CARGO_DEFAULT = 'Asesor de Ventas'; }
+  else if (gerenciaOk){ ROLE = 'gerencia'; NOMBRE_FIJO = localStorage.getItem('byd_tarjeta_gerencia_nombre') || ''; CARGO_DEFAULT = 'Gerente Comercial'; }
+  else { ROLE = null; NOMBRE_FIJO = ''; CARGO_DEFAULT = 'Asesor de Ventas'; }
+
+  var els = {
+    tabEditar: document.getElementById('btnTabEditar'),
+    tabPreview: document.getElementById('btnTabPreview'),
+    paneEditar: document.getElementById('paneEditar'),
+    panePreview: document.getElementById('panePreview'),
+    loadingNote: document.getElementById('loadingNote'),
+    formContent: document.getElementById('formContent'),
+    photoCircle: document.getElementById('photoCircle'),
+    photoInput: document.getElementById('photoInput'),
+    photoImg: document.getElementById('photoImg'),
+    photoPh: document.getElementById('photoPh'),
+    nombre: document.getElementById('fNombre'),
+    nombreHint: document.getElementById('nombreHint'),
+    cargo: document.getElementById('fCargo'),
+    sucursal: document.getElementById('fSucursal'),
+    whatsapp: document.getElementById('fWhatsapp'),
+    email: document.getElementById('fEmail'),
+    instagram: document.getElementById('fInstagram'),
+    frase: document.getElementById('fFrase'),
+    btnGuardar: document.getElementById('btnGuardar'),
+    savedNote: document.getElementById('savedNote'),
+    cardWrap: document.getElementById('cardWrap')
+  };
+
+  var fotoDataUrl = null;   // lo que se muestra (nueva foto local o la ya guardada)
+  var fotoFileIdActual = ''; // fileId ya guardado en Drive (si existe)
+  var fotoEsNueva = false;   // true si el usuario acaba de elegir una foto distinta
+
+  // ---------- Nombre: fijo para vendedor/jefe, editable para gerencia ----------
+  els.nombre.value = NOMBRE_FIJO;
+  if (ROLE === 'vendedor' || ROLE === 'jefe'){
+    els.nombre.readOnly = true;
+    els.nombreHint.textContent = 'Este nombre viene de tu inicio de sesión y no se puede editar acá.';
+  } else if (ROLE === 'gerencia'){
+    els.nombreHint.textContent = 'Se recuerda en este dispositivo para la próxima vez.';
+  } else {
+    els.nombreHint.textContent = '';
+  }
+  els.cargo.value = CARGO_DEFAULT;
+
+  function nombreActual(){
+    return (ROLE === 'gerencia') ? els.nombre.value.trim() : (NOMBRE_FIJO || '').trim();
+  }
+
+  function showTab(tab){
+    var isEditar = tab === 'editar';
+    els.tabEditar.classList.toggle('active', isEditar);
+    els.tabPreview.classList.toggle('active', !isEditar);
+    els.paneEditar.classList.toggle('active', isEditar);
+    els.panePreview.classList.toggle('active', !isEditar);
+    if (!isEditar) renderCard();
+  }
+  els.tabEditar.addEventListener('click', function(){ showTab('editar'); });
+  els.tabPreview.addEventListener('click', function(){ showTab('preview'); });
+
+  els.photoCircle.addEventListener('click', function(){ els.photoInput.click(); });
+  els.photoInput.addEventListener('change', function(e){
+    var file = e.target.files && e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(ev){
+      fotoDataUrl = ev.target.result;
+      fotoEsNueva = true;
+      els.photoImg.src = fotoDataUrl;
+      els.photoImg.style.display = 'block';
+      els.photoPh.style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+  });
+
+  function iniciales(nombre){
+    var partes = (nombre || '').trim().split(/\s+/).filter(Boolean);
+    if (!partes.length) return '?';
+    if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase();
+    return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
+  }
+
+  function normPhone(s){ return (s || '').replace(/\D/g, ''); }
+
+  function iconSvg(name){
+    var icons = {
+      whatsapp: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17.6 6.32A7.85 7.85 0 0012.05 4c-4.34 0-7.87 3.53-7.87 7.87 0 1.39.36 2.74 1.05 3.93L4 20l4.32-1.14a7.85 7.85 0 003.73.95h.01c4.34 0 7.87-3.53 7.87-7.87 0-2.1-.82-4.08-2.33-5.62zm-5.55 12.1h-.01a6.55 6.55 0 01-3.33-.91l-.24-.14-2.48.65.66-2.42-.16-.25a6.53 6.53 0 01-1-3.48 6.55 6.55 0 016.56-6.56c1.75 0 3.4.68 4.63 1.92a6.5 6.5 0 011.92 4.64c0 3.62-2.94 6.55-6.55 6.55z" fill="currentColor"/></svg>',
+      phone: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6.6 10.8c1.2 2.4 3.2 4.4 5.6 5.6l1.9-1.9c.2-.2.6-.3.9-.2 1 .3 2 .5 3 .5.5 0 .9.4.9.9V19c0 .5-.4.9-.9.9C10.6 19.9 4.1 13.4 4.1 5c0-.5.4-.9.9-.9h3.3c.5 0 .9.4.9.9 0 1 .2 2 .5 3 .1.3 0 .7-.2.9L6.6 10.8z" fill="currentColor"/></svg>',
+      email: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 6h16v12H4V6z" stroke="currentColor" stroke-width="1.6"/><path d="M4.5 6.5l7.5 6 7.5-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      instagram: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="4" width="16" height="16" rx="4.5" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="3.6" stroke="currentColor" stroke-width="1.6"/><circle cx="16.6" cy="7.4" r="1.1" fill="currentColor"/></svg>',
+      vcard: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3v12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M7 10l5 5 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 21h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>'
+    };
+    return icons[name] || '';
+  }
+
+  function buildShareText(d){
+    var lines = [
+      '¡Hola! 👋 Soy ' + d.nombre + ', ' + d.cargo + ' en BYD Yacopini (' + d.sucursal + ').',
+      ''
+    ];
+    if (d.whatsapp) lines.push('📱 WhatsApp: ' + d.whatsapp);
+    if (d.email) lines.push('📧 Email: ' + d.email);
+    if (d.instagram) lines.push('📷 Instagram: @' + d.instagram.replace(/^@/, ''));
+    if (d.frase) { lines.push(''); lines.push('"' + d.frase + '"'); }
+    lines.push('');
+    lines.push('Cualquier consulta, escribime 🚗⚡');
+    return lines.join('\n');
+  }
+
+  // ---------- Imagen de la tarjeta (para compartir con foto real) ----------
+  function loadImage(src){
+    return new Promise(function(resolve, reject){
+      var img = new Image();
+      img.onload = function(){ resolve(img); };
+      img.onerror = reject;
+      img.src = src;
+    });
+  }
+
+  function drawImageCover(ctx, img, dx, dy, dw, dh){
+    var ir = img.width / img.height, dr = dw / dh, sx, sy, sw, sh;
+    if (ir > dr){ sh = img.height; sw = sh * dr; sy = 0; sx = (img.width - sw) / 2; }
+    else { sw = img.width; sh = sw / dr; sx = 0; sy = (img.height - sh) / 2; }
+    ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
+  }
+
+  function roundRect(ctx, x, y, w, h, r){
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function wrapText(ctx, text, cx, y, maxWidth, lineHeight){
+    var words = text.split(' ');
+    var line = '';
+    var lines = [];
+    for (var i = 0; i < words.length; i++){
+      var test = line ? line + ' ' + words[i] : words[i];
+      if (ctx.measureText(test).width > maxWidth && line){
+        lines.push(line);
+        line = words[i];
+      } else {
+        line = test;
+      }
+    }
+    if (line) lines.push(line);
+    lines.forEach(function(l, i){ ctx.fillText(l, cx, y + i * lineHeight); });
+    return lines.length * lineHeight;
+  }
+
+  var BYD_LOGO_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="12 4 529 102">' +
+    '<path fill="#FFFFFF" d="M162.93,19.18c-8.06-12.16-21.88-14.53-31.23-14.75-8.23-.19-43.9-.23-64.67-.24-40.91-.03-17.51-.01-54.36-.01v19.54c43.75,0,95.68-.1,118.41.25,4.06.06,8.08.47,11.27,3.3,2.97,2.64,4.02,6.79,2.69,10.4-2.14,5.83-8.07,7.28-13.96,7.37-9.01.14-33.77.19-52.24.22-45.3.06-25.68.03-66.16.03v19.49c43.72,0,95.76-.09,118.41.25,7.06.1,14.53,2.56,14.53,10.43s-7.46,10.45-14.53,10.56c-22.59.33-74.66.24-118.41.24v19.53c43.88,0,101.32.16,119.03-.25,9.35-.22,23.18-2.59,31.23-14.75,7.56-11.41,5.71-26.27-4.22-35.8,9.93-9.54,11.78-24.39,4.21-35.8"/>' +
+    '<path fill="#FFFFFF" d="M520.08,15.93c-13.35-9.58-27.85-10.94-39.61-11.21-11.58-.27-29.05-.39-44.5-.45-37.67-.15-15.02-.08-50.91-.08v19.6c38.19,0,64.97-.32,94.46.52,8.66.24,17.95,1.16,26.31,6.96,7.92,5.5,12.62,14.26,12.62,23.72s-4.57,18.24-12.49,23.74c-8.36,5.81-17.65,6.72-26.31,6.96-29.49.83-56.27.51-94.46.51l-.13,19.59c38.41,0,66.03.14,95.41-.54,11.76-.27,26.26-1.63,39.61-11.21,12.67-9.09,20.33-23.36,20.33-39.05s-7.67-29.97-20.33-39.05"/>' +
+    '<path fill="#FFFFFF" d="M227.22,48.06c-10.23-.2-13.49-3.54-13.56-13.73-.07-9.42-.02-20.58-.02-30.14h-22.56c0,9.67-.19,29.24.19,38.7.74,18.38,6.77,24.11,25.55,24.75,13.02.44,23.36.29,41.36.28v-19.69c-14.43,0-20.31.04-30.96-.16"/>' +
+    '<path fill="#FFFFFF" d="M339.04,34.68c-.07,9.92-3.3,13.18-13.56,13.38-4.89.09-17.75.14-28.33.16h0s-.1.01-.1.01c-10.81,0-22.34-.02-29.1-.02v57.57h26.52v-37.88c.81,0,1.68,0,2.58,0h0s.1,0,.1,0v.02c13.8,0,31.04-.06,37.55-.26,19.93-.61,26-6.23,26.73-24.78.1-2.48.16-5.62.19-9.06V4.18h-22.56c0,9.8.04,20.81-.03,30.5"/>' +
+    '</svg>';
+
+  function buildCardImageBlob(d, fotoSrc){
+    return new Promise(function(resolve, reject){
+      var W = 1080, H = 1350;
+      var canvas = document.createElement('canvas');
+      canvas.width = W; canvas.height = H;
+      var ctx = canvas.getContext('2d');
+
+      ctx.fillStyle = '#0A0A0A';
+      ctx.fillRect(0, 0, W, H);
+
+      var logoSrc = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(BYD_LOGO_SVG)));
+
+      var photoPromise = fotoSrc ? loadImage(fotoSrc) : Promise.resolve(null);
+
+      Promise.all([loadImage(logoSrc), photoPromise]).then(function(imgs){
+        var logoImg = imgs[0], photoImg = imgs[1];
+
+        var logoW = 300, logoH = 58;
+        ctx.drawImage(logoImg, (W - logoW) / 2, 90, logoW, logoH);
+
+        var cx = W / 2, cy = 470, r = 195;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.clip();
+        if (photoImg){
+          drawImageCover(ctx, photoImg, cx - r, cy - r, r * 2, r * 2);
+        } else {
+          ctx.fillStyle = '#2A2A2A';
+          ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+          ctx.fillStyle = '#D4D4D4';
+          ctx.font = '800 130px Segoe UI, Arial, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(iniciales(d.nombre), cx, cy + 8);
+        }
+        ctx.restore();
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+        ctx.lineWidth = 8;
+        ctx.stroke();
+
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = '800 62px Segoe UI, Arial, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillText(d.nombre, cx, 745);
+
+        ctx.font = '800 26px Segoe UI, Arial, sans-serif';
+        var cargoText = d.cargo.toUpperCase();
+        var cargoW = ctx.measureText(cargoText).width + 60;
+        roundRect(ctx, cx - cargoW / 2, 790, cargoW, 56, 28);
+        ctx.fillStyle = '#1565D8';
+        ctx.fill();
+        ctx.fillStyle = '#FFFFFF';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(cargoText, cx, 790 + 28 + 2);
+
+        ctx.fillStyle = '#D4D4D4';
+        ctx.font = '36px Segoe UI, Arial, sans-serif';
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillText('BYD Yacopini · ' + d.sucursal, cx, 930);
+
+        if (d.frase){
+          ctx.fillStyle = '#B0B0B0';
+          ctx.font = 'italic 30px Segoe UI, Arial, sans-serif';
+          wrapText(ctx, '"' + d.frase + '"', cx, 1010, 820, 42);
+        }
+
+        canvas.toBlob(function(blob){
+          resolve(blob);
+        }, 'image/png', 0.95);
+      }).catch(reject);
+    });
+  }
+
+  function fmtStatus(el, text, isError){
+    el.textContent = text;
+    el.style.color = isError ? '#C0392B' : 'var(--verde-dm)';
+  }
+
+  async function shareCard(d, fotoSrc, shareText, shareLink){
+    var statusEl = document.getElementById('shareStatus');
+    if (statusEl) fmtStatus(statusEl, 'Generando imagen de la tarjeta…', false);
+    try {
+      var blob = await buildCardImageBlob(d, fotoSrc);
+      var fileName = 'Tarjeta_' + d.nombre.replace(/\s+/g, '_') + '.png';
+      var file = new File([blob], fileName, { type: 'image/png' });
+
+      var canShareFiles = navigator.canShare && navigator.canShare({ files: [file] });
+      if (navigator.share && canShareFiles){
+        await navigator.share({ files: [file], text: shareText, title: 'Mi tarjeta — BYD Yacopini' });
+        if (statusEl) fmtStatus(statusEl, '✓ Compartido', false);
+        return;
+      }
+
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.open(shareLink, '_blank');
+      if (statusEl) fmtStatus(statusEl, '⬇ Se descargó "' + fileName + '" — adjuntala en el chat que se abrió.', false);
+    } catch (err){
+      if (err && err.name === 'AbortError') { if (statusEl) statusEl.textContent = ''; return; }
+      if (statusEl) fmtStatus(statusEl, 'No se pudo compartir: ' + (err && err.message ? err.message : err), true);
+    }
+  }
+
+  function buildVCard(d){
+    var lines = [
+      'BEGIN:VCARD',
+      'VERSION:3.0',
+      'N:' + d.nombre + ';;;;',
+      'FN:' + d.nombre,
+      'ORG:BYD Yacopini',
+      'TITLE:' + d.cargo,
+      d.whatsapp ? 'TEL;TYPE=CELL:' + d.whatsapp : '',
+      d.email ? 'EMAIL:' + d.email : '',
+      'END:VCARD'
+    ].filter(Boolean);
+    return lines.join('\n');
+  }
+
+  function renderCard(){
+    var d = readForm();
+    if (!d.nombre){
+      els.cardWrap.innerHTML = '<div class="empty-note">Completá al menos tu nombre en "Editar mi tarjeta" para ver la vista previa.</div>';
+      return;
+    }
+    var tel = normPhone(d.whatsapp);
+    var waLink = tel ? 'https://wa.me/549' + tel : null;
+    var telLink = tel ? 'tel:+549' + tel : null;
+    var igLink = d.instagram ? 'https://instagram.com/' + d.instagram.replace(/^@/, '') : null;
+    var mailLink = d.email ? 'mailto:' + d.email : null;
+
+    var photoHtml = fotoDataUrl
+      ? '<img src="' + fotoDataUrl + '" alt="">'
+      : '<span class="ph">' + iniciales(d.nombre) + '</span>';
+
+    var rows = '';
+    if (waLink) rows += '<a class="contact-row" href="' + waLink + '" target="_blank" rel="noopener"><span class="ic">' + iconSvg('whatsapp') + '</span><span class="tx"><small>WhatsApp</small>' + d.whatsapp + '</span></a>';
+    if (telLink) rows += '<a class="contact-row" href="' + telLink + '"><span class="ic">' + iconSvg('phone') + '</span><span class="tx"><small>Teléfono</small>' + d.whatsapp + '</span></a>';
+    if (mailLink) rows += '<a class="contact-row" href="' + mailLink + '"><span class="ic">' + iconSvg('email') + '</span><span class="tx"><small>Email</small>' + d.email + '</span></a>';
+    if (igLink) rows += '<a class="contact-row" href="' + igLink + '" target="_blank" rel="noopener"><span class="ic">' + iconSvg('instagram') + '</span><span class="tx"><small>Instagram</small>@' + d.instagram.replace(/^@/, '') + '</span></a>';
+
+    var vcardBlob = new Blob([buildVCard(d)], { type: 'text/vcard' });
+    var vcardUrl = URL.createObjectURL(vcardBlob);
+    var vcardFileName = d.nombre.replace(/\s+/g, '_') + '.vcf';
+
+    var shareText = buildShareText(d);
+    var shareLink = 'https://wa.me/?text=' + encodeURIComponent(shareText);
+
+    els.cardWrap.innerHTML =
+      '<div class="card-outer"><div class="card">' +
+        '<div class="card-head">' +
+          '<svg class="logo" viewBox="12 4 529 102" xmlns="http://www.w3.org/2000/svg"><defs><style>.p0{fill:#FFFFFF;}</style></defs>' +
+            '<path class="p0" d="M162.93,19.18c-8.06-12.16-21.88-14.53-31.23-14.75-8.23-.19-43.9-.23-64.67-.24-40.91-.03-17.51-.01-54.36-.01v19.54c43.75,0,95.68-.1,118.41.25,4.06.06,8.08.47,11.27,3.3,2.97,2.64,4.02,6.79,2.69,10.4-2.14,5.83-8.07,7.28-13.96,7.37-9.01.14-33.77.19-52.24.22-45.3.06-25.68.03-66.16.03v19.49c43.72,0,95.76-.09,118.41.25,7.06.1,14.53,2.56,14.53,10.43s-7.46,10.45-14.53,10.56c-22.59.33-74.66.24-118.41.24v19.53c43.88,0,101.32.16,119.03-.25,9.35-.22,23.18-2.59,31.23-14.75,7.56-11.41,5.71-26.27-4.22-35.8,9.93-9.54,11.78-24.39,4.21-35.8"/>' +
+            '<path class="p0" d="M520.08,15.93c-13.35-9.58-27.85-10.94-39.61-11.21-11.58-.27-29.05-.39-44.5-.45-37.67-.15-15.02-.08-50.91-.08v19.6c38.19,0,64.97-.32,94.46.52,8.66.24,17.95,1.16,26.31,6.96,7.92,5.5,12.62,14.26,12.62,23.72s-4.57,18.24-12.49,23.74c-8.36,5.81-17.65,6.72-26.31,6.96-29.49.83-56.27.51-94.46.51l-.13,19.59c38.41,0,66.03.14,95.41-.54,11.76-.27,26.26-1.63,39.61-11.21,12.67-9.09,20.33-23.36,20.33-39.05s-7.67-29.97-20.33-39.05"/>' +
+            '<path class="p0" d="M227.22,48.06c-10.23-.2-13.49-3.54-13.56-13.73-.07-9.42-.02-20.58-.02-30.14h-22.56c0,9.67-.19,29.24.19,38.7.74,18.38,6.77,24.11,25.55,24.75,13.02.44,23.36.29,41.36.28v-19.69c-14.43,0-20.31.04-30.96-.16"/>' +
+            '<path class="p0" d="M339.04,34.68c-.07,9.92-3.3,13.18-13.56,13.38-4.89.09-17.75.14-28.33.16h0s-.1.01-.1.01c-10.81,0-22.34-.02-29.1-.02v57.57h26.52v-37.88c.81,0,1.68,0,2.58,0h0s.1,0,.1,0v.02c13.8,0,31.04-.06,37.55-.26,19.93-.61,26-6.23,26.73-24.78.1-2.48.16-5.62.19-9.06V4.18h-22.56c0,9.8.04,20.81-.03,30.5"/>' +
+          '</svg>' +
+          '<div class="card-photo">' + photoHtml + '</div>' +
+          '<div class="card-name">' + d.nombre + '</div>' +
+          '<div class="card-cargo">' + d.cargo + '</div><br>' +
+          '<div class="card-sucursal">BYD Yacopini · ' + d.sucursal + '</div>' +
+          (d.frase ? '<div class="card-frase">"' + d.frase + '"</div>' : '') +
+        '</div>' +
+        '<div class="card-body">' + (rows || '<div class="empty-note" style="padding:6px 0;">Agregá WhatsApp, email o Instagram para que aparezcan acá.</div>') + '</div>' +
+        '<div class="card-actions">' +
+          '<button type="button" class="act-whatsapp" id="btnCompartir">' + iconSvg('whatsapp') + ' Compartir</button>' +
+          '<a class="act-vcard" href="' + vcardUrl + '" download="' + vcardFileName + '">' + iconSvg('vcard') + ' Guardar contacto</a>' +
+        '</div>' +
+      '</div></div>' +
+      '<div class="share-status" id="shareStatus"></div>' +
+      '<div class="share-preview">' +
+        '<div class="share-preview-label">Esto es lo que se manda junto con la imagen de la tarjeta:</div>' +
+        '<div class="share-preview-bubble">' + shareText.replace(/\n/g, '<br>') + '</div>' +
+      '</div>';
+
+    var btnCompartir = document.getElementById('btnCompartir');
+    btnCompartir.addEventListener('click', function(){
+      shareCard(d, fotoDataUrl, shareText, shareLink);
+    });
+  }
+
+  function readForm(){
+    return {
+      nombre: els.nombre.value.trim(),
+      cargo: els.cargo.value,
+      sucursal: els.sucursal.value,
+      whatsapp: els.whatsapp.value.trim(),
+      email: els.email.value.trim(),
+      instagram: els.instagram.value.trim(),
+      frase: els.frase.value.trim()
+    };
+  }
+
+  function writeForm(d){
+    if (ROLE !== 'vendedor' && ROLE !== 'jefe'){
+      els.nombre.value = d.nombre || NOMBRE_FIJO || '';
+    }
+    els.cargo.value = d.cargo || CARGO_DEFAULT;
+    els.sucursal.value = d.sucursal || 'Mendoza';
+    els.whatsapp.value = d.telefono || d.whatsapp || '';
+    els.email.value = d.email || '';
+    els.instagram.value = d.instagram || '';
+    els.frase.value = d.frase || '';
+  }
+
+  function save(){
+    var nombre = nombreActual();
+    if (!nombre){
+      fmtStatus(els.savedNote, 'Falta tu nombre.', true);
+      return;
+    }
+    if (ROLE === 'gerencia'){
+      localStorage.setItem('byd_tarjeta_gerencia_nombre', nombre);
+    }
+
+    els.btnGuardar.disabled = true;
+    els.btnGuardar.textContent = 'Guardando…';
+    fmtStatus(els.savedNote, '', false);
+
+    var d = readForm();
+    d.nombre = nombre;
+
+    var subida = fotoEsNueva
+      ? subirFotoTarjeta(nombre, fotoDataUrl.split(',')[1], (fotoDataUrl.match(/^data:([^;]+);/) || [,'image/jpeg'])[1])
+          .then(function(res){ fotoFileIdActual = res.fileId; })
+      : Promise.resolve();
+
+    subida
+      .then(function(){
+        return llamarBackend('guardarTarjeta', {
+          nombre: nombre,
+          cargo: d.cargo,
+          sucursal: d.sucursal,
+          telefono: d.whatsapp,
+          email: d.email,
+          instagram: d.instagram,
+          frase: d.frase,
+          fotoFileId: fotoEsNueva ? fotoFileIdActual : undefined
+        });
+      })
+      .then(function(){
+        fotoEsNueva = false;
+        fmtStatus(els.savedNote, '✓ Guardado', false);
+        setTimeout(function(){ els.savedNote.textContent = ''; }, 2500);
+        showTab('preview');
+      })
+      .catch(function(err){
+        fmtStatus(els.savedNote, 'No se pudo guardar: ' + (err && err.message ? err.message : err), true);
+      })
+      .finally(function(){
+        els.btnGuardar.disabled = false;
+        els.btnGuardar.textContent = 'Guardar y ver mi tarjeta';
+      });
+  }
+  els.btnGuardar.addEventListener('click', save);
+
+  // ---------- Cargar datos existentes (si ya hay tarjeta guardada) ----------
+  function iniciar(){
+    var nombre = nombreActual();
+    if (!nombre){
+      els.loadingNote.style.display = 'none';
+      els.formContent.style.display = 'block';
+      return;
+    }
+    llamarBackend('obtenerTarjeta', { nombre: nombre })
+      .then(function(d){
+        if (d){
+          writeForm(d);
+          if (d.fotoDataUri){
+            fotoDataUrl = d.fotoDataUri;
+            fotoFileIdActual = d.fotoFileId || '';
+            els.photoImg.src = fotoDataUrl;
+            els.photoImg.style.display = 'block';
+            els.photoPh.style.display = 'none';
+          }
+        }
+      })
+      .catch(function(err){ console.error('No se pudo cargar la tarjeta existente:', err); })
+      .finally(function(){
+        els.loadingNote.style.display = 'none';
+        els.formContent.style.display = 'block';
+      });
+  }
+  iniciar();
+})();
+</script>
+</body>
+</html>
