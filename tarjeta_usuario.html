@@ -388,11 +388,24 @@
     if (!file) return;
     var reader = new FileReader();
     reader.onload = function(ev){
-      fotoDataUrl = ev.target.result;
-      fotoEsNueva = true;
-      els.photoImg.src = fotoDataUrl;
-      els.photoImg.style.display = 'block';
-      els.photoPh.style.display = 'none';
+      // Las fotos de celular pueden pesar varios MB y romper la subida (o
+      // venir en un formato como HEIC que el navegador no puede mostrar).
+      // Las redibujamos en un canvas, más chicas y como JPEG, antes de usarlas.
+      loadImage(ev.target.result).then(function(img){
+        var MAX = 800;
+        var scale = Math.min(1, MAX / Math.max(img.width, img.height));
+        var cw = Math.round(img.width * scale), ch = Math.round(img.height * scale);
+        var canvas = document.createElement('canvas');
+        canvas.width = cw; canvas.height = ch;
+        canvas.getContext('2d').drawImage(img, 0, 0, cw, ch);
+        fotoDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        fotoEsNueva = true;
+        els.photoImg.src = fotoDataUrl;
+        els.photoImg.style.display = 'block';
+        els.photoPh.style.display = 'none';
+      }).catch(function(){
+        fmtStatus(els.savedNote, 'No se pudo leer esa foto. Probá con otra (JPG o PNG).', true);
+      });
     };
     reader.readAsDataURL(file);
   });
