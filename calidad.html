@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BYD Yacopini &middot; Calidad</title>
+<style>
+  :root{
+    --negro:#0A0A0A;
+    --carbon:#2A2A2A;
+    --gris-oscuro:#4A4A4A;
+    --gris-medio:#8C8C8C;
+    --gris-claro:#D4D4D4;
+    --gris-fondo:#F2F2F2;
+    --blanco:#FFFFFF;
+    --azul-ev:#1565D8;
+    --verde:#388E3C;
+    --ambar:#D89614;
+    --rojo:#C0392B;
+  }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--gris-fondo); color:var(--negro); font-family:'Segoe UI', Arial, Helvetica, sans-serif; }
+  .app{ max-width:640px; margin:0 auto; padding:0 0 90px; }
+  .app-topbar{ background:var(--negro); padding:20px; display:flex; align-items:center; justify-content:space-between; }
+  .app-topbar svg{ height:32px; width:auto; display:block; }
+
+  .title-block{ padding:20px 20px 4px; }
+  .title-block h1{ font-size:21px; font-weight:800; margin:0 0 4px; }
+  .title-block p{ font-size:12.5px; color:var(--gris-oscuro); margin:0; line-height:1.5; }
+
+  .estado{ margin:10px 20px 0; padding:9px 12px; border-radius:8px; font-size:11.5px; line-height:1.5; }
+  .estado.cargando{ background:#EEF2F6; border:1px solid #D6DEE6; color:var(--gris-oscuro); }
+  .estado.error{ background:#FBEAEA; border:1px solid #E7B8B8; color:#8A2020; }
+  .oculto{ display:none !important; }
+
+  /* ---------- ingreso ---------- */
+  .login{ margin:24px 20px; background:var(--blanco); border-radius:14px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+  .login h2{ font-size:16px; margin:0 0 6px; }
+  .login p{ font-size:12.5px; color:var(--gris-oscuro); margin:0 0 16px; line-height:1.5; }
+  .login label{ display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--gris-oscuro); margin:12px 0 5px; }
+  .login input{ width:100%; padding:11px 12px; font-size:15px; font-family:inherit; border:1px solid var(--gris-claro); border-radius:10px; background:var(--gris-fondo); }
+  .login input:focus{ outline:none; border-color:var(--azul-ev); }
+  .login button{ width:100%; margin-top:18px; padding:12px; font-size:14px; font-weight:700; font-family:inherit; color:#fff; background:var(--negro); border:0; border-radius:24px; cursor:pointer; }
+  .login button:disabled{ opacity:.55; cursor:default; }
+
+  /* ---------- barra de periodo ---------- */
+  .periodo{ display:flex; align-items:center; gap:8px; padding:14px 20px 4px; }
+  .periodo button{ width:34px; height:34px; flex:none; border:1px solid var(--gris-claro); background:var(--blanco); border-radius:50%; font-size:16px; line-height:1; cursor:pointer; color:var(--negro); font-family:inherit; }
+  .periodo button:disabled{ opacity:.35; cursor:default; }
+  .periodo-txt{ flex:1; text-align:center; }
+  .periodo-txt .r{ font-size:14px; font-weight:800; }
+  .periodo-txt .s{ font-size:11px; color:var(--gris-medio); margin-top:1px; }
+  .tabs{ display:flex; gap:6px; padding:10px 20px 0; }
+  .tabs button{ flex:1; padding:8px; font-size:12px; font-weight:700; font-family:inherit; border:1px solid var(--gris-claro); background:var(--blanco); color:var(--gris-oscuro); border-radius:20px; cursor:pointer; }
+  .tabs button[aria-pressed="true"]{ background:var(--negro); color:#fff; border-color:var(--negro); }
+
+  /* ---------- fichas de totales ---------- */
+  .tiles{ display:grid; grid-template-columns:repeat(2,1fr); gap:8px; padding:14px 20px 0; }
+  .tile{ background:var(--blanco); border-radius:12px; padding:12px; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+  /* La quinta ficha va sola: ocupa el ancho para no dejar un hueco al lado. */
+  .tile.ancha{ grid-column:1/-1; }
+  .tile .k{ font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--gris-oscuro); }
+  .tile .v{ font-size:25px; font-weight:800; margin-top:3px; font-variant-numeric:tabular-nums; }
+  .tile .n{ font-size:10.5px; color:var(--gris-medio); margin-top:1px; }
+
+  /* ---------- listado por vendedor ---------- */
+  h2.sec{ font-size:13px; font-weight:800; margin:22px 20px 0; }
+  h2.sec + .hint{ font-size:11.5px; color:var(--gris-medio); margin:3px 20px 0; line-height:1.45; }
+  .lista{ padding:12px 20px 0; display:flex; flex-direction:column; gap:8px; }
+  .fila{ background:var(--blanco); border:1px solid var(--gris-claro); border-radius:12px; padding:11px 12px; }
+  .fila-top{ display:flex; align-items:center; gap:10px; }
+  .avatar{ width:34px; height:34px; border-radius:50%; background:var(--carbon); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:12px; flex:none; }
+  .nombre{ flex:1; min-width:0; font-size:13.5px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .ventas{ font-size:17px; font-weight:800; font-variant-numeric:tabular-nums; flex:none; }
+  .ventas span{ font-size:10px; font-weight:700; color:var(--gris-oscuro); text-transform:uppercase; letter-spacing:.04em; margin-left:3px; }
+  /* Barra de magnitud: un solo tono, con el valor siempre escrito al lado.
+     El numero no depende del color, asi que se lee igual en blanco y negro. */
+  .barra{ height:8px; background:var(--gris-fondo); border-radius:4px; margin-top:9px; overflow:hidden; }
+  .barra i{ display:block; height:100%; background:var(--azul-ev); border-radius:4px; }
+  .metricas{ display:flex; flex-wrap:wrap; gap:6px; margin-top:9px; }
+  .m{ font-size:10.5px; font-weight:700; padding:3px 8px; border-radius:20px; background:var(--gris-fondo); color:var(--gris-oscuro); }
+  .m b{ font-variant-numeric:tabular-nums; }
+  /* Los colores de estado van siempre con su etiqueta escrita al lado. */
+  .m.bien{ background:#E8F3E9; color:#256B28; }
+  .m.medio{ background:#FBF1DC; color:#7A5410; }
+  .m.mal{ background:#FBEAEA; color:#8A2020; }
+  .vacio{ margin:14px 20px; padding:22px; text-align:center; background:var(--blanco); border-radius:12px; color:var(--gris-medio); font-size:12.5px; line-height:1.6; }
+
+  /* ---------- detecciones tempranas ---------- */
+  .casos{ padding:12px 20px 0; display:flex; flex-direction:column; gap:8px; }
+  .caso{ background:var(--blanco); border:1px solid var(--gris-claro); border-radius:12px; padding:11px 12px; }
+  .caso-top{ display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+  .caso-quien{ flex:1; min-width:0; font-size:12.5px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .caso-fecha{ font-size:10.5px; color:var(--gris-medio); flex:none; }
+  .caso p{ margin:0; font-size:12.5px; line-height:1.5; color:var(--carbon); }
+  .caso-pie{ margin-top:7px; font-size:10.5px; color:var(--gris-medio); }
+  /* El estado va escrito, no sólo con color: se entiende igual en blanco y negro. */
+  .chip{ font-size:10px; font-weight:700; padding:3px 8px; border-radius:20px; flex:none; text-transform:uppercase; letter-spacing:.04em; }
+  .chip.nueva{ background:#FBEAEA; color:#8A2020; }
+  .chip.en_gestion{ background:#FBF1DC; color:#7A5410; }
+  .chip.resuelta{ background:#E8F3E9; color:#256B28; }
+  .chip.anulada{ background:var(--gris-fondo); color:var(--gris-oscuro); }
+
+  /* ---------- evolucion ---------- */
+  .grafico{ margin:12px 20px 0; background:var(--blanco); border-radius:12px; padding:14px 12px 10px; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+  .grafico svg{ display:block; width:100%; height:auto; }
+  .leyenda{ display:flex; gap:14px; justify-content:center; margin-top:8px; font-size:10.5px; color:var(--gris-oscuro); font-weight:700; }
+  .leyenda i{ width:9px; height:9px; border-radius:2px; display:inline-block; margin-right:4px; vertical-align:-1px; }
+
+  .pie{ font-size:10.5px; color:var(--gris-medio); text-align:center; padding:22px 24px 0; line-height:1.6; }
+  .salir{ display:block; margin:16px auto 0; background:none; border:0; color:var(--gris-medio); font-size:11.5px; font-family:inherit; text-decoration:underline; cursor:pointer; }
+</style>
+</head>
+<body>
+
+<div class="app-topbar">
+  <svg viewBox="12 4 529 102" xmlns="http://www.w3.org/2000/svg" aria-label="BYD Yacopini">
+    <defs><style>.st0{fill:#FFFFFF;}</style></defs>
+    <path class="st0" d="M162.93,19.18c-8.06-12.16-21.88-14.53-31.23-14.75-8.23-.19-43.9-.23-64.67-.24-40.91-.03-17.51-.01-54.36-.01v19.54c43.75,0,95.68-.1,118.41.25,4.06.06,8.08.47,11.27,3.3,2.97,2.64,4.02,6.79,2.69,10.4-2.14,5.83-8.07,7.28-13.96,7.37-9.01.14-33.77.19-52.24.22-45.3.06-25.68.03-66.16.03v19.49c43.72,0,95.76-.09,118.41.25,7.06.1,14.53,2.56,14.53,10.43s-7.46,10.45-14.53,10.56c-22.59.33-74.66.24-118.41.24v19.53c43.88,0,101.32.16,119.03-.25,9.35-.22,23.18-2.59,31.23-14.75,7.56-11.41,5.71-26.27-4.22-35.8,9.93-9.54,11.78-24.39,4.21-35.8"/>
+    <path class="st0" d="M520.08,15.93c-13.35-9.58-27.85-10.94-39.61-11.21-11.58-.27-29.05-.39-44.5-.45-37.67-.15-15.02-.08-50.91-.08v19.6c38.19,0,64.97-.32,94.46.52,8.66.24,17.95,1.16,26.31,6.96,7.92,5.5,12.62,14.26,12.62,23.72s-4.57,18.24-12.49,23.74c-8.36,5.81-17.65,6.72-26.31,6.96-29.49.83-56.27.51-94.46.51l-.13,19.59c38.41,0,66.03.14,95.41-.54,11.76-.27,26.26-1.63,39.61-11.21,12.67-9.09,20.33-23.36,20.33-39.05s-7.67-29.97-20.33-39.05"/>
+    <path class="st0" d="M227.22,48.06c-10.23-.2-13.49-3.54-13.56-13.73-.07-9.42-.02-20.58-.02-30.14h-22.56c0,9.67-.19,29.24.19,38.7.74,18.38,6.77,24.11,25.55,24.75,13.02.44,23.36.29,41.36.28v-19.69c-14.43,0-20.31.04-30.96-.16"/>
+    <path class="st0" d="M339.04,34.68c-.07,9.92-3.3,13.18-13.56,13.38-4.89.09-17.75.14-28.33.16h0s-.1.01-.1.01c-10.81,0-22.34-.02-29.1-.02v57.57h26.52v-37.88c.81,0,1.68,0,2.58,0h0s.1,0,.1,0v.02c13.8,0,31.04-.06,37.55-.26,19.93-.61,26-6.23,26.73-24.78.1-2.48.16-5.62.19-9.06V4.18h-22.56c0,9.8.04,20.81-.03,30.5"/>
+  </svg>
+</div>
+
+<div class="app">
+  <div class="title-block">
+    <h1>Calidad</h1>
+    <p>El resultado de cada vendedor semana por semana: entregas, NPS de fábrica, reclamos del call center
+       y las detecciones tempranas que cargó cada uno.</p>
+  </div>
+
+  <!-- ============ INGRESO ============ -->
+  <div class="login oculto" id="login">
+    <h2>Entrá con tu cuenta del Portal</h2>
+    <p>Es la misma cuenta del Portal de Calidad. Se pide una sola vez en este teléfono.</p>
+    <form id="loginForm">
+      <label for="mail">Email</label>
+      <input id="mail" type="email" autocomplete="username" required>
+      <label for="pass">Contraseña</label>
+      <input id="pass" type="password" autocomplete="current-password" required>
+      <button type="submit" id="btnEntrar">Entrar</button>
+    </form>
+    <div class="estado error oculto" id="loginError"></div>
+  </div>
+
+  <!-- ============ PANEL ============ -->
+  <div class="oculto" id="panel">
+    <div class="tabs">
+      <button type="button" id="tabSemana" aria-pressed="true">Por semana</button>
+      <button type="button" id="tabMes" aria-pressed="false">Por mes</button>
+    </div>
+
+    <div class="periodo">
+      <button type="button" id="antes" aria-label="Período anterior">‹</button>
+      <div class="periodo-txt">
+        <div class="r" id="rango">—</div>
+        <div class="s" id="subrango"></div>
+      </div>
+      <button type="button" id="despues" aria-label="Período siguiente">›</button>
+    </div>
+
+    <div class="estado cargando oculto" id="cargando">Cargando…</div>
+    <div class="estado error oculto" id="error"></div>
+
+    <div class="tiles" id="tiles"></div>
+
+    <h2 class="sec">Evolución de las últimas 8 semanas</h2>
+    <div class="grafico" id="grafico"></div>
+
+    <h2 class="sec">Cada vendedor</h2>
+    <p class="hint" id="hintLista"></p>
+    <div class="lista" id="lista"></div>
+
+    <h2 class="sec">Detecciones tempranas</h2>
+    <p class="hint" id="hintCasos"></p>
+    <div class="casos" id="casos"></div>
+
+    <p class="pie">
+      Los datos salen del Portal de Calidad y se actualizan solos: la pantalla los
+      vuelve a pedir cada cinco minutos y cada vez que volvés a ella.<br>
+      <span id="actualizado"></span><br>
+      <a href="https://byd-portal-calidad.netlify.app" target="_blank" rel="noopener">Abrir el Portal de Calidad</a>
+    </p>
+    <button type="button" class="salir" id="salir">Cerrar sesión</button>
+  </div>
+</div>
+
+<a id="hubBackBtn" href="./index.html" style="position:fixed;bottom:18px;left:18px;z-index:999999;
+   background:#0A0A0A;color:#fff;border-radius:24px;padding:10px 16px;font:700 13px 'Segoe UI',Arial,sans-serif;
+   text-decoration:none;box-shadow:0 3px 12px rgba(0,0,0,.28);">‹ Volver</a>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+
+// La clave anónima es pública por diseño: no da acceso a nada por sí sola. Lo
+// que protege los datos es el permiso por fila de la base, que exige una
+// sesión iniciada y además le oculta a cada vendedor lo de los demás. Por eso
+// esta pantalla pide entrar en vez de traer los datos sin más.
+const URL_BASE = 'https://mgicnwnvtfkrxmkmewnt.supabase.co'
+const CLAVE_PUBLICA = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1naWNud252dGZrcnhta21ld250Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1Nzk5MDIsImV4cCI6MjEwNTE1NTkwMn0.GLWN_wI6Q_6Qu1EGi02oPNrL9wgTj-zbGsJCoIE-HQE'
+
+const db = createClient(URL_BASE, CLAVE_PUBLICA)
+
+const $ = (id) => document.getElementById(id)
+const ver = (el, si) => el.classList.toggle('oculto', !si)
+
+// ---------------------------------------------------------------- fechas
+const DIA = 86400000
+const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre']
+
+// La semana arranca el lunes, que es como se mira el negocio.
+function lunesDe(fecha) {
+  const d = new Date(fecha)
+  d.setHours(0, 0, 0, 0)
+  const desplazamiento = (d.getDay() + 6) % 7
+  return new Date(d.getTime() - desplazamiento * DIA)
+}
+const iso = (d) => d.toISOString().slice(0, 10)
+const soloFecha = (s) => (s ?? '').slice(0, 10)
+// Las detecciones guardan la hora completa en UTC: una cargada a las 22 de
+// Mendoza es la 1 del día siguiente en UTC y caería en la semana equivocada.
+function fechaLocalDe(instante) {
+  const d = new Date(instante)
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  return `${d.getFullYear()}-${m}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function rotuloSemana(lunes) {
+  const domingo = new Date(lunes.getTime() + 6 * DIA)
+  const mismoMes = lunes.getMonth() === domingo.getMonth()
+  const a = `${lunes.getDate()}${mismoMes ? '' : ' de ' + MESES[lunes.getMonth()]}`
+  return {
+    titulo: `Del ${a} al ${domingo.getDate()} de ${MESES[domingo.getMonth()]}`,
+    sub: `${lunes.getFullYear()} · semana del ${iso(lunes)}`,
+  }
+}
+
+// ---------------------------------------------------------------- estado
+let datos = null          // lo que se trajo de la base, una sola vez
+let modo = 'semana'       // 'semana' | 'mes'
+let cursor = lunesDe(new Date())   // lunes de la semana mostrada
+let cursorMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+
+// ---------------------------------------------------------------- ingreso
+async function arrancar() {
+  const { data } = await db.auth.getSession()
+  if (data.session) { ver($('login'), false); ver($('panel'), true); await cargar() }
+  else { ver($('login'), true); ver($('panel'), false) }
+}
+
+$('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault()
+  const btn = $('btnEntrar')
+  btn.disabled = true
+  btn.textContent = 'Entrando…'
+  ver($('loginError'), false)
+  const { error } = await db.auth.signInWithPassword({
+    email: $('mail').value.trim(),
+    password: $('pass').value,
+  })
+  btn.disabled = false
+  btn.textContent = 'Entrar'
+  if (error) {
+    $('loginError').textContent =
+      error.message === 'Invalid login credentials'
+        ? 'El email o la contraseña no coinciden.'
+        : error.message
+    ver($('loginError'), true)
+    return
+  }
+  ver($('login'), false)
+  ver($('panel'), true)
+  await cargar()
+})
+
+$('salir').addEventListener('click', async () => {
+  await db.auth.signOut()
+  location.reload()
+})
+
+// ---------------------------------------------------------------- datos
+// `callado` es el refresco automático: no muestra "Cargando…" para no hacer
+// parpadear la pantalla mientras el gerente la está mirando.
+async function cargar(callado = false) {
+  ultima = Date.now()
+  ver($('cargando'), !callado)
+  ver($('error'), false)
+  try {
+    // Solo las columnas que se usan: traer la fila entera multiplica por seis
+    // lo que baja el teléfono sin agregar nada a la pantalla.
+    const [ops, enc, vend, det, perf] = await Promise.all([
+      db.from('operaciones').select('fecha_venta,vendedor_id'),
+      db.from('encuestas').select('canal,fecha,vendedor_id,nps,tiene_reclamo'),
+      db.from('vendedores').select('id,nombre,activo,perfil_id'),
+      db.from('detecciones').select('created_at,descripcion,cliente_nombre,estado,vendedor_id,reportado_por'),
+      db.from('perfiles').select('id,nombre'),
+    ])
+    for (const r of [ops, enc, vend, det, perf]) if (r.error) throw r.error
+
+    // La detección guarda el perfil de quien la cargó y, si su ficha está
+    // vinculada, también el vendedor. Cuando falta lo segundo se recupera por
+    // el perfil, que es lo que pasa con los que se registraron después.
+    const vendedorDePerfil = new Map()
+    for (const v of vend.data ?? []) if (v.perfil_id) vendedorDePerfil.set(v.perfil_id, v.id)
+
+    datos = {
+      operaciones: ops.data ?? [],
+      encuestas: enc.data ?? [],
+      vendedores: new Map((vend.data ?? []).map((v) => [v.id, v.nombre])),
+      perfiles: new Map((perf.data ?? []).map((p) => [p.id, p.nombre])),
+      detecciones: (det.data ?? []).map((d) => ({
+        ...d,
+        vendedor_id: d.vendedor_id ?? vendedorDePerfil.get(d.reportado_por) ?? null,
+      })),
+    }
+    ver($('cargando'), false)
+    $('actualizado').textContent =
+      'Actualizado a las ' +
+      new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })
+    pintar()
+  } catch (e) {
+    ver($('cargando'), false)
+    $('error').textContent =
+      'No pudimos leer los datos: ' + (e.message ?? e) +
+      '. Si dice que no tenés permiso, pedile a Calidad que active tu usuario.'
+    ver($('error'), true)
+  }
+}
+
+// ---------------------------------------------------------------- cálculo
+function rango() {
+  if (modo === 'semana') {
+    const desde = iso(cursor)
+    const hasta = iso(new Date(cursor.getTime() + 6 * DIA))
+    return { desde, hasta }
+  }
+  const fin = new Date(cursorMes.getFullYear(), cursorMes.getMonth() + 1, 0)
+  return { desde: iso(cursorMes), hasta: iso(fin) }
+}
+
+// El NPS no es un promedio de promedios: hay que recontar promotores y
+// detractores sobre el total, igual que en el Portal.
+function npsDe(encuestas) {
+  const con = encuestas.filter((e) => e.nps !== null && e.nps !== undefined)
+  if (con.length === 0) return { nps: null, total: 0 }
+  const pro = con.filter((e) => e.nps >= 9).length
+  const det = con.filter((e) => e.nps <= 6).length
+  return { nps: Math.round(((pro - det) / con.length) * 1000) / 10, total: con.length }
+}
+
+function resumen(desde, hasta) {
+  const dentro = (f) => { const d = soloFecha(f); return d >= desde && d <= hasta }
+  const ops = datos.operaciones.filter((o) => dentro(o.fecha_venta))
+  const byd = datos.encuestas.filter((e) => e.canal === 'app_byd' && dentro(e.fecha))
+  const internas = datos.encuestas.filter((e) => e.canal === 'interna' && dentro(e.fecha))
+  const detecciones = datos.detecciones
+    .filter((d) => { const f = fechaLocalDe(d.created_at); return f >= desde && f <= hasta })
+    .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
+
+  const porVendedor = new Map()
+  const fila = (id) => {
+    if (!porVendedor.has(id)) {
+      porVendedor.set(id, { id, nombre: datos.vendedores.get(id) ?? 'Sin vendedor', ventas: 0, byd: [], internas: 0, reclamos: 0, detecciones: 0 })
+    }
+    return porVendedor.get(id)
+  }
+  for (const o of ops) if (o.vendedor_id) fila(o.vendedor_id).ventas++
+  for (const e of byd) if (e.vendedor_id) fila(e.vendedor_id).byd.push(e)
+  for (const e of internas) if (e.vendedor_id) {
+    const f = fila(e.vendedor_id)
+    f.internas++
+    if (e.tiene_reclamo) f.reclamos++
+  }
+  for (const d of detecciones) if (d.vendedor_id) fila(d.vendedor_id).detecciones++
+
+  const filas = [...porVendedor.values()]
+    .map((f) => ({ ...f, ...npsDe(f.byd) }))
+    .sort((a, b) => b.ventas - a.ventas || (b.nps ?? -Infinity) - (a.nps ?? -Infinity))
+
+  const reclamos = internas.filter((e) => e.tiene_reclamo).length
+  return {
+    ventas: ops.length,
+    // La planilla de BYD marca "Otros" cuando no le asigna la venta a nadie
+    // (reventa). Se cuenta aparte para que el total y la lista cierren.
+    sinVendedor: ops.filter((o) => !o.vendedor_id).length,
+    ...npsDe(byd),
+    internas: internas.length,
+    reclamos,
+    pctReclamos: internas.length === 0 ? null : Math.round((reclamos / internas.length) * 1000) / 10,
+    filas,
+    detecciones,
+    sinResolver: detecciones.filter((d) => d.estado === 'nueva' || d.estado === 'en_gestion').length,
+  }
+}
+
+// ---------------------------------------------------------------- pintar
+const iniciales = (n) => n.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase()
+const num = (v, suf = '') => (v === null || v === undefined ? '—' : v + suf)
+// La descripción de una detección la escribe el vendedor a mano: se escapa
+// antes de meterla en la página para que un "<" no rompa el listado.
+const escapar = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
+
+function pintar() {
+  if (!datos) return
+  const { desde, hasta } = rango()
+  const r = resumen(desde, hasta)
+
+  if (modo === 'semana') {
+    const { titulo, sub } = rotuloSemana(cursor)
+    $('rango').textContent = titulo
+    $('subrango').textContent = sub
+    $('despues').disabled = cursor.getTime() >= lunesDe(new Date()).getTime()
+  } else {
+    $('rango').textContent = MESES[cursorMes.getMonth()][0].toUpperCase() + MESES[cursorMes.getMonth()].slice(1) + ' ' + cursorMes.getFullYear()
+    $('subrango').textContent = `del ${desde} al ${hasta}`
+    const hoy = new Date()
+    $('despues').disabled = cursorMes.getFullYear() >= hoy.getFullYear() && cursorMes.getMonth() >= hoy.getMonth()
+  }
+
+  $('tiles').innerHTML = [
+    ['Vehículos entregados', r.ventas, r.ventas === 1 ? 'una entrega' : 'entregas', ''],
+    ['NPS de fábrica', num(r.nps, '%'), `sobre ${r.total} ${r.total === 1 ? 'encuesta' : 'encuestas'}`, ''],
+    ['Llamadas del call center', r.internas, r.internas === 1 ? 'una llamada' : 'llamadas', ''],
+    ['Con reclamo', num(r.pctReclamos, '%'), `${r.reclamos} de ${r.internas}`, ''],
+    ['Detecciones tempranas', r.detecciones.length,
+      r.detecciones.length === 0 ? 'ningún caso cargado' : `${r.sinResolver} sin resolver`, ' ancha'],
+  ].map(([k, v, n, c]) => `<div class="tile${c}"><div class="k">${k}</div><div class="v">${v}</div><div class="n">${n}</div></div>`).join('')
+
+  pintarLista(r)
+  pintarCasos(r)
+  pintarGrafico()
+}
+
+function pintarLista(r) {
+  const periodo = modo === 'semana' ? 'esa semana' : 'ese mes'
+  // Se aclara la diferencia con la ficha de arriba: si no, parece que faltan
+  // entregas cuando en realidad BYD no se las asignó a nadie.
+  const reventa = r.sinVendedor === 0 ? '' :
+    ` Además hubo ${r.sinVendedor} ${r.sinVendedor === 1 ? 'entrega' : 'entregas'} de reventa, que la planilla de BYD no le asigna a ningún vendedor.`
+  $('hintLista').textContent =
+    `Ordenados por entregas. Solo aparecen los que tuvieron movimiento ${periodo}.` + reventa
+
+  if (r.filas.length === 0) {
+    $('lista').innerHTML = `<div class="vacio">Ningún vendedor tuvo movimiento ${periodo}.<br>Probá con otro período.</div>`
+    return
+  }
+  const tope = Math.max(...r.filas.map((f) => f.ventas), 1)
+
+  $('lista').innerHTML = r.filas.map((f) => {
+    // El color siempre va con el número escrito al lado: nunca es lo único
+    // que distingue un resultado bueno de uno malo.
+    const claseNps = f.nps === null ? '' : f.nps >= 70 ? ' bien' : f.nps >= 40 ? ' medio' : ' mal'
+    const pctRec = f.internas === 0 ? null : Math.round((f.reclamos / f.internas) * 1000) / 10
+    const claseRec = pctRec === null ? '' : pctRec === 0 ? ' bien' : pctRec <= 30 ? ' medio' : ' mal'
+    return `
+      <div class="fila">
+        <div class="fila-top">
+          <div class="avatar">${iniciales(f.nombre)}</div>
+          <div class="nombre">${escapar(f.nombre)}</div>
+          <div class="ventas">${f.ventas}<span>entreg.</span></div>
+        </div>
+        <div class="barra"><i style="width:${Math.round((f.ventas / tope) * 100)}%"></i></div>
+        <div class="metricas">
+          <span class="m${claseNps}">NPS <b>${num(f.nps, '%')}</b>${f.total ? ` · ${f.total} enc.` : ' · sin encuestas'}</span>
+          <span class="m${claseRec}">Reclamos <b>${num(pctRec, '%')}</b>${f.internas ? ` · ${f.reclamos} de ${f.internas}` : ' · sin llamadas'}</span>
+          <span class="m">Detecciones <b>${f.detecciones}</b></span>
+        </div>
+      </div>`
+  }).join('')
+}
+
+// Los casos que cargaron los vendedores, del más nuevo al más viejo. Van
+// enteros y no resumidos: el gerente quiere leer qué pasó, no contar cuántos.
+function pintarCasos(r) {
+  const periodo = modo === 'semana' ? 'esa semana' : 'ese mes'
+  $('hintCasos').textContent =
+    'Lo que el vendedor avisa apenas lo detecta, sin esperar a que aparezca en una encuesta.'
+
+  if (r.detecciones.length === 0) {
+    $('casos').innerHTML = `<div class="vacio">Nadie cargó detecciones ${periodo}.</div>`
+    return
+  }
+  const ESTADO = { nueva: 'Nueva', en_gestion: 'En gestión', resuelta: 'Resuelta', anulada: 'Anulada' }
+
+  $('casos').innerHTML = r.detecciones.map((d) => {
+    const quien = (d.vendedor_id && datos.vendedores.get(d.vendedor_id))
+      || datos.perfiles.get(d.reportado_por)
+      || 'Sin identificar'
+    const f = new Date(d.created_at)
+    const fecha = `${f.getDate()}/${f.getMonth() + 1}`
+    return `
+      <div class="caso">
+        <div class="caso-top">
+          <div class="avatar">${iniciales(quien)}</div>
+          <div class="caso-quien">${escapar(quien)}</div>
+          <span class="chip ${d.estado}">${ESTADO[d.estado] ?? d.estado}</span>
+          <span class="caso-fecha">${fecha}</span>
+        </div>
+        <p>${escapar(d.descripcion ?? '')}</p>
+        ${d.cliente_nombre ? `<div class="caso-pie">Cliente: ${escapar(d.cliente_nombre)}</div>` : ''}
+      </div>`
+  }).join('')
+}
+
+// Evolución: una sola serie por gráfico y el valor escrito sobre la barra más
+// alta, para no repetir un número en cada columna.
+function pintarGrafico() {
+  const semanas = []
+  const base = modo === 'semana' ? cursor : lunesDe(new Date(cursorMes.getFullYear(), cursorMes.getMonth() + 1, 0))
+  for (let i = 7; i >= 0; i--) {
+    const lunes = new Date(base.getTime() - i * 7 * DIA)
+    const r = resumen(iso(lunes), iso(new Date(lunes.getTime() + 6 * DIA)))
+    semanas.push({ lunes, ventas: r.ventas, nps: r.nps })
+  }
+  const tope = Math.max(...semanas.map((s) => s.ventas), 1)
+  const ANCHO = 320, ALTO = 104, hueco = 6
+  // Aire arriba para la etiqueta de la barra más alta: sin esto el número
+  // queda cortado contra el borde del gráfico.
+  const AIRE = 14, PIE = 16
+  const ancho = (ANCHO - hueco * (semanas.length - 1)) / semanas.length
+
+  const barras = semanas.map((s, i) => {
+    const h = Math.max(s.ventas === 0 ? 0 : 3, Math.round((s.ventas / tope) * (ALTO - PIE - AIRE)))
+    const x = i * (ancho + hueco)
+    const y = ALTO - PIE - h
+    const ultima = i === semanas.length - 1
+    const etiqueta = (s.ventas === tope || ultima) && s.ventas > 0
+      ? `<text x="${x + ancho / 2}" y="${y - 4}" text-anchor="middle" font-size="10" font-weight="700" fill="#0A0A0A">${s.ventas}</text>`
+      : ''
+    return `
+      <rect x="${x}" y="${y}" width="${ancho}" height="${h}" rx="3"
+            fill="${ultima ? '#1565D8' : '#B9CDEB'}"><title>Semana del ${iso(s.lunes)}: ${s.ventas} entregas${s.nps === null ? '' : ', NPS ' + s.nps + '%'}</title></rect>
+      ${etiqueta}
+      <text x="${x + ancho / 2}" y="${ALTO - 3}" text-anchor="middle" font-size="9" fill="#8C8C8C">${s.lunes.getDate()}/${s.lunes.getMonth() + 1}</text>`
+  }).join('')
+
+  $('grafico').innerHTML = `
+    <svg viewBox="0 0 ${ANCHO} ${ALTO}" role="img"
+         aria-label="Vehículos entregados por semana en las últimas ocho semanas">${barras}</svg>
+    <div class="leyenda"><span><i style="background:#1565D8"></i>Semana mostrada</span><span><i style="background:#B9CDEB"></i>Semanas previas</span></div>`
+}
+
+// ---------------------------------------------------------------- controles
+$('antes').addEventListener('click', () => {
+  if (modo === 'semana') cursor = new Date(cursor.getTime() - 7 * DIA)
+  else cursorMes = new Date(cursorMes.getFullYear(), cursorMes.getMonth() - 1, 1)
+  pintar()
+})
+$('despues').addEventListener('click', () => {
+  if (modo === 'semana') cursor = new Date(cursor.getTime() + 7 * DIA)
+  else cursorMes = new Date(cursorMes.getFullYear(), cursorMes.getMonth() + 1, 1)
+  pintar()
+})
+$('tabSemana').addEventListener('click', () => {
+  modo = 'semana'
+  $('tabSemana').setAttribute('aria-pressed', 'true')
+  $('tabMes').setAttribute('aria-pressed', 'false')
+  pintar()
+})
+$('tabMes').addEventListener('click', () => {
+  modo = 'mes'
+  $('tabMes').setAttribute('aria-pressed', 'true')
+  $('tabSemana').setAttribute('aria-pressed', 'false')
+  pintar()
+})
+
+// ---------------------------------------------------------------- al día
+// El Portal se sincroniza solo con las planillas, así que los números cambian
+// mientras la pantalla está abierta. Se vuelven a pedir cada cinco minutos y
+// cada vez que el gerente vuelve a la pestaña, para que no mire datos viejos.
+const CADA = 5 * 60 * 1000
+let ultima = 0
+
+async function refrescar() {
+  if (!datos) return                         // todavía no entró
+  if (Date.now() - ultima < 30000) return    // no atosigar a la base
+  await cargar(true)
+}
+
+setInterval(refrescar, CADA)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') refrescar()
+})
+
+// El botón de volver apunta al panel del que vino, igual que el resto del hub.
+;(function () {
+  const b = document.getElementById('hubBackBtn')
+  if (b && sessionStorage.getItem('bydJefeOk') === '1') b.href = './panel_jefe.html'
+  else if (b && sessionStorage.getItem('bydVendorOk') === '1') b.href = './panel_ventas.html'
+})()
+
+arrancar()
+</script>
+</body>
+</html>
