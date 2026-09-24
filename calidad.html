@@ -54,6 +54,15 @@
   .tabs button{ flex:1; padding:8px; font-size:12px; font-weight:700; font-family:inherit; border:1px solid var(--gris-claro); background:var(--blanco); color:var(--gris-oscuro); border-radius:20px; cursor:pointer; }
   .tabs button[aria-pressed="true"]{ background:var(--negro); color:#fff; border-color:var(--negro); }
 
+  /* ---------- filtro por vendedor ---------- */
+  .filtro{ padding:10px 20px 0; }
+  .filtro label{ display:block; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--gris-oscuro); margin-bottom:5px; }
+  .filtro select{ width:100%; padding:10px 12px; font-size:14px; font-family:inherit; color:var(--negro); background:var(--blanco); border:1px solid var(--gris-claro); border-radius:10px; }
+  .filtro select:focus{ outline:none; border-color:var(--azul-ev); }
+  /* Cuando hay uno elegido se nota, para que no se lea un numero chico como
+     si fuera el del concesionario entero. */
+  .filtro select.puesto{ border-color:var(--azul-ev); font-weight:700; }
+
   /* ---------- fichas de totales ---------- */
   .tiles{ display:grid; grid-template-columns:repeat(2,1fr); gap:8px; padding:14px 20px 0; }
   .tile{ background:var(--blanco); border-radius:12px; padding:12px; box-shadow:0 1px 3px rgba(0,0,0,.06); }
@@ -163,6 +172,11 @@
       <button type="button" id="tabMes" aria-pressed="false">Por mes</button>
     </div>
 
+    <div class="filtro">
+      <label for="filtroVendedor">Vendedor</label>
+      <select id="filtroVendedor"><option value="">Todos los vendedores</option></select>
+    </div>
+
     <div class="periodo">
       <button type="button" id="antes" aria-label="Período anterior">‹</button>
       <div class="periodo-txt">
@@ -251,6 +265,7 @@ function rotuloSemana(lunes) {
 // ---------------------------------------------------------------- estado
 let datos = null          // lo que se trajo de la base, una sola vez
 let modo = 'semana'       // 'semana' | 'mes'
+let vendedorElegido = ''  // '' = todos
 let cursor = lunesDe(new Date())   // lunes de la semana mostrada
 let cursorMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
 
@@ -326,6 +341,7 @@ async function cargar(callado = false) {
         vendedor_id: d.vendedor_id ?? vendedorDePerfil.get(d.reportado_por) ?? null,
       })),
     }
+    llenarVendedores(vend.data ?? [])
     ver($('cargando'), false)
     $('actualizado').textContent =
       'Actualizado a las ' +
@@ -339,6 +355,29 @@ async function cargar(callado = false) {
     ver($('error'), true)
   }
 }
+
+// Sólo los que están en actividad, por nombre. El elegido se conserva cuando
+// la pantalla se refresca sola: si no, cada cinco minutos volvería a "todos"
+// mientras el gerente está mirando a una persona.
+function llenarVendedores(vendedores) {
+  const activos = vendedores
+    .filter((v) => v.activo)
+    .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
+  if (!activos.some((v) => v.id === vendedorElegido)) vendedorElegido = ''
+
+  const sel = $('filtroVendedor')
+  sel.innerHTML =
+    '<option value="">Todos los vendedores</option>' +
+    activos.map((v) => `<option value="${v.id}">${escapar(v.nombre)}</option>`).join('')
+  sel.value = vendedorElegido
+  sel.classList.toggle('puesto', vendedorElegido !== '')
+}
+
+$('filtroVendedor').addEventListener('change', (e) => {
+  vendedorElegido = e.target.value
+  e.target.classList.toggle('puesto', vendedorElegido !== '')
+  pintar()
+})
 
 // ---------------------------------------------------------------- cálculo
 function rango() {
@@ -363,11 +402,16 @@ function npsDe(encuestas) {
 
 function resumen(desde, hasta) {
   const dentro = (f) => { const d = soloFecha(f); return d >= desde && d <= hasta }
-  const ops = datos.operaciones.filter((o) => dentro(o.fecha_venta))
-  const byd = datos.encuestas.filter((e) => e.canal === 'app_byd' && dentro(e.fecha))
-  const internas = datos.encuestas.filter((e) => e.canal === 'interna' && dentro(e.fecha))
+  // Con un vendedor elegido, lo que no está a nombre de nadie queda afuera:
+  // sumarle las reventas a una persona seria acreditarle ventas que no hizo.
+  const suyo = (id) => !vendedorElegido || id === vendedorElegido
+
+  const ops = datos.operaciones.filter((o) => dentro(o.fecha_venta) && suyo(o.vendedor_id))
+  const byd = datos.encuestas.filter((e) => e.canal === 'app_byd' && dentro(e.fecha) && suyo(e.vendedor_id))
+  const internas = datos.encuestas.filter((e) => e.canal === 'interna' && dentro(e.fecha) && suyo(e.vendedor_id))
   const detecciones = datos.detecciones
-    .filter((d) => { const f = fechaLocalDe(d.created_at); return f >= desde && f <= hasta })
+    .filter((d) => fechaLocalDe(d.created_at) >= desde && fechaLocalDe(d.created_at) <= hasta)
+    .filter((d) => suyo(d.vendedor_id))
     .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
 
   const porVendedor = new Map()
@@ -450,11 +494,15 @@ function pintarLista(r) {
   // entregas cuando en realidad BYD no se las asignó a nadie.
   const reventa = r.sinVendedor === 0 ? '' :
     ` Además hubo ${r.sinVendedor} ${r.sinVendedor === 1 ? 'entrega' : 'entregas'} de reventa, que la planilla de BYD no le asigna a ningún vendedor.`
-  $('hintLista').textContent =
-    `Ordenados por entregas. Solo aparecen los que tuvieron movimiento ${periodo}.` + reventa
+  $('hintLista').textContent = vendedorElegido
+    ? `Todo lo de arriba es solo de esta persona. Para ver el concesionario entero, elegí "Todos los vendedores".`
+    : `Ordenados por entregas. Solo aparecen los que tuvieron movimiento ${periodo}.` + reventa
 
   if (r.filas.length === 0) {
-    $('lista').innerHTML = `<div class="vacio">Ningún vendedor tuvo movimiento ${periodo}.<br>Probá con otro período.</div>`
+    const quien = vendedorElegido
+      ? `${escapar(datos.vendedores.get(vendedorElegido) ?? 'Esa persona')} no tuvo movimiento ${periodo}.`
+      : `Ningún vendedor tuvo movimiento ${periodo}.`
+    $('lista').innerHTML = `<div class="vacio">${quien}<br>Probá con otro período.</div>`
     return
   }
   const tope = Math.max(...r.filas.map((f) => f.ventas), 1)
@@ -490,7 +538,10 @@ function pintarCasos(r) {
     'Lo que el vendedor avisa apenas lo detecta, sin esperar a que aparezca en una encuesta.'
 
   if (r.detecciones.length === 0) {
-    $('casos').innerHTML = `<div class="vacio">Nadie cargó detecciones ${periodo}.</div>`
+    const quien = vendedorElegido
+      ? `${escapar(datos.vendedores.get(vendedorElegido) ?? 'Esa persona')} no cargó detecciones ${periodo}.`
+      : `Nadie cargó detecciones ${periodo}.`
+    $('casos').innerHTML = `<div class="vacio">${quien}</div>`
     return
   }
   const ESTADO = { nueva: 'Nueva', en_gestion: 'En gestión', resuelta: 'Resuelta', anulada: 'Anulada' }
