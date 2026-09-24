@@ -109,6 +109,18 @@
 
   .pie{ font-size:10.5px; color:var(--gris-medio); text-align:center; padding:22px 24px 0; line-height:1.6; }
   .salir{ display:block; margin:16px auto 0; background:none; border:0; color:var(--gris-medio); font-size:11.5px; font-family:inherit; text-decoration:underline; cursor:pointer; }
+
+  /* ---------- adentro del Tablero de Control ----------
+     La misma pantalla se usa suelta y embebida en una solapa del hub. Cuando
+     va embebida, el logo, el titulo y el boton de volver ya los pone el hub:
+     repetirlos adentro se ve como si fueran dos apps encimadas. */
+  .embebido .app-topbar,
+  .embebido .title-block,
+  .embebido #hubBackBtn{ display:none; }
+  .embebido body,
+  body.embebido{ background:transparent; }
+  .embebido .app{ padding-bottom:16px; max-width:none; }
+  .embebido .tabs{ padding-top:0; }
 </style>
 </head>
 <body>
@@ -582,6 +594,24 @@ setInterval(refrescar, CADA)
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') refrescar()
 })
+
+// ------------------------------------------------- adentro del Tablero
+// Con ?embebido=1 la pantalla vive en una solapa del hub. Ahí no puede tener
+// su propio scroll —quedarían dos barras, una adentro de la otra—, así que le
+// avisa al hub cuánto mide y el hub agranda el marco.
+const EMBEBIDO = new URLSearchParams(location.search).get('embebido') === '1'
+if (EMBEBIDO) {
+  document.documentElement.classList.add('embebido')
+  document.body.classList.add('embebido')
+
+  const avisarAltura = () => {
+    const alto = Math.ceil(document.documentElement.scrollHeight)
+    parent.postMessage({ tipo: 'alto-calidad', alto }, '*')
+  }
+  new ResizeObserver(avisarAltura).observe(document.body)
+  window.addEventListener('load', avisarAltura)
+  avisarAltura()
+}
 
 // El botón de volver apunta al panel del que vino, igual que el resto del hub.
 ;(function () {

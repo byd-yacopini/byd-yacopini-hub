@@ -650,6 +650,7 @@
     <button class="tab-btn" data-tab="solicitudes">Solicitudes</button>
     <button class="tab-btn" data-tab="stock">Stock</button>
     <button class="tab-btn" data-tab="entregas">Entregas</button>
+    <button class="tab-btn" data-tab="calidad">Calidad</button>
   </div>
 
   <div class="wrap">
@@ -897,6 +898,13 @@
         </div>
       </div>
 
+
+      <!-- Calidad. La pantalla vive en calidad.html y aca se muestra embebida,
+           para no tener los mismos numeros escritos en dos lugares. -->
+      <div class="section" id="tab-calidad">
+        <iframe id="marcoCalidad" title="Calidad" data-src="./calidad.html?embebido=1"
+                style="width:100%;border:0;display:block;min-height:520px;"></iframe>
+      </div>
     </div>
 
     <!-- ============ VISTA: HERRAMIENTAS ============ -->
@@ -1846,6 +1854,44 @@
   var h = new Date().getHours();
   var g = h < 6 ? 'Buenas noches' : h < 12 ? 'Buenos días' : h < 20 ? 'Buenas tardes' : 'Buenas noches';
   document.getElementById('greeting').textContent = g;
+})();
+</script>
+<script>
+// La solapa Calidad muestra calidad.html adentro del Tablero. Se carga recien
+// cuando se toca: si se cargara siempre, cada visita al hub pegaria contra la
+// base del Portal de Calidad aunque nadie mire esa solapa.
+(function () {
+  var marco = document.getElementById('marcoCalidad');
+  var boton = document.querySelector('.tab-btn[data-tab="calidad"]');
+  if (!marco || !boton) return;
+
+  // El filtro de Mes/Ano y el aviso de la planilla son del Tablero y no tocan
+  // a Calidad, que trae su propia navegacion por semana y por mes. Dejarlos a
+  // la vista hacia que cambiar el mes ahi arriba no hiciera nada y pareciera
+  // que estaba roto.
+  var delTablero = ['dateFilterBar', 'dataBanner'];
+  function mostrarLoDelTablero(si) {
+    delTablero.forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.style.display = si ? '' : 'none';
+    });
+  }
+
+  document.querySelectorAll('.tab-btn').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var esCalidad = b.dataset.tab === 'calidad';
+      mostrarLoDelTablero(!esCalidad);
+      if (esCalidad && !marco.getAttribute('src')) marco.setAttribute('src', marco.dataset.src);
+    });
+  });
+
+  // La pantalla embebida avisa cuanto mide y el marco se agranda, asi no
+  // quedan dos barras de scroll, una adentro de la otra.
+  window.addEventListener('message', function (e) {
+    if (e.source !== marco.contentWindow) return;
+    if (!e.data || e.data.tipo !== 'alto-calidad') return;
+    marco.style.height = Math.max(520, Math.ceil(e.data.alto)) + 'px';
+  });
 })();
 </script>
 </body>
