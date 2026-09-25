@@ -1,0 +1,4 @@
+# Herramienta interna del equipo de Calidad de BYD Yacopini.
+# No tiene sentido que aparezca en buscadores: todo lo de adentro pide cuenta.
+User-agent: *
+Disallow: /

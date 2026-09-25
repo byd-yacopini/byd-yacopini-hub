@@ -1,0 +1,32 @@
+{
+  "name": "Portal de Calidad · BYD Yacopini",
+  "short_name": "BYD Calidad",
+  "description": "Ventas, encuestas, Mystery Shopper y auditorías del equipo de Calidad.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "lang": "es-AR",
+  "icons": [
+    {
+      "src": "./icono-192-v4.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icono-512-v4.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icono-maskable-512-v4.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
