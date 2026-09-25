@@ -95,7 +95,21 @@
   .m.mal{ background:#FBEAEA; color:#8A2020; }
   .vacio{ margin:14px 20px; padding:22px; text-align:center; background:var(--blanco); border-radius:12px; color:var(--gris-medio); font-size:12.5px; line-height:1.6; }
 
+  /* Cuando entra un vendedor, que quede claro de entrada que lo que ve es lo
+     suyo y no el resultado del concesionario. */
+  .aviso-propio{ margin:10px 20px 0; padding:9px 12px; border-radius:8px; background:var(--blanco);
+                 border:1px solid var(--gris-claro); border-left:3px solid var(--azul-ev);
+                 font-size:11.5px; line-height:1.5; color:var(--gris-oscuro); }
+
   /* ---------- detecciones tempranas ---------- */
+  .desplegar{ display:flex; align-items:center; justify-content:space-between; gap:10px;
+              width:calc(100% - 40px); margin:10px 20px 0; padding:11px 14px;
+              background:var(--blanco); border:1px solid var(--gris-claro); border-radius:12px;
+              font-family:inherit; font-size:13px; font-weight:700; color:var(--negro);
+              cursor:pointer; text-align:left; }
+  .desplegar:hover{ border-color:var(--azul-ev); }
+  .desplegar .flecha{ font-size:11px; color:var(--gris-oscuro); transition:transform .15s; }
+  .desplegar[aria-expanded="true"] .flecha{ transform:rotate(180deg); }
   .casos{ padding:12px 20px 0; display:flex; flex-direction:column; gap:8px; }
   .caso{ background:var(--blanco); border:1px solid var(--gris-claro); border-radius:12px; padding:11px 12px; }
   .caso-top{ display:flex; align-items:center; gap:8px; margin-bottom:6px; }
@@ -199,10 +213,12 @@
       <button type="button" id="tabMes" aria-pressed="false">Por mes</button>
     </div>
 
-    <div class="filtro">
+    <div class="filtro" id="filtro">
       <label for="filtroVendedor">Vendedor</label>
       <select id="filtroVendedor"><option value="">Todos los vendedores</option></select>
     </div>
+
+    <p class="aviso-propio oculto" id="avisoPropio"></p>
 
     <div class="periodo">
       <button type="button" id="antes" aria-label="Período anterior">‹</button>
@@ -221,13 +237,20 @@
     <h2 class="sec">Evolución de las últimas 8 semanas</h2>
     <div class="grafico" id="grafico"></div>
 
-    <h2 class="sec">Cada vendedor</h2>
+    <h2 class="sec" id="tituloLista">Cada vendedor</h2>
     <p class="hint" id="hintLista"></p>
     <div class="lista" id="lista"></div>
 
+    <!-- Los casos arrancan plegados y se abren todos de un toque: con varios
+         cargados, la lista entera empujaba el resto de la pantalla fuera de
+         vista y había que scrollear mucho para volver arriba. -->
     <h2 class="sec">Detecciones tempranas</h2>
     <p class="hint" id="hintCasos"></p>
-    <div class="casos" id="casos"></div>
+    <button type="button" class="desplegar oculto" id="desplegar" aria-expanded="false" aria-controls="casos">
+      <span id="desplegarTexto">Ver los casos</span>
+      <span class="flecha" aria-hidden="true">▾</span>
+    </button>
+    <div class="casos oculto" id="casos"></div>
 
     <p class="pie">
       Los datos salen del Portal de Calidad y se actualizan solos: la pantalla los
@@ -293,6 +316,8 @@ function rotuloSemana(lunes) {
 let datos = null          // lo que se trajo de la base, una sola vez
 let modo = 'semana'       // 'semana' | 'mes'
 let vendedorElegido = ''  // '' = todos
+let sesion = null         // { rol, nombre, vendedorId } de quien entró
+let casosAbiertos = false // los casos arrancan plegados
 let cursor = lunesDe(new Date())   // lunes de la semana mostrada
 let cursorMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
 
@@ -352,6 +377,8 @@ async function cargar(callado = false) {
     ])
     for (const r of [ops, enc, vend, det, perf]) if (r.error) throw r.error
 
+    await reconocerQuienEntro(vend.data ?? [])
+
     // La detección guarda el perfil de quien la cargó y, si su ficha está
     // vinculada, también el vendedor. Cuando falta lo segundo se recupera por
     // el perfil, que es lo que pasa con los que se registraron después.
@@ -383,10 +410,41 @@ async function cargar(callado = false) {
   }
 }
 
+// Un vendedor entra a la misma pantalla que el gerente, pero ve solamente lo
+// suyo. No alcanza con esconderle el resto: la base ya le muestra únicamente
+// las detecciones que cargó él. Acá se le fija el filtro en su propia ficha,
+// para que las entregas y el NPS tampoco sean los del concesionario entero.
+async function reconocerQuienEntro(vendedores) {
+  if (sesion) return // ya se resolvió; no hace falta en cada refresco
+
+  const { data: auth } = await db.auth.getUser()
+  const id = auth?.user?.id
+  if (!id) return
+
+  // Un vendedor sólo puede leer su propia fila de perfiles, así que esto
+  // devuelve una sola fila o ninguna; no es una fuga.
+  const { data: perfil } = await db.from('perfiles').select('nombre,rol').eq('id', id).maybeSingle()
+  const ficha = vendedores.find((v) => v.perfil_id === id) ?? null
+  sesion = { rol: perfil?.rol ?? null, nombre: perfil?.nombre ?? '', vendedorId: ficha?.id ?? null }
+
+  if (sesion.rol !== 'vendedor') return
+
+  // Desde acá, todo lo que se muestre es de esta persona.
+  vendedorElegido = sesion.vendedorId ?? ''
+  ver($('filtro'), false)
+  ver($('avisoPropio'), true)
+  $('avisoPropio').textContent = sesion.vendedorId
+    ? 'Estás viendo tus resultados. Sólo vos y el equipo de Calidad los ven.'
+    : 'Tu usuario todavía no está vinculado a tu ficha de vendedor, así que ' +
+      'no podemos separar tus resultados. Pedile a Calidad que te vincule.'
+  $('tituloLista').textContent = 'Tu resultado'
+}
+
 // Sólo los que están en actividad, por nombre. El elegido se conserva cuando
 // la pantalla se refresca sola: si no, cada cinco minutos volvería a "todos"
 // mientras el gerente está mirando a una persona.
 function llenarVendedores(vendedores) {
+  if (sesion?.rol === 'vendedor') return // no elige: ve lo suyo y nada más
   const activos = vendedores
     .filter((v) => v.activo)
     .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
@@ -399,6 +457,14 @@ function llenarVendedores(vendedores) {
   sel.value = vendedorElegido
   sel.classList.toggle('puesto', vendedorElegido !== '')
 }
+
+// Un toque y se abren todas. Se vuelve a pintar en vez de sólo mostrar el
+// bloque, para que el alto que se le avisa al hub quede al día y el marco
+// crezca: si no, la lista queda cortada adentro de la solapa.
+$('desplegar').addEventListener('click', () => {
+  casosAbiertos = !casosAbiertos
+  pintar()
+})
 
 $('filtroVendedor').addEventListener('change', (e) => {
   vendedorElegido = e.target.value
@@ -521,14 +587,20 @@ function pintarLista(r) {
   // entregas cuando en realidad BYD no se las asignó a nadie.
   const reventa = r.sinVendedor === 0 ? '' :
     ` Además hubo ${r.sinVendedor} ${r.sinVendedor === 1 ? 'entrega' : 'entregas'} de reventa, que la planilla de BYD no le asigna a ningún vendedor.`
-  $('hintLista').textContent = vendedorElegido
-    ? `Todo lo de arriba es solo de esta persona. Para ver el concesionario entero, elegí "Todos los vendedores".`
-    : `Ordenados por entregas. Solo aparecen los que tuvieron movimiento ${periodo}.` + reventa
+  $('hintLista').textContent =
+    sesion?.rol === 'vendedor'
+      ? `Todo lo de arriba es tuyo, no del concesionario.`
+      : vendedorElegido
+        ? `Todo lo de arriba es solo de esta persona. Para ver el concesionario entero, elegí "Todos los vendedores".`
+        : `Ordenados por entregas. Solo aparecen los que tuvieron movimiento ${periodo}.` + reventa
 
   if (r.filas.length === 0) {
-    const quien = vendedorElegido
-      ? `${escapar(datos.vendedores.get(vendedorElegido) ?? 'Esa persona')} no tuvo movimiento ${periodo}.`
-      : `Ningún vendedor tuvo movimiento ${periodo}.`
+    const quien =
+      sesion?.rol === 'vendedor'
+        ? `No tuviste movimiento ${periodo}.`
+        : vendedorElegido
+          ? `${escapar(datos.vendedores.get(vendedorElegido) ?? 'Esa persona')} no tuvo movimiento ${periodo}.`
+          : `Ningún vendedor tuvo movimiento ${periodo}.`
     $('lista').innerHTML = `<div class="vacio">${quien}<br>Probá con otro período.</div>`
     return
   }
@@ -565,12 +637,26 @@ function pintarCasos(r) {
     'Lo que el vendedor avisa apenas lo detecta, sin esperar a que aparezca en una encuesta.'
 
   if (r.detecciones.length === 0) {
-    const quien = vendedorElegido
-      ? `${escapar(datos.vendedores.get(vendedorElegido) ?? 'Esa persona')} no cargó detecciones ${periodo}.`
-      : `Nadie cargó detecciones ${periodo}.`
+    const quien = sesion?.rol === 'vendedor'
+      ? `No cargaste detecciones ${periodo}.`
+      : vendedorElegido
+        ? `${escapar(datos.vendedores.get(vendedorElegido) ?? 'Esa persona')} no cargó detecciones ${periodo}.`
+        : `Nadie cargó detecciones ${periodo}.`
+    ver($('desplegar'), false)
+    ver($('casos'), true)
     $('casos').innerHTML = `<div class="vacio">${quien}</div>`
     return
   }
+
+  // El botón dice cuántos hay antes de abrirlos, así se sabe si vale la pena.
+  const n = r.detecciones.length
+  ver($('desplegar'), true)
+  $('desplegarTexto').textContent = casosAbiertos
+    ? 'Ocultar los casos'
+    : `Ver ${n === 1 ? 'el caso' : `los ${n} casos`}`
+  $('desplegar').setAttribute('aria-expanded', String(casosAbiertos))
+  ver($('casos'), casosAbiertos)
+
   const ESTADO = { nueva: 'Nueva', en_gestion: 'En gestión', resuelta: 'Resuelta', anulada: 'Anulada' }
 
   $('casos').innerHTML = r.detecciones.map((d) => {
