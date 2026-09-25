@@ -642,6 +642,11 @@
     <select id="mainViewSelect" class="main-select">
       <option value="tablero">Tablero de Control</option>
       <option value="herramientas">Herramientas</option>
+      <!-- Este no es una vista de acá adentro: lleva al Portal de Calidad,
+           que vive en /portal/ de este mismo sitio. Se pone en el mismo
+           desplegable a propósito, para que sea una sola app y no haya que
+           acordarse de dos direcciones. -->
+      <option value="portal">Portal de Calidad</option>
     </select>
   </div>
   <div class="tabs sub-tabs" id="subTabs">
@@ -1906,6 +1911,29 @@
     if (!e.data || e.data.tipo !== 'alto-calidad') return;
     marco.style.height = Math.max(520, Math.ceil(e.data.alto)) + 'px';
   });
+})();
+</script>
+<script>
+// "Portal de Calidad" en el desplegable de arriba no es una vista de esta
+// pagina: lleva al Portal, que vive en /portal/ de este mismo sitio.
+//
+// Se intercepta en fase de captura para que el manejador original no llegue a
+// correr: si corriera, buscaria un #view-portal que no existe y escondería
+// todo justo antes de navegar, dejando la pantalla en blanco un instante.
+(function () {
+  var sel = document.getElementById('mainViewSelect');
+  if (!sel) return;
+
+  var ultima = sel.value;
+
+  sel.addEventListener('change', function (e) {
+    if (sel.value !== 'portal') { ultima = sel.value; return; }
+    e.stopImmediatePropagation();
+    // Se deja como estaba: si el navegador vuelve atras, la pagina no aparece
+    // con "Portal de Calidad" elegido y nada mostrandose.
+    sel.value = ultima;
+    window.location.href = './portal/';
+  }, true);
 })();
 </script>
 </body>
