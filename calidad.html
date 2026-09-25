@@ -130,6 +130,33 @@
   body.embebido{ background:transparent; }
   .embebido .app{ padding-bottom:16px; max-width:none; }
   .embebido .tabs{ padding-top:0; }
+
+  /* ---------- en una computadora ----------
+     Hasta acá todo es una columna, que es lo correcto en un teléfono. En una
+     pantalla ancha, esa misma columna estirada se ve como un celular gigante:
+     cinco fichas de 280px de largo y una lista de vendedores con medio metro
+     de aire al costado. Acá se reparte el ancho. */
+  @media (min-width: 900px){
+    .app{ max-width:1180px; margin:0 auto; }
+
+    /* Los controles no crecen con la pantalla: un desplegable de 1100px de
+       ancho para elegir un vendedor no ayuda a nadie. */
+    .tabs, .filtro{ max-width:430px; }
+    .periodo{ max-width:560px; }
+
+    /* Las cinco fichas entran en una fila. */
+    .tiles{ grid-template-columns:repeat(5, 1fr); }
+    .tile.ancha{ grid-column:auto; }
+    .tile .v{ font-size:23px; }
+
+    /* El gráfico mantiene su proporción en vez de estirarse a lo alto: con
+       todo el ancho disponible quedaba de 400px de alto. */
+    .grafico{ padding:16px 16px 12px; }
+    .grafico svg{ max-height:230px; margin:0 auto; }
+
+    /* Vendedores y casos, de a dos por fila. */
+    .lista, .casos{ display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; align-items:start; }
+  }
 </style>
 </head>
 <body>

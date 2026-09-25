@@ -900,7 +900,12 @@
 
 
       <!-- Calidad. La pantalla vive en calidad.html y aca se muestra embebida,
-           para no tener los mismos numeros escritos en dos lugares. -->
+           para no tener los mismos numeros escritos en dos lugares.
+           En la compu, las solapas se reparten en dos columnas. Eso encerraba
+           esta pantalla en media pantalla y se veia como en un telefono, con
+           la otra mitad vacia: aca se pide una sola columna y el marco pasa a
+           usar todo el ancho. -->
+      <style>#tab-calidad.section.active{ column-count:1; }</style>
       <div class="section" id="tab-calidad">
         <iframe id="marcoCalidad" title="Calidad" data-src="./calidad.html?embebido=1"
                 style="width:100%;border:0;display:block;min-height:520px;"></iframe>
