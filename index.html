@@ -575,7 +575,6 @@
 </style>
 
 
-<link rel="stylesheet" href="estilo.css">
 </head>
 <body class="gate-locked">
 <div id="bydGate" style="position:fixed;inset:0;z-index:999999;background:#0A0A0A;display:flex;align-items:center;justify-content:center;padding:24px;opacity:1;">
@@ -588,10 +587,16 @@
       <path class="st0" d="M339.04,34.68c-.07,9.92-3.3,13.18-13.56,13.38-4.89.09-17.75.14-28.33.16h0s-.1.01-.1.01c-10.81,0-22.34-.02-29.1-.02v57.57h26.52v-37.88c.81,0,1.68,0,2.58,0h0s.1,0,.1,0v.02c13.8,0,31.04-.06,37.55-.26,19.93-.61,26-6.23,26.73-24.78.1-2.48.16-5.62.19-9.06V4.18h-22.56c0,9.8.04,20.81-.03,30.5"/>
     </svg>
     <div style="color:#fff;font-weight:800;font-size:16px;margin-bottom:4px;">BYD Yacopini</div>
-    <div style="color:#8C8C8C;font-size:12px;margin-bottom:18px;">Acceso interno &middot; Gerencia</div>
-    <input id="bydGatePass" type="password" inputmode="numeric" placeholder="Clave" autocomplete="off" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid #4A4A4A;background:#2A2A2A;color:#fff;font-size:16px;text-align:center;box-sizing:border-box;">
-    <button type="submit" style="width:100%;margin-top:10px;padding:12px;border-radius:10px;border:none;background:#1565D8;color:#fff;font-weight:700;font-size:14px;">Entrar</button>
-    <div id="bydGateError" style="color:#E85555;font-size:12px;margin-top:10px;display:none;">Clave incorrecta</div>
+    <div style="color:#8C8C8C;font-size:12px;margin-bottom:16px;">Acceso interno</div>
+    <div style="display:flex;gap:6px;background:#1C1C1C;border-radius:12px;padding:4px;margin-bottom:14px;">
+      <button type="button" id="bydModoVendedor" style="flex:1;padding:10px 6px;border:none;border-radius:9px;background:#1565D8;color:#fff;font-weight:700;font-size:13px;cursor:pointer;">Vendedor</button>
+      <button type="button" id="bydModoGerencia" style="flex:1;padding:10px 6px;border:none;border-radius:9px;background:transparent;color:#8C8C8C;font-weight:700;font-size:13px;cursor:pointer;">Gerencia</button>
+    </div>
+    <input id="bydGateMail" type="email" inputmode="email" placeholder="Tu mail" autocomplete="username" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid #4A4A4A;background:#2A2A2A;color:#fff;font-size:16px;text-align:center;box-sizing:border-box;margin-bottom:8px;">
+    <input id="bydGatePass" type="password" placeholder="Tu código" autocomplete="current-password" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid #4A4A4A;background:#2A2A2A;color:#fff;font-size:16px;text-align:center;box-sizing:border-box;">
+    <button type="submit" id="bydGateBtn" style="width:100%;margin-top:10px;padding:12px;border-radius:10px;border:none;background:#1565D8;color:#fff;font-weight:700;font-size:14px;">Entrar</button>
+    <div id="bydGateError" style="color:#E85555;font-size:12px;margin-top:10px;display:none;"></div>
+    <div id="bydGateAyuda" style="color:#6E6E6E;font-size:11px;margin-top:14px;line-height:1.5;"></div>
   </form>
 </div>
 <style>
@@ -600,29 +605,125 @@
   #bydGate.fadeOut{ opacity:0; }
 </style>
 <script>
+// La puerta de entrada, con dos formas de pasar:
+//
+//   Vendedor  -> su mail y su código, que es su cuenta del Portal de Calidad.
+//                Como el Portal vive en este mismo dominio, entrar acá lo deja
+//                adentro de allá también: una sola app, un solo ingreso.
+//   Gerencia  -> la clave general de siempre, la que ya venían usando.
+//
+// Se mantienen las dos a propósito: sacar la general dejaría afuera a
+// cualquiera que todavía no tenga cuenta.
+//
+// Ojo con qué protege esto. El repo es público y el hash de abajo está a la
+// vista, así que la clave general esconde la pantalla, no los datos. Los
+// números se piden a la base con la sesión iniciada, y ahí sí cada uno ve
+// nada más que lo suyo. Por eso entrar con la cuenta propia no es sólo más
+// cómodo: es lo único que de verdad identifica a la persona.
 (function(){
   var HASH = "a734aecec77bc8826bec68f0264b70228ab419e52a8fcdf05016ebee0465f257";
   var body = document.body;
-  function unlock(){ var g=document.getElementById('bydGate'); if(g){ g.classList.add('fadeOut'); setTimeout(function(){ body.classList.remove('gate-locked'); g.remove(); }, 220); } else { body.classList.remove('gate-locked'); } }
-  if (sessionStorage.getItem('bydGateOk') === '1') { unlock(); }
-  else {
-    document.getElementById('bydGateForm').addEventListener('submit', function(e){
-      e.preventDefault();
-      var val = document.getElementById('bydGatePass').value;
-      crypto.subtle.digest('SHA-256', new TextEncoder().encode(val)).then(function(buf){
-        var hex = Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
-        if (hex === HASH) {
-          sessionStorage.setItem('bydGateOk','1');
-          unlock();
-        } else {
-          document.getElementById('bydGateError').style.display = 'block';
-          document.getElementById('bydGatePass').value = '';
-          document.getElementById('bydGatePass').focus();
-        }
-      });
-    });
+  function abrir(){ var g=document.getElementById('bydGate'); if(g){ g.classList.add('fadeOut'); setTimeout(function(){ body.classList.remove('gate-locked'); g.remove(); }, 220); } else { body.classList.remove('gate-locked'); } }
+  window.__bydAbrir = abrir;
+  if (sessionStorage.getItem('bydGateOk') === '1') { abrir(); return; }
+
+  var form   = document.getElementById('bydGateForm');
+  var mail   = document.getElementById('bydGateMail');
+  var pass   = document.getElementById('bydGatePass');
+  var boton  = document.getElementById('bydGateBtn');
+  var error  = document.getElementById('bydGateError');
+  var ayuda  = document.getElementById('bydGateAyuda');
+  var bVend  = document.getElementById('bydModoVendedor');
+  var bGer   = document.getElementById('bydModoGerencia');
+  var modo   = 'vendedor';
+
+  function pintarBoton(b, activo){
+    b.style.background = activo ? '#1565D8' : 'transparent';
+    b.style.color = activo ? '#fff' : '#8C8C8C';
   }
+
+  function elegir(cual){
+    modo = cual;
+    try { localStorage.setItem('bydModo', cual); } catch(e){}
+    pintarBoton(bVend, cual === 'vendedor');
+    pintarBoton(bGer,  cual === 'gerencia');
+    mail.style.display = cual === 'vendedor' ? '' : 'none';
+    pass.placeholder = cual === 'vendedor' ? 'Tu código' : 'Clave de gerencia';
+    ayuda.textContent = cual === 'vendedor'
+      ? 'Tu mail de Yacopini y el código que te pasaron.'
+      : 'La clave de siempre.';
+    error.style.display = 'none';
+    pass.value = '';
+  }
+
+  bVend.addEventListener('click', function(){ elegir('vendedor'); mail.focus(); });
+  bGer.addEventListener('click',  function(){ elegir('gerencia');  pass.focus(); });
+
+  // Se recuerda cómo entró la última vez, que casi siempre es la misma.
+  var guardado = null;
+  try { guardado = localStorage.getItem('bydModo'); } catch(e){}
+  elegir(guardado === 'gerencia' ? 'gerencia' : 'vendedor');
+
+  function terminar(ok, texto){
+    boton.disabled = false; boton.textContent = 'Entrar';
+    if (ok) { try { sessionStorage.setItem('bydGateOk','1'); } catch(e){} abrir(); return; }
+    error.textContent = texto; error.style.display = 'block';
+    pass.value = ''; pass.focus();
+  }
+
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    error.style.display = 'none';
+
+    if (modo === 'vendedor' && !mail.value.trim()) {
+      terminar(false, 'Te falta poner tu mail.');
+      return;
+    }
+    boton.disabled = true; boton.textContent = 'Entrando…';
+
+    if (modo === 'vendedor') {
+      // Si el módulo de abajo todavía no cargó, se avisa en vez de rechazar un
+      // código que en realidad estaba bien.
+      if (!window.__bydEntrarConCuenta) { terminar(false, 'Un segundo, todavía está cargando. Probá de nuevo.'); return; }
+      window.__bydEntrarConCuenta(mail.value.trim(), pass.value).then(function(r){ terminar(r.ok, r.mensaje); });
+      return;
+    }
+
+    // La clave de gerencia se comprueba acá, sin depender de nada externo,
+    // para que siga funcionando aunque no cargue el módulo.
+    crypto.subtle.digest('SHA-256', new TextEncoder().encode(pass.value)).then(function(buf){
+      var hex = Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+      terminar(hex === HASH, 'Esa clave no es.');
+    });
+  });
 })();
+</script>
+<script type="module">
+// El ingreso con la cuenta del Portal de Calidad.
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+
+// La clave anónima es pública por diseño: sin sesión iniciada no da acceso a
+// nada. Lo que protege los datos es el permiso por fila de la base.
+const db = createClient(
+  'https://mgicnwnvtfkrxmkmewnt.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1naWNud252dGZrcnhta21ld250Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1Nzk5MDIsImV4cCI6MjEwNTE1NTkwMn0.GLWN_wI6Q_6Qu1EGi02oPNrL9wgTj-zbGsJCoIE-HQE',
+)
+
+window.__bydEntrarConCuenta = async function (email, password) {
+  const { error } = await db.auth.signInWithPassword({ email, password })
+  if (!error) return { ok: true }
+  if (error.message === 'Invalid login credentials') {
+    return { ok: false, mensaje: 'Ese mail o ese código no coinciden.' }
+  }
+  return { ok: false, mensaje: 'No pudimos entrar. Probá de nuevo en un momento.' }
+}
+
+// Si ya había entrado con su cuenta, no se le vuelve a pedir nada.
+const { data } = await db.auth.getSession()
+if (data.session) {
+  try { sessionStorage.setItem('bydGateOk', '1') } catch (e) {}
+  if (window.__bydAbrir) window.__bydAbrir()
+}
 </script>
 
   <div class="topbar">
