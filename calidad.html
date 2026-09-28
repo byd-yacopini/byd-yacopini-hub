@@ -130,6 +130,31 @@
   .leyenda{ display:flex; gap:14px; justify-content:center; margin-top:8px; font-size:10.5px; color:var(--gris-oscuro); font-weight:700; }
   .leyenda i{ width:9px; height:9px; border-radius:2px; display:inline-block; margin-right:4px; vertical-align:-1px; }
 
+  /* ---------- avisar un problema (sólo vendedores) ---------- */
+  .avisar{ margin:14px 20px 0; }
+  .btn-avisar{ width:100%; padding:13px; font-size:14px; font-weight:700; font-family:inherit; color:#fff;
+               background:var(--azul-ev); border:0; border-radius:24px; cursor:pointer; }
+  .form-aviso{ background:var(--blanco); border-radius:14px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+  .form-aviso h3{ font-size:14px; margin:0 0 4px; }
+  .form-aviso p{ font-size:12px; color:var(--gris-oscuro); margin:0 0 6px; line-height:1.5; }
+  .form-aviso label{ display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--gris-oscuro); margin:12px 0 5px; }
+  .form-aviso input, .form-aviso textarea{ width:100%; padding:11px 12px; font-size:15px; font-family:inherit; border:1px solid var(--gris-claro); border-radius:10px; background:var(--gris-fondo); }
+  .form-aviso textarea{ min-height:96px; resize:vertical; }
+  .form-aviso input:focus, .form-aviso textarea:focus{ outline:none; border-color:var(--azul-ev); }
+  .form-aviso .acciones{ display:flex; gap:8px; margin-top:16px; }
+  .form-aviso .acciones button{ flex:1; padding:12px; font-size:14px; font-weight:700; font-family:inherit; border-radius:24px; cursor:pointer; }
+  .form-aviso .enviar{ color:#fff; background:var(--azul-ev); border:0; }
+  .form-aviso .enviar:disabled{ opacity:.55; cursor:default; }
+  .form-aviso .cancelar{ color:var(--gris-oscuro); background:none; border:1px solid var(--gris-claro); }
+  .estado.ok{ margin:10px 0 0; background:#E8F3E9; border:1px solid #BFDCC1; color:#256B28; }
+  .form-aviso .estado.error{ margin:10px 0 0; }
+
+  /* ---------- mystery shopper (sólo vendedores) ---------- */
+  .visita-top{ display:flex; align-items:center; gap:10px; }
+  .visita-mes{ flex:1; min-width:0; font-size:13.5px; font-weight:700; }
+  .visita-pje{ font-size:19px; font-weight:800; font-variant-numeric:tabular-nums; flex:none; }
+  .visita-obs{ margin:6px 0 0; font-size:12px; line-height:1.5; color:var(--carbon); }
+
   .pie{ font-size:10.5px; color:var(--gris-medio); text-align:center; padding:22px 24px 0; line-height:1.6; }
   .salir{ display:block; margin:16px auto 0; background:none; border:0; color:var(--gris-medio); font-size:11.5px; font-family:inherit; text-decoration:underline; cursor:pointer; }
 
@@ -221,6 +246,29 @@
 
     <p class="aviso-propio oculto" id="avisoPropio"></p>
 
+    <!-- El vendedor avisa desde acá mismo, sin salir a otra app. -->
+    <div class="avisar oculto" id="avisar">
+      <button type="button" class="btn-avisar" id="abrirAviso">+ Avisar un problema</button>
+      <form class="form-aviso oculto" id="formAviso">
+        <h3>Contá qué pasó</h3>
+        <p>Si ves que un cliente quedó disconforme, avisá acá. Cuanto antes se sepa, más rápido se puede resolver.</p>
+        <label for="avisoQue">Qué pasó</label>
+        <textarea id="avisoQue" required placeholder="El cliente se fue molesto porque la entrega se atrasó y nadie lo llamó."></textarea>
+        <label for="avisoCliente">Nombre del cliente</label>
+        <input id="avisoCliente" autocomplete="off">
+        <label for="avisoTel">Teléfono</label>
+        <input id="avisoTel" type="tel" inputmode="tel" placeholder="261 155123456" autocomplete="off">
+        <label for="avisoVin">VIN (si lo tenés)</label>
+        <input id="avisoVin" autocomplete="off" autocapitalize="characters">
+        <div class="estado error oculto" id="avisoError"></div>
+        <div class="acciones">
+          <button type="button" class="cancelar" id="cancelarAviso">Cancelar</button>
+          <button type="submit" class="enviar" id="enviarAviso">Enviar aviso</button>
+        </div>
+      </form>
+      <div class="estado ok oculto" id="avisoListo">Listo, Calidad ya tiene tu aviso. Lo vas a ver abajo, en tus detecciones.</div>
+    </div>
+
     <div class="periodo">
       <button type="button" id="antes" aria-label="Período anterior">‹</button>
       <div class="periodo-txt">
@@ -253,11 +301,17 @@
     </button>
     <div class="casos oculto" id="casos"></div>
 
+    <div class="oculto" id="bloqueMystery">
+      <h2 class="sec">Tus visitas de Mystery Shopper</h2>
+      <p class="hint">El cliente incógnito que manda BYD. Al lado de cada puntaje, el objetivo.</p>
+      <div class="lista" id="mystery"></div>
+    </div>
+
     <p class="pie">
       Los datos salen del Portal de Calidad y se actualizan solos: la pantalla los
       vuelve a pedir cada cinco minutos y cada vez que volvés a ella.<br>
-      <span id="actualizado"></span><br>
-      <a href="https://lucim2003.github.io/byd-calidad/" target="_blank" rel="noopener">Abrir el Portal de Calidad</a>
+      <span id="actualizado"></span>
+      <span class="oculto" id="enlacePortal"><br><a href="./portal/" target="_blank" rel="noopener">Abrir el Portal de Calidad</a></span>
     </p>
     <button type="button" class="salir" id="salir">Cerrar sesión</button>
   </div>
@@ -380,6 +434,14 @@ async function cargar(callado = false) {
 
     await reconocerQuienEntro(vend.data ?? [])
 
+    // Sólo el vendedor: la base ya le devuelve únicamente sus visitas.
+    if (sesion?.rol === 'vendedor') {
+      const ms = await db.from('mystery_shopper')
+        .select('periodo,puntaje,objetivo,observaciones')
+        .order('periodo', { ascending: false })
+      pintarMystery(ms.error ? [] : ms.data ?? [])
+    }
+
     // La detección guarda el perfil de quien la cargó y, si su ficha está
     // vinculada, también el vendedor. Cuando falta lo segundo se recupera por
     // el perfil, que es lo que pasa con los que se registraron después.
@@ -426,13 +488,16 @@ async function reconocerQuienEntro(vendedores) {
   // devuelve una sola fila o ninguna; no es una fuga.
   const { data: perfil } = await db.from('perfiles').select('nombre,rol').eq('id', id).maybeSingle()
   const ficha = vendedores.find((v) => v.perfil_id === id) ?? null
-  sesion = { rol: perfil?.rol ?? null, nombre: perfil?.nombre ?? '', vendedorId: ficha?.id ?? null }
+  sesion = { rol: perfil?.rol ?? null, nombre: perfil?.nombre ?? '', vendedorId: ficha?.id ?? null, perfilId: id }
 
-  if (sesion.rol !== 'vendedor') return
+  // El vendedor no sale de acá a otra app: avisa y mira todo desde esta
+  // pantalla. El enlace al Portal queda para los demás.
+  if (sesion.rol !== 'vendedor') { ver($('enlacePortal'), true); return }
 
   // Desde acá, todo lo que se muestre es de esta persona.
   vendedorElegido = sesion.vendedorId ?? ''
   ver($('filtro'), false)
+  ver($('avisar'), true)
   ver($('avisoPropio'), true)
   $('avisoPropio').textContent = sesion.vendedorId
     ? 'Estás viendo tus resultados. Sólo vos y el equipo de Calidad los ven.'
@@ -679,6 +744,81 @@ function pintarCasos(r) {
       </div>`
   }).join('')
 }
+
+// El Mystery no depende de la semana o el mes elegido: son pocas visitas por
+// año y lo que sirve es ver la seguidilla completa.
+function pintarMystery(visitas) {
+  ver($('bloqueMystery'), visitas.length > 0)
+  $('mystery').innerHTML = visitas.map((v) => {
+    const [a, m] = String(v.periodo).split('-')
+    const mes = MESES[Number(m) - 1] ?? ''
+    const puntaje = Number(v.puntaje)
+    const objetivo = Number(v.objetivo ?? 85)
+    const clase = puntaje >= objetivo ? 'bien' : 'mal'
+    return `
+      <div class="fila">
+        <div class="visita-top">
+          <div class="visita-mes">${mes[0]?.toUpperCase() ?? ''}${mes.slice(1)} ${a}</div>
+          <span class="m ${clase}">${puntaje >= objetivo ? 'Cumple' : 'Abajo del'} objetivo ${objetivo}%</span>
+          <div class="visita-pje">${puntaje}%</div>
+        </div>
+        ${v.observaciones ? `<p class="visita-obs">${escapar(v.observaciones)}</p>` : ''}
+      </div>`
+  }).join('')
+}
+
+// ------------------------------------------------------- avisar un problema
+// Lo mismo que "Detección temprana" en el Portal, pero sin salir de acá: el
+// caso queda a nombre de quien lo carga y, si su ficha está vinculada, del
+// vendedor, para que se le cuente en la pantalla del gerente.
+function abrirAviso(si) {
+  ver($('formAviso'), si)
+  ver($('abrirAviso'), !si)
+  ver($('avisoError'), false)
+  if (si) { ver($('avisoListo'), false); $('avisoQue').focus() }
+}
+$('abrirAviso').addEventListener('click', () => abrirAviso(true))
+$('cancelarAviso').addEventListener('click', () => abrirAviso(false))
+
+$('formAviso').addEventListener('submit', async (e) => {
+  e.preventDefault()
+  const descripcion = $('avisoQue').value.trim()
+  if (!descripcion) {
+    $('avisoError').textContent = 'Contá qué pasó antes de enviar.'
+    ver($('avisoError'), true)
+    return
+  }
+  const btn = $('enviarAviso')
+  btn.disabled = true
+  btn.textContent = 'Enviando…'
+  ver($('avisoError'), false)
+  const opcional = (id) => $(id).value.trim() || null
+  const { error } = await db.from('detecciones').insert({
+    descripcion,
+    cliente_nombre: opcional('avisoCliente'),
+    cliente_telefono: opcional('avisoTel'),
+    vin: opcional('avisoVin'),
+    reportado_por: sesion.perfilId,
+    vendedor_id: sesion.vendedorId,
+  })
+  btn.disabled = false
+  btn.textContent = 'Enviar aviso'
+  if (error) {
+    $('avisoError').textContent = 'No se pudo enviar: ' + error.message + '. Probá de nuevo.'
+    ver($('avisoError'), true)
+    return
+  }
+  $('formAviso').reset()
+  abrirAviso(false)
+  ver($('avisoListo'), true)
+  // Se vuelve a la semana actual y se abren los casos, así ve el suyo.
+  modo = 'semana'
+  $('tabSemana').setAttribute('aria-pressed', 'true')
+  $('tabMes').setAttribute('aria-pressed', 'false')
+  cursor = lunesDe(new Date())
+  casosAbiertos = true
+  await cargar(true)
+})
 
 // Evolución: una sola serie por gráfico y el valor escrito sobre la barra más
 // alta, para no repetir un número en cada columna.
