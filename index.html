@@ -653,7 +653,7 @@
       // Si el módulo de abajo todavía no cargó, se avisa en vez de rechazar un
       // código que en realidad estaba bien.
       if (!window.__bydEntrarConCuenta) { terminar(false, 'Un segundo, todavía está cargando. Probá de nuevo.'); return; }
-      window.__bydEntrarConCuenta(correo, pass.value).then(function(r){ terminar(r.ok, r.mensaje); });
+      window.__bydEntrarConCuenta(correo, pass.value).then(function(r){ if (!r.yendo) terminar(r.ok, r.mensaje); });
     });
   });
 })();
@@ -669,18 +669,62 @@ const db = createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1naWNud252dGZrcnhta21ld250Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1Nzk5MDIsImV4cCI6MjEwNTE1NTkwMn0.GLWN_wI6Q_6Qu1EGi02oPNrL9wgTj-zbGsJCoIE-HQE',
 )
 
+// Un vendedor no se queda en esta página, que es la del gerente: se lo manda a
+// su Panel de Ventas, donde están "Mi Calidad" y "Avisar un problema". El panel
+// lo reconoce por las mismas dos marcas que deja su propia puerta con código, y
+// el nombre del perfil sale de la misma planilla de Ventas (npm run usuarios),
+// pero no siempre igual escrito: el perfil puede decir "Nicolas Diaz" y la
+// planilla "DIAZ NICOLAS", y el panel compara el nombre letra por letra. Por
+// eso se busca en la planilla (la misma que lee la puerta del panel) la fila
+// con las mismas palabras y se usa el nombre tal cual figura ahí.
+const PLANILLA_CODIGOS = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSqiPilcsX2Me2tLPndCa5GUkjaRl_b4ljUnmZBIHIEtjy_uL3bEZUrZbm76ZNIdZYNNHceWwCxONPq/pub?gid=0&single=true&output=csv'
+
+// La misma regla que src/lib/nombres.ts: mismas palabras, en cualquier orden.
+const clavePalabras = (s) =>
+  (s || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .split(/\s+/).filter(Boolean).sort().join(' ')
+
+async function nombreEnLaPlanilla(nombre) {
+  try {
+    const texto = await (await fetch(PLANILLA_CODIGOS + '&nocache=' + Date.now())).text()
+    const filas = texto.split(/\r?\n/).map((l) => l.split(','))
+    const col = filas[0].findIndex((h) => /vendedor/i.test(h))
+    const clave = clavePalabras(nombre)
+    const fila = filas.slice(1).find((f) => clavePalabras(f[col]) === clave)
+    if (fila) return fila[col].trim()
+  } catch (e) {}
+  return nombre // sin planilla, el del perfil: casi siempre es el mismo
+}
+
+async function esVendedor() {
+  const { data: auth } = await db.auth.getUser()
+  const id = auth?.user?.id
+  if (!id) return false
+  const { data: perfil } = await db.from('perfiles').select('nombre,rol').eq('id', id).maybeSingle()
+  if (perfil?.rol !== 'vendedor') return false
+  const nombre = await nombreEnLaPlanilla(perfil.nombre)
+  try {
+    sessionStorage.removeItem('bydGateOk')
+    sessionStorage.setItem('bydVendorOk', '1')
+    sessionStorage.setItem('bydVendorNombre', nombre)
+  } catch (e) {}
+  location.replace('./panel_ventas.html')
+  return true
+}
+
 window.__bydEntrarConCuenta = async function (email, password) {
   const { error } = await db.auth.signInWithPassword({ email, password })
-  if (!error) return { ok: true }
+  if (!error) return (await esVendedor()) ? { yendo: true } : { ok: true }
   if (error.message === 'Invalid login credentials') {
     return { ok: false, mensaje: 'Ese mail o ese código no coinciden.' }
   }
   return { ok: false, mensaje: 'No pudimos entrar. Probá de nuevo en un momento.' }
 }
 
-// Si ya había entrado con su cuenta, no se le vuelve a pedir nada.
+// Si ya había entrado con su cuenta, no se le vuelve a pedir nada: el vendedor
+// va a su panel y el resto pasa directo.
 const { data } = await db.auth.getSession()
-if (data.session) {
+if (data.session && !(await esVendedor())) {
   try { sessionStorage.setItem('bydGateOk', '1') } catch (e) {}
   if (window.__bydAbrir) window.__bydAbrir()
 }
