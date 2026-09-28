@@ -1,0 +1,273 @@
+/* Estilo común del hub: el mismo look que el Portal de Calidad.
+ *
+ * Cada página lo carga al final del <head>, así que pisa sus propios estilos
+ * sin tocarlos. Si alguna página deja de cargarlo, vuelve a verse como antes:
+ * no se rompe nada.
+ *
+ * Todo va dentro de @media screen para que lo que se imprime o se exporta a
+ * PDF salga igual que siempre.
+ */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+@media screen {
+
+/* ── Paleta ───────────────────────────────────────────────────────────── */
+:root {
+  --hub-fondo: #f6f7f9;
+  --hub-panel: #ffffff;
+  --hub-panel-2: #f0f2f5;
+  --hub-borde: #e3e6ea;
+  --hub-tinta: #1b1c1e;
+  --hub-tinta-suave: #5c6167;
+  --hub-tinta-tenue: #8b9096;
+  --hub-azul: #2166ab;
+  --hub-azul-oscuro: #1a5289;
+  --hub-azul-suave: #e8f0f8;
+
+  /* Las variables que ya usan todas las páginas, con los valores del Portal */
+  --negro: #1b1c1e;
+  --carbon: #1b1c1e;
+  --gris-oscuro: #5c6167;
+  --gris-medio: #8b9096;
+  --gris-claro: #e3e6ea;
+  --gris-fondo: #f6f7f9;
+  --azul-ev: #2166ab;
+  --verde: #2f9e5f;
+  --verde-dm: #2f9e5f;
+  --rojo: #c62851;
+  --ambar: #d97a06;
+  --morado: #6b4fc9;
+  --radius: 16px;
+  /* calculadora de comisiones */
+  --navy: #1b1c1e;
+  --blue: #2166ab;
+  --orange: #2166ab;
+  --grey: #f6f7f9;
+  --border: #e3e6ea;
+  --text: #1b1c1e;
+  --green: #2f9e5f;
+  --red: #c62851;
+}
+
+html, body {
+  background: var(--hub-fondo) !important;
+  color: var(--hub-tinta);
+  -webkit-font-smoothing: antialiased;
+}
+body, button, input, select, textarea {
+  font-family: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+/* El logo de BYD: el SVG lo pinta en blanco para el fondo negro de antes */
+.st0 { fill: var(--hub-tinta) !important; }
+
+/* ── Encabezados: sobre el mismo lienzo, sin franja negra ─────────────── */
+.topbar, .app-topbar, .header-calc, .main-select-wrap, .tabs, .tabs-bar {
+  background: var(--hub-fondo) !important;
+  color: var(--hub-tinta) !important;
+  box-shadow: none !important;
+}
+.topbar *, .app-topbar *, .header-calc * { color: inherit !important; }
+/* En el gestor y en plantillas el encabezado tenía un margen negativo pensado
+   para estar dentro de la tarjeta, y el logo quedaba cortado arriba */
+body > .app-topbar { margin: 0 !important; }
+/* Logos que vienen como imagen blanca */
+.topbar img, .app-topbar img, .header-calc img { filter: brightness(0) saturate(100%) invert(9%); }
+/* Cotización del dólar en el encabezado del cotizador */
+.fx-pill {
+  background: var(--hub-panel) !important;
+  border: 1px solid var(--hub-borde) !important;
+  border-radius: 16px !important;
+}
+.fx-pill .val { color: var(--hub-tinta) !important; }
+.fx-pill .lbl, .fx-pill .upd { color: var(--hub-tinta-tenue) !important; }
+/* Botón "Salir" y similares dentro del encabezado */
+.topbar button, .app-topbar button {
+  background: var(--hub-panel) !important;
+  border: 1px solid var(--hub-borde) !important;
+  border-radius: 999px !important;
+}
+.topbar .subtitle, .topbar .sub, .app-topbar .sub, .topbar .s,
+.header-calc p, .header-calc .subtitle {
+  color: var(--hub-tinta-tenue) !important;
+}
+.topbar .greeting, .topbar .t, .app-topbar .greeting { color: var(--hub-tinta) !important; }
+
+/* Selector principal (Tablero / Herramientas) */
+.main-select {
+  background-color: var(--hub-panel) !important;
+  color: var(--hub-tinta) !important;
+  border: 1px solid var(--hub-borde) !important;
+  border-radius: 12px !important;
+  font-weight: 600 !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%235c6167' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 14px center !important;
+  padding-right: 38px !important;
+}
+.main-select option { background: #fff !important; color: var(--hub-tinta) !important; }
+
+/* Solapas en pastilla: la activa en azul */
+.tabs button, .tab-btn, .tabs-bar button, .tabbar button, .view-tab, .cfgsub-tab,
+.switch button, .pill-btn, .catalogo-filtro-pill {
+  border-radius: 999px !important;
+  font-weight: 600 !important;
+}
+.tabs button, .tabs .tab-btn {
+  background: var(--hub-panel) !important;
+  color: var(--hub-tinta-suave) !important;
+  border: 1px solid var(--hub-borde) !important;
+}
+.tabs button.active, .tab-btn.active, .tabs-bar button.active, .tabbar button.active,
+.view-tab.active, .cfgsub-tab.active, .switch button.active, .pill-btn.active,
+.catalogo-filtro-pill.active {
+  background: var(--hub-azul) !important;
+  color: #fff !important;
+  border-color: var(--hub-azul) !important;
+}
+
+/* ── Tarjetas ─────────────────────────────────────────────────────────── */
+.card, .tcard, .kpi, .panel, .date-filter-bar, .ficha-card, .promo-card, .model-card,
+.evento, .login {
+  background: var(--hub-panel);
+  border-color: var(--hub-borde) !important;
+  border-radius: 16px !important;
+  box-shadow: none !important;
+}
+.kpi .n { font-weight: 700 !important; letter-spacing: -0.02em; color: var(--hub-tinta); }
+.kpi .l { color: var(--hub-tinta-suave) !important; }
+
+/* Títulos de sección en mayúsculas con tracking amplio */
+.tcard h2, .card h2, .section-title, .panel h2 {
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.14em !important;
+  text-transform: uppercase;
+  color: var(--hub-tinta-tenue) !important;
+}
+
+/* ── Botones ──────────────────────────────────────────────────────────── */
+.login { border: 1px solid var(--hub-borde) !important; }
+.btn-primary, button.primary, .df-btn-primary, .ficha-btn.ver, .btn-guardar, .login button {
+  background: var(--hub-azul) !important;
+  border-color: var(--hub-azul) !important;
+  color: #fff !important;
+  border-radius: 999px !important;
+}
+.btn-primary:hover, button.primary:hover, .df-btn-primary:hover, .ficha-btn.ver:hover,
+.btn-guardar:hover {
+  background: var(--hub-azul-oscuro) !important;
+}
+.df-btn-secondary, .btn-secondary, button.secondary {
+  background: var(--hub-panel-2) !important;
+  color: var(--hub-tinta) !important;
+  border-radius: 999px !important;
+}
+
+/* ── Campos ───────────────────────────────────────────────────────────── */
+input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]),
+select, textarea {
+  background-color: var(--hub-panel-2);
+  border-color: var(--hub-borde) !important;
+  border-radius: 12px;
+  color: var(--hub-tinta);
+}
+input:focus, select:focus, textarea:focus {
+  outline: none !important;
+  border-color: var(--hub-azul) !important;
+  box-shadow: 0 0 0 3px var(--hub-azul-suave) !important;
+}
+::placeholder { color: var(--hub-tinta-tenue) !important; opacity: 1; }
+
+/* ── Avisos ───────────────────────────────────────────────────────────── */
+.install-hint, .snapshot-banner, .hint {
+  border-radius: 16px !important;
+}
+.install-hint {
+  background: var(--hub-azul-suave) !important;
+  border: 1px solid #cfe0f0 !important;
+  color: var(--hub-azul-oscuro) !important;
+}
+.install-hint strong { color: var(--hub-azul-oscuro) !important; }
+
+/* Desplegables con la flecha del Portal */
+select:not([multiple]):not(.main-select) {
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%235c6167' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px !important;
+}
+/* En celdas de tabla no hay lugar para la flecha */
+td select {
+  background-position: right 6px center;
+  padding-right: 20px !important;
+}
+
+/* Precio de la unidad en el cotizador: que no se salga de la tarjeta */
+.unidad-row input { min-width: 0; width: 100%; }
+
+/* ── Pantalla de clave ────────────────────────────────────────────────── */
+#bydGate { background: var(--hub-fondo) !important; }
+#bydGate form {
+  background: var(--hub-panel);
+  border: 1px solid var(--hub-borde);
+  border-radius: 16px;
+  padding: 28px 24px;
+  max-width: 340px !important;
+}
+#bydGate form, #bydGate form * { font-family: 'Inter', system-ui, sans-serif !important; }
+#bydGate form svg { width: 150px !important; }
+#bydGate form > div:first-of-type { color: var(--hub-tinta) !important; }
+#bydGate input {
+  background: var(--hub-panel-2) !important;
+  color: var(--hub-tinta) !important;
+  border: 1px solid var(--hub-borde) !important;
+  border-radius: 12px !important;
+}
+#bydGate button {
+  background: var(--hub-azul) !important;
+  border-radius: 999px !important;
+}
+
+/* Botón flotante para volver al hub */
+#hubBackBtn {
+  background: var(--hub-panel) !important;
+  color: var(--hub-tinta) !important;
+  border: 1px solid var(--hub-borde) !important;
+  box-shadow: 0 4px 16px rgba(27, 28, 30, 0.10) !important;
+  font-family: 'Inter', system-ui, sans-serif !important;
+}
+.fab {
+  background: var(--hub-azul) !important;
+  color: #fff !important;
+  box-shadow: 0 4px 16px rgba(33, 102, 171, 0.30) !important;
+}
+
+/* Solapas de subrayado (horas extras, remitos) */
+.tabbar {
+  background: var(--hub-fondo) !important;
+  border: 0 !important;
+  padding: 10px 16px 4px !important;
+  gap: 6px;
+}
+.tabbar button:not(.active) {
+  background: var(--hub-panel) !important;
+  border: 1px solid var(--hub-borde) !important;
+  color: var(--hub-tinta-suave) !important;
+}
+
+/* Tablas: encabezado claro como en el Portal */
+thead th {
+  background: var(--hub-panel-2) !important;
+  color: var(--hub-tinta-suave) !important;
+  border-color: var(--hub-borde) !important;
+  font-weight: 600 !important;
+}
+td { border-color: var(--hub-borde) !important; }
+
+/* Barras de desplazamiento finas como en el Portal */
+* { scrollbar-width: thin; scrollbar-color: var(--hub-borde) transparent; }
+
+}
