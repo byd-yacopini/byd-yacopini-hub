@@ -658,9 +658,15 @@
   });
 })();
 </script>
+<!-- La librería de la base va en un solo archivo y con la versión fija: el
+     formato por módulos se bajaba en cadena (un archivo pedía el siguiente) y
+     era lo más lento de abrir la pantalla. Con versión fija el teléfono la
+     guarda y la segunda vez ni la pide. -->
+<link rel="preconnect" href="https://mgicnwnvtfkrxmkmewnt.supabase.co">
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.min.js"></script>
 <script type="module">
 // El ingreso con la cuenta del Portal de Calidad.
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+const { createClient } = window.supabase
 
 // La clave anónima es pública por diseño: sin sesión iniciada no da acceso a
 // nada. Lo que protege los datos es el permiso por fila de la base.
@@ -684,9 +690,17 @@ const clavePalabras = (s) =>
   (s || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
     .split(/\s+/).filter(Boolean).sort().join(' ')
 
+// La planilla tarda más de un segundo en llegar: se pide apenas aparece la
+// puerta, mientras la persona escribe, y no después de que tocó Entrar.
+let planilla = null
+const pedirPlanilla = () =>
+  (planilla ??= fetch(PLANILLA_CODIGOS + '&nocache=' + Date.now()).then((r) => r.text()).catch(() => null))
+if (document.getElementById('bydGate')) pedirPlanilla()
+
 async function nombreEnLaPlanilla(nombre) {
   try {
-    const texto = await (await fetch(PLANILLA_CODIGOS + '&nocache=' + Date.now())).text()
+    const texto = await pedirPlanilla()
+    if (!texto) return nombre
     const filas = texto.split(/\r?\n/).map((l) => l.split(','))
     const col = filas[0].findIndex((h) => /vendedor/i.test(h))
     const clave = clavePalabras(nombre)
@@ -697,8 +711,9 @@ async function nombreEnLaPlanilla(nombre) {
 }
 
 async function esVendedor() {
-  const { data: auth } = await db.auth.getUser()
-  const id = auth?.user?.id
+  // getSession lee la sesión guardada en el teléfono, sin ir al servidor.
+  const { data: ses } = await db.auth.getSession()
+  const id = ses?.session?.user?.id
   if (!id) return false
   const { data: perfil } = await db.from('perfiles').select('nombre,rol').eq('id', id).maybeSingle()
   if (perfil?.rol !== 'vendedor') return false

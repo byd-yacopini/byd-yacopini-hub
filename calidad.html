@@ -72,6 +72,24 @@
   .tile .v{ font-size:25px; font-weight:800; margin-top:3px; font-variant-numeric:tabular-nums; }
   .tile .n{ font-size:10.5px; color:var(--gris-medio); margin-top:1px; }
 
+  /* ---------- movimiento ----------
+     Mientras llega la primera carga se ven las fichas vacías latiendo, en vez
+     de un "Cargando…" suelto. Cuando un número cambia en un refresco, su ficha
+     se ilumina un momento para que se note qué se movió. */
+  .tile.esqueleto{ height:78px; background:linear-gradient(90deg,#ECECEC 25%,#F7F7F7 50%,#ECECEC 75%);
+                   background-size:200% 100%; animation:brillo 1.1s linear infinite; box-shadow:none; }
+  @keyframes brillo{ from{ background-position:200% 0 } to{ background-position:-200% 0 } }
+  .aparece{ animation:aparece .3s ease-out both; }
+  @keyframes aparece{ from{ opacity:0; transform:translateY(6px) } to{ opacity:1; transform:none } }
+  .tile.cambio{ animation:resalta 1.6s ease-out; }
+  @keyframes resalta{ from{ background:#DCE8FB } to{ background:var(--blanco) } }
+  .vivo{ display:inline-block; width:7px; height:7px; border-radius:50%; background:#388E3C; margin-right:5px;
+         vertical-align:0; animation:late 2s ease-in-out infinite; }
+  @keyframes late{ 50%{ opacity:.3 } }
+  @media (prefers-reduced-motion: reduce){
+    .tile.esqueleto, .aparece, .tile.cambio, .vivo{ animation:none; }
+  }
+
   /* ---------- listado por vendedor ---------- */
   h2.sec{ font-size:13px; font-weight:800; margin:22px 20px 0; }
   h2.sec + .hint{ font-size:11.5px; color:var(--gris-medio); margin:3px 20px 0; line-height:1.45; }
@@ -309,7 +327,7 @@
 
     <p class="pie">
       Los datos salen del Portal de Calidad y se actualizan solos: la pantalla los
-      vuelve a pedir cada cinco minutos y cada vez que volvés a ella.<br>
+      vuelve a pedir cada minuto y cada vez que volvés a ella.<br>
       <span id="actualizado"></span>
       <span class="oculto" id="enlacePortal"><br><a href="./portal/" target="_blank" rel="noopener">Abrir el Portal de Calidad</a></span>
     </p>
@@ -321,8 +339,14 @@
    background:#0A0A0A;color:#fff;border-radius:24px;padding:10px 16px;font:700 13px 'Segoe UI',Arial,sans-serif;
    text-decoration:none;box-shadow:0 3px 12px rgba(0,0,0,.28);">‹ Volver</a>
 
+<!-- La librería de la base va en un solo archivo y con la versión fija: el
+     formato por módulos se bajaba en cadena (un archivo pedía el siguiente) y
+     era lo más lento de abrir la pantalla. Con versión fija el teléfono la
+     guarda y la segunda vez ni la pide. -->
+<link rel="preconnect" href="https://mgicnwnvtfkrxmkmewnt.supabase.co">
+<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.min.js"></script>
 <script type="module">
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+const { createClient } = window.supabase
 
 // La clave anónima es pública por diseño: no da acceso a nada por sí sola. Lo
 // que protege los datos es el permiso por fila de la base, que exige una
@@ -418,29 +442,30 @@ $('salir').addEventListener('click', async () => {
 // parpadear la pantalla mientras el gerente la está mirando.
 async function cargar(callado = false) {
   ultima = Date.now()
-  ver($('cargando'), !callado)
+  if (!datos && !callado) {
+    $('tiles').innerHTML = '<div class="tile esqueleto"></div>'.repeat(4) + '<div class="tile esqueleto ancha"></div>'
+  }
   ver($('error'), false)
   try {
     // Solo las columnas que se usan: traer la fila entera multiplica por seis
-    // lo que baja el teléfono sin agregar nada a la pantalla.
-    const [ops, enc, vend, det, perf] = await Promise.all([
+    // lo que baja el teléfono sin agregar nada a la pantalla. Todo se pide a la
+    // vez, incluido quién es y su Mystery: antes eso iba después, en fila, y
+    // cada paso sumaba una vuelta a la base.
+    const { data: ses } = await db.auth.getSession()
+    const [ops, enc, vend, det, perf, ms] = await Promise.all([
       db.from('operaciones').select('fecha_venta,vendedor_id'),
       db.from('encuestas').select('canal,fecha,vendedor_id,nps,tiene_reclamo'),
       db.from('vendedores').select('id,nombre,activo,perfil_id'),
       db.from('detecciones').select('created_at,descripcion,cliente_nombre,estado,vendedor_id,reportado_por'),
-      db.from('perfiles').select('id,nombre'),
+      db.from('perfiles').select('id,nombre,rol'),
+      db.from('mystery_shopper').select('periodo,puntaje,objetivo,observaciones').order('periodo', { ascending: false }),
     ])
     for (const r of [ops, enc, vend, det, perf]) if (r.error) throw r.error
 
-    await reconocerQuienEntro(vend.data ?? [])
+    reconocerQuienEntro(ses?.session?.user?.id, perf.data ?? [], vend.data ?? [])
 
     // Sólo el vendedor: la base ya le devuelve únicamente sus visitas.
-    if (sesion?.rol === 'vendedor') {
-      const ms = await db.from('mystery_shopper')
-        .select('periodo,puntaje,objetivo,observaciones')
-        .order('periodo', { ascending: false })
-      pintarMystery(ms.error ? [] : ms.data ?? [])
-    }
+    if (sesion?.rol === 'vendedor') pintarMystery(ms.error ? [] : ms.data ?? [])
 
     // La detección guarda el perfil de quien la cargó y, si su ficha está
     // vinculada, también el vendedor. Cuando falta lo segundo se recupera por
@@ -460,12 +485,13 @@ async function cargar(callado = false) {
     }
     llenarVendedores(vend.data ?? [])
     ver($('cargando'), false)
-    $('actualizado').textContent =
-      'Actualizado a las ' +
+    $('actualizado').innerHTML =
+      '<span class="vivo" aria-hidden="true"></span>Actualizado a las ' +
       new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })
     pintar()
   } catch (e) {
     ver($('cargando'), false)
+    if (!datos) $('tiles').innerHTML = ''
     $('error').textContent =
       'No pudimos leer los datos: ' + (e.message ?? e) +
       '. Si dice que no tenés permiso, pedile a Calidad que active tu usuario.'
@@ -477,16 +503,12 @@ async function cargar(callado = false) {
 // suyo. No alcanza con esconderle el resto: la base ya le muestra únicamente
 // las detecciones que cargó él. Acá se le fija el filtro en su propia ficha,
 // para que las entregas y el NPS tampoco sean los del concesionario entero.
-async function reconocerQuienEntro(vendedores) {
-  if (sesion) return // ya se resolvió; no hace falta en cada refresco
+function reconocerQuienEntro(id, perfiles, vendedores) {
+  if (sesion || !id) return // ya se resolvió; no hace falta en cada refresco
 
-  const { data: auth } = await db.auth.getUser()
-  const id = auth?.user?.id
-  if (!id) return
-
-  // Un vendedor sólo puede leer su propia fila de perfiles, así que esto
-  // devuelve una sola fila o ninguna; no es una fuga.
-  const { data: perfil } = await db.from('perfiles').select('nombre,rol').eq('id', id).maybeSingle()
+  // Un vendedor sólo puede leer su propia fila de perfiles, así que la lista
+  // trae una sola fila o ninguna; no es una fuga.
+  const perfil = perfiles.find((p) => p.id === id)
   const ficha = vendedores.find((v) => v.perfil_id === id) ?? null
   sesion = { rol: perfil?.rol ?? null, nombre: perfil?.nombre ?? '', vendedorId: ficha?.id ?? null, perfilId: id }
 
@@ -507,7 +529,7 @@ async function reconocerQuienEntro(vendedores) {
 }
 
 // Sólo los que están en actividad, por nombre. El elegido se conserva cuando
-// la pantalla se refresca sola: si no, cada cinco minutos volvería a "todos"
+// la pantalla se refresca sola: si no, cada minuto volvería a "todos"
 // mientras el gerente está mirando a una persona.
 function llenarVendedores(vendedores) {
   if (sesion?.rol === 'vendedor') return // no elige: ve lo suyo y nada más
@@ -616,6 +638,10 @@ const num = (v, suf = '') => (v === null || v === undefined ? '—' : v + suf)
 // antes de meterla en la página para que un "<" no rompa el listado.
 const escapar = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
 
+let valoresAnteriores = {}
+let vistaAnterior = ''
+let primeraVez = true
+
 function pintar() {
   if (!datos) return
   const { desde, hasta } = rango()
@@ -640,7 +666,17 @@ function pintar() {
     ['Con reclamo', num(r.pctReclamos, '%'), `${r.reclamos} de ${r.internas}`, ''],
     ['Detecciones tempranas', r.detecciones.length,
       r.detecciones.length === 0 ? 'ningún caso cargado' : `${r.sinResolver} sin resolver`, ' ancha'],
-  ].map(([k, v, n, c]) => `<div class="tile${c}"><div class="k">${k}</div><div class="v">${v}</div><div class="n">${n}</div></div>`).join('')
+  ].map(([k, v, n, c]) => {
+    // Sólo se ilumina si cambió con la misma vista: al pasar de semana todos
+    // cambian y no tiene sentido marcarlos.
+    const vista = modo + rango().desde + vendedorElegido
+    const cambio = vistaAnterior === vista && valoresAnteriores[k] !== undefined && valoresAnteriores[k] !== String(v)
+    valoresAnteriores[k] = String(v)
+    return `<div class="tile${c}${cambio ? ' cambio' : ''}${primeraVez ? ' aparece' : ''}"><div class="k">${k}</div><div class="v">${v}</div><div class="n">${n}</div></div>`
+  }).join('')
+  vistaAnterior = modo + rango().desde + vendedorElegido
+  if (primeraVez) { $('lista').classList.add('aparece'); $('grafico').classList.add('aparece') }
+  primeraVez = false
 
   pintarLista(r)
   pintarCasos(r)
@@ -884,14 +920,17 @@ $('tabMes').addEventListener('click', () => {
 
 // ---------------------------------------------------------------- al día
 // El Portal se sincroniza solo con las planillas, así que los números cambian
-// mientras la pantalla está abierta. Se vuelven a pedir cada cinco minutos y
-// cada vez que el gerente vuelve a la pestaña, para que no mire datos viejos.
-const CADA = 5 * 60 * 1000
+// mientras la pantalla está abierta: lo que Calidad carga en el Portal, o un
+// aviso nuevo de un vendedor, le aparece al gerente en menos de un minuto. Se
+// vuelven a pedir cada minuto mientras la pantalla está a la vista (en segundo
+// plano no, para no gastarle datos al teléfono) y apenas se vuelve a ella.
+const CADA = 60 * 1000
 let ultima = 0
 
 async function refrescar() {
-  if (!datos) return                         // todavía no entró
-  if (Date.now() - ultima < 30000) return    // no atosigar a la base
+  if (!datos) return                                   // todavía no entró
+  if (document.visibilityState !== 'visible') return  // nadie la está mirando
+  if (Date.now() - ultima < 10000) return              // no atosigar a la base
   await cargar(true)
 }
 
