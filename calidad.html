@@ -489,6 +489,7 @@ async function cargar(callado = false) {
       '<span class="vivo" aria-hidden="true"></span>Actualizado a las ' +
       new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })
     pintar()
+    escucharCambios()
   } catch (e) {
     ver($('cargando'), false)
     if (!datos) $('tiles').innerHTML = ''
@@ -935,6 +936,25 @@ async function refrescar() {
 }
 
 setInterval(refrescar, CADA)
+
+// Además, la base avisa en el momento en que algo cambia (migración 0018), y
+// ahí se vuelve a pedir sin esperar al minuto. La sincronización trae cientos
+// de filas de una vez: se espera a que se calmen los avisos y se pide una
+// sola vez. Si el tiempo real no estuviera activo, queda el minuto de arriba.
+let avisoPendiente = null
+let escuchando = false
+function escucharCambios() {
+  if (escuchando) return
+  escuchando = true
+  const canal = db.channel('calidad')
+  for (const tabla of ['operaciones', 'encuestas', 'detecciones', 'mystery_shopper', 'vendedores']) {
+    canal.on('postgres_changes', { event: '*', schema: 'public', table: tabla }, () => {
+      clearTimeout(avisoPendiente)
+      avisoPendiente = setTimeout(() => { if (datos && document.visibilityState === 'visible') cargar(true) }, 1500)
+    })
+  }
+  canal.subscribe()
+}
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') refrescar()
 })
