@@ -25,8 +25,33 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+// Botón de modo claro u oscuro (lo agregó el Portal de Calidad).
+// Las páginas cargan tema.js con una línea en su <head>. Algunas las regenera
+// la sincronización y esa línea se pierde a los minutos, así que acá se agrega
+// al vuelo a cualquier página del hub que no la tenga. Si algo falla, se
+// devuelve la página tal cual vino: nunca queda en blanco.
+function conTema(respuesta) {
+  const tipo = respuesta.headers.get('content-type') || '';
+  if (!respuesta.ok || tipo.indexOf('text/html') === -1) return respuesta;
+  return respuesta.clone().text().then((html) => {
+    const i = html.toLowerCase().indexOf('</head>');
+    if (html.indexOf('tema.js') !== -1 || i === -1) return respuesta;
+    const nuevo = html.slice(0, i) + '<script src="tema.js"></script>' + html.slice(i);
+    return new Response(nuevo, { status: respuesta.status, statusText: respuesta.statusText, headers: respuesta.headers });
+  }).catch(() => respuesta);
+}
+
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
+  const esPaginaDelHub =
+    event.request.mode === 'navigate' &&
+    url.origin === self.location.origin &&
+    url.pathname.indexOf('/portal/') === -1 &&
+    !SHELL_FILES.some((f) => url.pathname.endsWith(f.replace('./', '')));
+  if (esPaginaDelHub) {
+    event.respondWith(fetch(event.request).then(conTema));
+    return;
+  }
   // Solo interceptamos el shell del hub (index/manifest/icons).
   // El resto (gestor_precios.html, calculadora_creditos.html, links externos)
   // siempre va a la red para asegurar datos actualizados.
