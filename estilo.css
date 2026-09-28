@@ -58,54 +58,23 @@ body, button, input, select, textarea {
   font-family: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif !important;
 }
 
-/* El logo de BYD: el SVG lo pinta en blanco para el fondo negro de antes */
-.st0 { fill: var(--hub-tinta) !important; }
-
-/* ── Encabezados: sobre el mismo lienzo, sin franja negra ─────────────── */
-.topbar, .app-topbar, .header-calc, .main-select-wrap, .tabs, .tabs-bar {
-  background: var(--hub-fondo) !important;
-  color: var(--hub-tinta) !important;
-  box-shadow: none !important;
+/* ── Encabezado: la franja negra con el logo BYD queda como siempre ───── */
+.topbar, .app-topbar, .header-calc, .main-select-wrap, .main-select-wrap ~ .tabs {
+  background: #0a0a0a !important;
 }
-.topbar *, .app-topbar *, .header-calc * { color: inherit !important; }
 /* En el gestor y en plantillas el encabezado tenía un margen negativo pensado
    para estar dentro de la tarjeta, y el logo quedaba cortado arriba */
 body > .app-topbar { margin: 0 !important; }
-/* Logos que vienen como imagen blanca */
-.topbar img, .app-topbar img, .header-calc img { filter: brightness(0) saturate(100%) invert(9%); }
-/* Cotización del dólar en el encabezado del cotizador */
-.fx-pill {
-  background: var(--hub-panel) !important;
-  border: 1px solid var(--hub-borde) !important;
-  border-radius: 16px !important;
-}
-.fx-pill .val { color: var(--hub-tinta) !important; }
-.fx-pill .lbl, .fx-pill .upd { color: var(--hub-tinta-tenue) !important; }
-/* Botón "Salir" y similares dentro del encabezado */
-.topbar button, .app-topbar button {
-  background: var(--hub-panel) !important;
-  border: 1px solid var(--hub-borde) !important;
-  border-radius: 999px !important;
-}
-.topbar .subtitle, .topbar .sub, .app-topbar .sub, .topbar .s,
-.header-calc p, .header-calc .subtitle {
-  color: var(--hub-tinta-tenue) !important;
-}
-.topbar .greeting, .topbar .t, .app-topbar .greeting { color: var(--hub-tinta) !important; }
 
-/* Selector principal (Tablero / Herramientas) */
+/* Selector principal (Tablero / Herramientas), sobre la franja negra */
 .main-select {
-  background-color: var(--hub-panel) !important;
-  color: var(--hub-tinta) !important;
-  border: 1px solid var(--hub-borde) !important;
   border-radius: 12px !important;
   font-weight: 600 !important;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%235c6167' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23ffffff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
   background-repeat: no-repeat !important;
   background-position: right 14px center !important;
   padding-right: 38px !important;
 }
-.main-select option { background: #fff !important; color: var(--hub-tinta) !important; }
 
 /* Solapas en pastilla: la activa en azul */
 .tabs button, .tab-btn, .tabs-bar button, .tabbar button, .view-tab, .cfgsub-tab,
@@ -118,7 +87,13 @@ body > .app-topbar { margin: 0 !important; }
   color: var(--hub-tinta-suave) !important;
   border: 1px solid var(--hub-borde) !important;
 }
-.tabs button.active, .tab-btn.active, .tabs-bar button.active, .tabbar button.active,
+/* Las solapas del Tablero van dentro de la franja negra */
+.main-select-wrap ~ .tabs button {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #d4d4d4 !important;
+  border: 1px solid transparent !important;
+}
+.tabs button.active, .tab-btn.active, .main-select-wrap ~ .tabs button.active, .tabs-bar button.active, .tabbar button.active,
 .view-tab.active, .cfgsub-tab.active, .switch button.active, .pill-btn.active,
 .catalogo-filtro-pill.active {
   background: var(--hub-azul) !important;
@@ -219,6 +194,7 @@ td select {
 }
 #bydGate form, #bydGate form * { font-family: 'Inter', system-ui, sans-serif !important; }
 #bydGate form svg { width: 150px !important; }
+#bydGate .st0 { fill: var(--hub-tinta) !important; }
 #bydGate form > div:first-of-type { color: var(--hub-tinta) !important; }
 #bydGate input {
   background: var(--hub-panel-2) !important;
