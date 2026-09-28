@@ -147,6 +147,15 @@
     if (e.origin === location.origin && e.data && e.data.tipo === 'byd-tema') aplicar(leer())
   })
 
+  // El service worker del hub (sw.js) le agrega el botón al vuelo a las
+  // páginas que regenera la sincronización. Antes sólo se instalaba al abrir
+  // el Tablero; los vendedores entran directo a su panel y no lo tenían.
+  try {
+    if ('serviceWorker' in navigator && location.pathname.indexOf('/portal/') === -1) {
+      navigator.serviceWorker.register('./sw.js').catch(function () {})
+    }
+  } catch (e) {}
+
   // Adentro de un marco no va botón: ya lo tiene la página de afuera.
   if (window.top !== window.self) return
 
