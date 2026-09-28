@@ -48,7 +48,12 @@
     '@media screen{' +
     // Se invierte al 90% y no al 100%: el negro puro sobre blanco puro, dado
     // vuelta, encandila.
-    'html[data-tema="oscuro"]{filter:invert(.9) hue-rotate(180deg);background:#fff}' +
+    // El alto automático hace que el oscurecido cubra toda la página y no sólo
+    // la primera pantalla (algunas páginas fijan html a height:100%).
+    'html[data-tema="oscuro"]{filter:invert(.9) hue-rotate(180deg);height:auto !important;min-height:100%}' +
+    // La página y lo que queda debajo de ella van del mismo gris: si no, en
+    // oscuro se ve un rectángulo más claro del alto de la pantalla.
+    'html[data-tema="oscuro"],html[data-tema="oscuro"] body{background:#f6f7f9 !important}' +
     enOscuro(CONSERVA) + '{filter:invert(1) hue-rotate(180deg)}' +
     enOscuro(anidados) + '{filter:none}' +
     '#bydBotonTema{position:fixed;right:14px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:999997;' +
