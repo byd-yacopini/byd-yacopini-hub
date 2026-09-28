@@ -12,9 +12,14 @@
     <meta name="apple-mobile-web-app-title" content="BYD Calidad" />
     <meta name="description" content="Portal de Calidad de BYD Yacopini." />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- El tema se aplica antes de pintar: si no, quien eligió el oscuro ve un
+         relámpago blanco cada vez que abre el Portal. -->
+    <script>
+      try { if (localStorage.getItem('byd-tema') === 'oscuro') document.documentElement.dataset.tema = 'oscuro' } catch (e) {}
+    </script>
     <title>Portal de Calidad · BYD Yacopini</title>
-    <script type="module" crossorigin src="/byd-yacopini-hub/portal/assets/index-HdgSEqIV.js"></script>
-    <link rel="stylesheet" crossorigin href="/byd-yacopini-hub/portal/assets/index-167oD3Sg.css">
+    <script type="module" crossorigin src="/byd-yacopini-hub/portal/assets/index-ZOlKrbVf.js"></script>
+    <link rel="stylesheet" crossorigin href="/byd-yacopini-hub/portal/assets/index-LcEds9T3.css">
   </head>
   <body>
     <div id="root"></div>
