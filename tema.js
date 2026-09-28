@@ -16,6 +16,21 @@
   var CLAVE = 'byd-tema'
   var raiz = document.documentElement
 
+  // Sin zoom al tocar. En el iPhone, tocar un campo con letra de menos de
+  // 16px agranda la página sola y queda corrida; el doble toque rápido hace lo
+  // mismo. Se fija la escala en 1 y se apaga el zoom por doble toque. Pellizcar
+  // para agrandar sigue andando en el iPhone.
+  try {
+    var vp = document.querySelector('meta[name="viewport"]')
+    if (!vp) {
+      vp = document.createElement('meta')
+      vp.name = 'viewport'
+      vp.content = 'width=device-width, initial-scale=1'
+      document.head.appendChild(vp)
+    }
+    if (!/maximum-scale/.test(vp.content)) vp.content += ', maximum-scale=1'
+  } catch (e) {}
+
   function leer() {
     try { return localStorage.getItem(CLAVE) === 'oscuro' ? 'oscuro' : 'claro' } catch (e) { return 'claro' }
   }
@@ -45,6 +60,7 @@
 
   var estilo = document.createElement('style')
   estilo.textContent =
+    'html{touch-action:manipulation;-webkit-text-size-adjust:100%}' +
     '@media screen{' +
     // Se invierte al 90% y no al 100%: el negro puro sobre blanco puro, dado
     // vuelta, encandila.

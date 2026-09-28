@@ -301,4 +301,8 @@ a.card .icon { border-radius: 14px !important; }
 /* Saludo más grande */
 .greeting { font-weight: 800 !important; }
 
+/* Calculadora de comisiones: el resumen del filtro no entra en una línea en
+   el celular y empujaba la página de costado */
+.filtro-resumen { white-space: normal !important; max-width: 100%; }
+
 }

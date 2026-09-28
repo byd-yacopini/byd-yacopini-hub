@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
 <title>BYD Yacopini &middot; Calidad</title>
 <style>
   :root{
@@ -254,8 +254,8 @@
   <!-- ============ PANEL ============ -->
   <div class="oculto" id="panel">
     <div class="tabs">
-      <button type="button" id="tabSemana" aria-pressed="true">Por semana</button>
-      <button type="button" id="tabMes" aria-pressed="false">Por mes</button>
+      <button type="button" id="tabSemana" aria-pressed="false">Por semana</button>
+      <button type="button" id="tabMes" aria-pressed="true">Por mes</button>
       <button type="button" id="tabAnio" aria-pressed="false">Por año</button>
     </div>
 
@@ -320,6 +320,16 @@
       <span class="flecha" aria-hidden="true">▾</span>
     </button>
     <div class="casos oculto" id="casos"></div>
+
+    <!-- Lo que los clientes le dijeron al call center cuando se quejaron. Se
+         ve el comentario entero: sirve para saber qué corregir, no sólo cuántos. -->
+    <h2 class="sec" id="tituloReclamos">Reclamos de clientes</h2>
+    <p class="hint" id="hintReclamos"></p>
+    <button type="button" class="desplegar oculto" id="desplegarRec" aria-expanded="false" aria-controls="reclamos">
+      <span id="desplegarRecTexto">Ver los reclamos</span>
+      <span class="flecha" aria-hidden="true">▾</span>
+    </button>
+    <div class="casos oculto" id="reclamos"></div>
 
     <div class="oculto" id="bloqueMystery">
       <h2 class="sec">Tus visitas de Mystery Shopper</h2>
@@ -395,10 +405,13 @@ function rotuloSemana(lunes) {
 
 // ---------------------------------------------------------------- estado
 let datos = null          // lo que se trajo de la base, una sola vez
-let modo = 'semana'       // 'semana' | 'mes' | 'anio'
+// Arranca por mes: la semana en curso, sobre todo un lunes, está casi siempre
+// en cero y parecía que la pantalla no cargaba.
+let modo = 'mes'          // 'semana' | 'mes' | 'anio'
 let vendedorElegido = ''  // '' = todos
 let sesion = null         // { rol, nombre, vendedorId } de quien entró
 let casosAbiertos = false // los casos arrancan plegados
+let reclamosAbiertos = false
 let cursor = lunesDe(new Date())   // lunes de la semana mostrada
 let cursorMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
 let cursorAnio = new Date().getFullYear()
@@ -465,15 +478,20 @@ async function cargar(callado = false) {
     // vez, incluido quién es y su Mystery: antes eso iba después, en fila, y
     // cada paso sumaba una vuelta a la base.
     const { data: ses } = await db.auth.getSession()
-    const [ops, enc, vend, det, perf, ms] = await Promise.all([
+    const [ops, enc, vend, det, rec, perf, ms] = await Promise.all([
       db.from('operaciones').select('fecha_venta,vendedor_id'),
       db.from('encuestas').select('canal,fecha,vendedor_id,nps,tiene_reclamo'),
       db.from('vendedores').select('id,nombre,activo,perfil_id'),
       db.from('detecciones').select('created_at,descripcion,cliente_nombre,estado,vendedor_id,reportado_por'),
+      db.from('encuestas')
+        .select('fecha,vendedor_id,cliente_nombre,comentario,area_reclamo,satisfaccion,modelo:datos->>Modelo,categoria:categorias_reclamo(nombre)')
+        .eq('canal', 'interna').eq('tiene_reclamo', true),
       db.from('perfiles').select('id,nombre,rol'),
       db.from('mystery_shopper').select('periodo,puntaje,objetivo,observaciones').order('periodo', { ascending: false }),
     ])
     for (const r of [ops, enc, vend, det, perf]) if (r.error) throw r.error
+    // Si el detalle de reclamos fallara, el resto de la pantalla sigue igual.
+    if (rec.error) console.warn('No se pudo leer el detalle de reclamos:', rec.error.message)
 
     reconocerQuienEntro(ses?.session?.user?.id, perf.data ?? [], vend.data ?? [])
 
@@ -491,6 +509,7 @@ async function cargar(callado = false) {
       encuestas: enc.data ?? [],
       vendedores: new Map((vend.data ?? []).map((v) => [v.id, v.nombre])),
       perfiles: new Map((perf.data ?? []).map((p) => [p.id, p.nombre])),
+      reclamos: rec.error ? [] : rec.data ?? [],
       detecciones: (det.data ?? []).map((d) => ({
         ...d,
         vendedor_id: d.vendedor_id ?? vendedorDePerfil.get(d.reportado_por) ?? null,
@@ -563,6 +582,11 @@ function llenarVendedores(vendedores) {
 // Un toque y se abren todas. Se vuelve a pintar en vez de sólo mostrar el
 // bloque, para que el alto que se le avisa al hub quede al día y el marco
 // crezca: si no, la lista queda cortada adentro de la solapa.
+$('desplegarRec').addEventListener('click', () => {
+  reclamosAbiertos = !reclamosAbiertos
+  pintar()
+})
+
 $('desplegar').addEventListener('click', () => {
   casosAbiertos = !casosAbiertos
   pintar()
@@ -643,6 +667,9 @@ function resumen(desde, hasta) {
     filas,
     detecciones,
     sinResolver: detecciones.filter((d) => d.estado === 'nueva' || d.estado === 'en_gestion').length,
+    listaReclamos: datos.reclamos
+      .filter((e) => dentro(e.fecha) && suyo(e.vendedor_id))
+      .sort((a, b) => (a.fecha < b.fecha ? 1 : -1)),
   }
 }
 
@@ -701,6 +728,7 @@ function pintar() {
 
   pintarLista(r)
   pintarCasos(r)
+  pintarReclamos(r)
   pintarGrafico()
 }
 
@@ -874,6 +902,59 @@ $('formAviso').addEventListener('submit', async (e) => {
   casosAbiertos = true
   await cargar(true)
 })
+
+// Los reclamos del call center, del más nuevo al más viejo. El comentario
+// puede venir en el general o en el de un aspecto (entrega, administración…):
+// se muestra el que haya.
+const AREA = { venta: 'Venta', ventas: 'Venta', postventa: 'Postventa', administracion: 'Administración', entrega: 'Entrega' }
+function pintarReclamos(r) {
+  const periodo = periodoTexto()
+  const esVendedor = sesion?.rol === 'vendedor'
+  $('tituloReclamos').textContent = esVendedor ? 'Reclamos de tus clientes' : 'Reclamos de clientes'
+  $('hintReclamos').textContent =
+    'Lo que dijeron los clientes que se quejaron cuando los llamó el call center.'
+
+  const lista = r.listaReclamos
+  if (lista.length === 0) {
+    const quien = esVendedor
+      ? `Ningún cliente tuyo se quejó ${periodo}.`
+      : vendedorElegido
+        ? `Ningún cliente de ${escapar(datos.vendedores.get(vendedorElegido) ?? 'esa persona')} se quejó ${periodo}.`
+        : `Ningún cliente se quejó ${periodo}.`
+    ver($('desplegarRec'), false)
+    ver($('reclamos'), true)
+    $('reclamos').innerHTML = `<div class="vacio">${quien}</div>`
+    return
+  }
+
+  const n = lista.length
+  ver($('desplegarRec'), true)
+  $('desplegarRecTexto').textContent = reclamosAbiertos
+    ? 'Ocultar los reclamos'
+    : `Ver ${n === 1 ? 'el reclamo' : `los ${n} reclamos`}`
+  $('desplegarRec').setAttribute('aria-expanded', String(reclamosAbiertos))
+  ver($('reclamos'), reclamosAbiertos)
+
+  $('reclamos').innerHTML = lista.map((e) => {
+    const comentarios = e.satisfaccion?.comentarios ?? {}
+    const texto = e.comentario
+      || Object.values(comentarios).filter(Boolean).join(' · ')
+      || 'Sin comentario cargado.'
+    const [, m, d] = String(e.fecha).split('-')
+    const etiquetas = [AREA[(e.area_reclamo ?? '').toLowerCase()], e.categoria?.nombre].filter(Boolean)
+    const vendedor = !esVendedor && e.vendedor_id ? datos.vendedores.get(e.vendedor_id) : null
+    return `
+      <div class="caso">
+        <div class="caso-top">
+          <div class="avatar">${iniciales(e.cliente_nombre || '?')}</div>
+          <div class="caso-quien">${escapar(e.cliente_nombre || 'Cliente sin nombre')}</div>
+          <span class="caso-fecha">${Number(d)}/${Number(m)}</span>
+        </div>
+        <p>${escapar(texto)}</p>
+        <div class="caso-pie">${[e.modelo, ...etiquetas, vendedor ? 'Vendedor: ' + vendedor : null].filter(Boolean).map(escapar).join(' · ')}</div>
+      </div>`
+  }).join('')
+}
 
 // Evolución: una sola serie por gráfico y el valor escrito sobre la barra más
 // alta, para no repetir un número en cada columna.

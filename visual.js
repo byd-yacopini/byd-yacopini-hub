@@ -78,10 +78,38 @@
     'border-radius:11px;margin-bottom:10px;color:var(--c);' +
     'background:color-mix(in srgb,var(--c) 13%,#fff)}' +
     '.kpi-ico svg{width:18px;height:18px;display:block}' +
-    '@media print{.kpi-ico{display:none}}'
+    '.tabla-desliza{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}' +
+    '@media print{.kpi-ico{display:none}.tabla-desliza{overflow:visible}}'
   document.head.appendChild(css)
 
+  // Tablas más anchas que la pantalla (el gestor de precios, la calculadora
+  // de comisiones): en vez de que se corra la página entera de costado, que
+  // en el celular se ve como un zoom que no se va, la tabla se desplaza sola
+  // adentro de una caja del ancho de la pantalla.
+  function contenerTablas() {
+    var tablas = document.querySelectorAll('table')
+    for (var i = 0; i < tablas.length; i++) {
+      var t = tablas[i]
+      var padre = t.parentElement
+      if (!padre || padre.classList.contains('tabla-desliza')) continue
+      var ancho = document.documentElement.clientWidth
+      if (t.getBoundingClientRect().right <= ancho + 2) continue
+      var caja = document.createElement('div')
+      caja.className = 'tabla-desliza'
+      padre.insertBefore(caja, t)
+      caja.appendChild(t)
+    }
+  }
+  var tablasProgramadas = false
+  function programarTablas() {
+    if (tablasProgramadas) return
+    tablasProgramadas = true
+    setTimeout(function () { tablasProgramadas = false; contenerTablas() }, 300)
+  }
+  window.addEventListener('resize', programarTablas)
+
   function arrancar() {
+    programarTablas()
     recorrer(document.body)
     // Algunas fichas se arman cuando llegan los datos.
     new MutationObserver(function (cambios) {
@@ -89,6 +117,7 @@
         var nuevos = cambios[i].addedNodes
         for (var j = 0; j < nuevos.length; j++) if (nuevos[j].nodeType === 1) recorrer(nuevos[j])
       }
+      programarTablas()
     }).observe(document.body, { childList: true, subtree: true })
   }
   if (document.body) arrancar()
