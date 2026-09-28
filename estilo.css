@@ -93,7 +93,7 @@ body > .app-topbar { margin: 0 !important; }
   color: #d4d4d4 !important;
   border: 1px solid transparent !important;
 }
-.tabs button.active, .tab-btn.active, .main-select-wrap ~ .tabs button.active, .tabs-bar button.active, .tabbar button.active,
+.tabs button.active, .tabs button[aria-pressed="true"], .tab-btn.active, .main-select-wrap ~ .tabs button.active, .tabs-bar button.active, .tabbar button.active,
 .view-tab.active, .cfgsub-tab.active, .switch button.active, .pill-btn.active,
 .catalogo-filtro-pill.active {
   background: var(--hub-azul) !important;

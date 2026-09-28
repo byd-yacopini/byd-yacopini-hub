@@ -233,7 +233,7 @@
 <div class="app">
   <div class="title-block">
     <h1>Calidad</h1>
-    <p>El resultado de cada vendedor semana por semana: entregas, NPS de fábrica, reclamos del call center
+    <p>El resultado de cada vendedor por semana, por mes o por año: entregas, NPS de fábrica, reclamos del call center
        y las detecciones tempranas que cargó cada uno.</p>
   </div>
 
@@ -256,6 +256,7 @@
     <div class="tabs">
       <button type="button" id="tabSemana" aria-pressed="true">Por semana</button>
       <button type="button" id="tabMes" aria-pressed="false">Por mes</button>
+      <button type="button" id="tabAnio" aria-pressed="false">Por año</button>
     </div>
 
     <div class="filtro" id="filtro">
@@ -302,7 +303,7 @@
 
     <div class="tiles" id="tiles"></div>
 
-    <h2 class="sec">Evolución de las últimas 8 semanas</h2>
+    <h2 class="sec" id="tituloGrafico">Evolución de las últimas 8 semanas</h2>
     <div class="grafico" id="grafico"></div>
 
     <h2 class="sec" id="tituloLista">Cada vendedor</h2>
@@ -394,12 +395,23 @@ function rotuloSemana(lunes) {
 
 // ---------------------------------------------------------------- estado
 let datos = null          // lo que se trajo de la base, una sola vez
-let modo = 'semana'       // 'semana' | 'mes'
+let modo = 'semana'       // 'semana' | 'mes' | 'anio'
 let vendedorElegido = ''  // '' = todos
 let sesion = null         // { rol, nombre, vendedorId } de quien entró
 let casosAbiertos = false // los casos arrancan plegados
 let cursor = lunesDe(new Date())   // lunes de la semana mostrada
 let cursorMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+let cursorAnio = new Date().getFullYear()
+
+// Cómo se nombra el período elegido en los textos ("No tuviste movimiento …").
+const periodoTexto = () => ({ semana: 'esa semana', mes: 'ese mes', anio: 'ese año' })[modo]
+
+function elegirModo(nuevo) {
+  modo = nuevo
+  $('tabSemana').setAttribute('aria-pressed', String(nuevo === 'semana'))
+  $('tabMes').setAttribute('aria-pressed', String(nuevo === 'mes'))
+  $('tabAnio').setAttribute('aria-pressed', String(nuevo === 'anio'))
+}
 
 // ---------------------------------------------------------------- ingreso
 async function arrancar() {
@@ -569,6 +581,7 @@ function rango() {
     const hasta = iso(new Date(cursor.getTime() + 6 * DIA))
     return { desde, hasta }
   }
+  if (modo === 'anio') return { desde: `${cursorAnio}-01-01`, hasta: `${cursorAnio}-12-31` }
   const fin = new Date(cursorMes.getFullYear(), cursorMes.getMonth() + 1, 0)
   return { desde: iso(cursorMes), hasta: iso(fin) }
 }
@@ -654,6 +667,12 @@ function pintar() {
     $('rango').textContent = titulo
     $('subrango').textContent = sub
     $('despues').disabled = cursor.getTime() >= lunesDe(new Date()).getTime()
+  } else if (modo === 'anio') {
+    $('rango').textContent = `Año ${cursorAnio}`
+    $('subrango').textContent = cursorAnio === new Date().getFullYear()
+      ? `del 1 de enero a hoy`
+      : `de enero a diciembre`
+    $('despues').disabled = cursorAnio >= new Date().getFullYear()
   } else {
     $('rango').textContent = MESES[cursorMes.getMonth()][0].toUpperCase() + MESES[cursorMes.getMonth()].slice(1) + ' ' + cursorMes.getFullYear()
     $('subrango').textContent = `del ${desde} al ${hasta}`
@@ -686,7 +705,7 @@ function pintar() {
 }
 
 function pintarLista(r) {
-  const periodo = modo === 'semana' ? 'esa semana' : 'ese mes'
+  const periodo = periodoTexto()
   // Se aclara la diferencia con la ficha de arriba: si no, parece que faltan
   // entregas cuando en realidad BYD no se las asignó a nadie.
   const reventa = r.sinVendedor === 0 ? '' :
@@ -736,7 +755,7 @@ function pintarLista(r) {
 // Los casos que cargaron los vendedores, del más nuevo al más viejo. Van
 // enteros y no resumidos: el gerente quiere leer qué pasó, no contar cuántos.
 function pintarCasos(r) {
-  const periodo = modo === 'semana' ? 'esa semana' : 'ese mes'
+  const periodo = periodoTexto()
   $('hintCasos').textContent =
     'Lo que el vendedor avisa apenas lo detecta, sin esperar a que aparezca en una encuesta.'
 
@@ -850,9 +869,7 @@ $('formAviso').addEventListener('submit', async (e) => {
   abrirAviso(false)
   ver($('avisoListo'), true)
   // Se vuelve a la semana actual y se abren los casos, así ve el suyo.
-  modo = 'semana'
-  $('tabSemana').setAttribute('aria-pressed', 'true')
-  $('tabMes').setAttribute('aria-pressed', 'false')
+  elegirModo('semana')
   cursor = lunesDe(new Date())
   casosAbiertos = true
   await cargar(true)
@@ -861,6 +878,8 @@ $('formAviso').addEventListener('submit', async (e) => {
 // Evolución: una sola serie por gráfico y el valor escrito sobre la barra más
 // alta, para no repetir un número en cada columna.
 function pintarGrafico() {
+  if (modo === 'anio') return pintarGraficoAnio()
+  $('tituloGrafico').textContent = 'Evolución de las últimas 8 semanas'
   const semanas = []
   const base = modo === 'semana' ? cursor : lunesDe(new Date(cursorMes.getFullYear(), cursorMes.getMonth() + 1, 0))
   for (let i = 7; i >= 0; i--) {
@@ -896,29 +915,64 @@ function pintarGrafico() {
     <div class="leyenda"><span><i style="background:#1565D8"></i>Semana mostrada</span><span><i style="background:#B9CDEB"></i>Semanas previas</span></div>`
 }
 
+// En la vista por año, una barra por mes del año elegido. El mes en curso va
+// resaltado; los que todavía no llegaron quedan vacíos, sin barra.
+function pintarGraficoAnio() {
+  $('tituloGrafico').textContent = `Mes a mes en ${cursorAnio}`
+  const hoy = new Date()
+  const meses = []
+  for (let m = 0; m < 12; m++) {
+    const fin = new Date(cursorAnio, m + 1, 0)
+    const r = resumen(iso(new Date(cursorAnio, m, 1)), iso(fin))
+    const futuro = cursorAnio > hoy.getFullYear() || (cursorAnio === hoy.getFullYear() && m > hoy.getMonth())
+    const actual = cursorAnio === hoy.getFullYear() && m === hoy.getMonth()
+    meses.push({ m, ventas: r.ventas, nps: r.nps, futuro, actual })
+  }
+  const tope = Math.max(...meses.map((x) => x.ventas), 1)
+  const ANCHO = 320, ALTO = 104, hueco = 5, AIRE = 14, PIE = 16
+  const ancho = (ANCHO - hueco * 11) / 12
+  const INICIAL = ['E', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D']
+
+  const barras = meses.map((x, i) => {
+    const h = x.futuro ? 0 : Math.max(x.ventas === 0 ? 0 : 3, Math.round((x.ventas / tope) * (ALTO - PIE - AIRE)))
+    const px = i * (ancho + hueco)
+    const y = ALTO - PIE - h
+    const etiqueta = !x.futuro && x.ventas > 0 && (x.ventas === tope || x.actual)
+      ? `<text x="${px + ancho / 2}" y="${y - 4}" text-anchor="middle" font-size="10" font-weight="700" fill="#0A0A0A">${x.ventas}</text>`
+      : ''
+    const nombre = MESES[x.m][0].toUpperCase() + MESES[x.m].slice(1)
+    return `
+      <rect x="${px}" y="${y}" width="${ancho}" height="${h}" rx="3"
+            fill="${x.actual ? '#1565D8' : '#B9CDEB'}"><title>${nombre} ${cursorAnio}: ${x.ventas} entregas${x.nps === null ? '' : ', NPS ' + x.nps + '%'}</title></rect>
+      ${etiqueta}
+      <text x="${px + ancho / 2}" y="${ALTO - 3}" text-anchor="middle" font-size="9" fill="${x.futuro ? '#D4D4D4' : '#8C8C8C'}">${INICIAL[x.m]}</text>`
+  }).join('')
+
+  const esteAnio = cursorAnio === hoy.getFullYear()
+  $('grafico').innerHTML = `
+    <svg viewBox="0 0 ${ANCHO} ${ALTO}" role="img"
+         aria-label="Vehículos entregados por mes en ${cursorAnio}">${barras}</svg>
+    <div class="leyenda">${esteAnio
+      ? '<span><i style="background:#1565D8"></i>Mes en curso</span><span><i style="background:#B9CDEB"></i>Meses anteriores</span>'
+      : '<span><i style="background:#B9CDEB"></i>Entregas de cada mes</span>'}</div>`
+}
+
 // ---------------------------------------------------------------- controles
 $('antes').addEventListener('click', () => {
   if (modo === 'semana') cursor = new Date(cursor.getTime() - 7 * DIA)
+  else if (modo === 'anio') cursorAnio--
   else cursorMes = new Date(cursorMes.getFullYear(), cursorMes.getMonth() - 1, 1)
   pintar()
 })
 $('despues').addEventListener('click', () => {
   if (modo === 'semana') cursor = new Date(cursor.getTime() + 7 * DIA)
+  else if (modo === 'anio') cursorAnio++
   else cursorMes = new Date(cursorMes.getFullYear(), cursorMes.getMonth() + 1, 1)
   pintar()
 })
-$('tabSemana').addEventListener('click', () => {
-  modo = 'semana'
-  $('tabSemana').setAttribute('aria-pressed', 'true')
-  $('tabMes').setAttribute('aria-pressed', 'false')
-  pintar()
-})
-$('tabMes').addEventListener('click', () => {
-  modo = 'mes'
-  $('tabMes').setAttribute('aria-pressed', 'true')
-  $('tabSemana').setAttribute('aria-pressed', 'false')
-  pintar()
-})
+$('tabSemana').addEventListener('click', () => { elegirModo('semana'); pintar() })
+$('tabMes').addEventListener('click', () => { elegirModo('mes'); pintar() })
+$('tabAnio').addEventListener('click', () => { elegirModo('anio'); pintar() })
 
 // ---------------------------------------------------------------- al día
 // El Portal se sincroniza solo con las planillas, así que los números cambian
