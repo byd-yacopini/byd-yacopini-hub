@@ -587,16 +587,11 @@
       <path class="st0" d="M339.04,34.68c-.07,9.92-3.3,13.18-13.56,13.38-4.89.09-17.75.14-28.33.16h0s-.1.01-.1.01c-10.81,0-22.34-.02-29.1-.02v57.57h26.52v-37.88c.81,0,1.68,0,2.58,0h0s.1,0,.1,0v.02c13.8,0,31.04-.06,37.55-.26,19.93-.61,26-6.23,26.73-24.78.1-2.48.16-5.62.19-9.06V4.18h-22.56c0,9.8.04,20.81-.03,30.5"/>
     </svg>
     <div style="color:#fff;font-weight:800;font-size:16px;margin-bottom:4px;">BYD Yacopini</div>
-    <div style="color:#8C8C8C;font-size:12px;margin-bottom:16px;">Acceso interno</div>
-    <div style="display:flex;gap:6px;background:#1C1C1C;border-radius:12px;padding:4px;margin-bottom:14px;">
-      <button type="button" id="bydModoVendedor" style="flex:1;padding:10px 6px;border:none;border-radius:9px;background:#1565D8;color:#fff;font-weight:700;font-size:13px;cursor:pointer;">Vendedor</button>
-      <button type="button" id="bydModoGerencia" style="flex:1;padding:10px 6px;border:none;border-radius:9px;background:transparent;color:#8C8C8C;font-weight:700;font-size:13px;cursor:pointer;">Gerencia</button>
-    </div>
+    <div style="color:#8C8C8C;font-size:12px;margin-bottom:18px;">Acceso interno</div>
     <input id="bydGateMail" type="email" inputmode="email" placeholder="Tu mail" autocomplete="username" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid #4A4A4A;background:#2A2A2A;color:#fff;font-size:16px;text-align:center;box-sizing:border-box;margin-bottom:8px;">
     <input id="bydGatePass" type="password" placeholder="Tu código" autocomplete="current-password" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid #4A4A4A;background:#2A2A2A;color:#fff;font-size:16px;text-align:center;box-sizing:border-box;">
     <button type="submit" id="bydGateBtn" style="width:100%;margin-top:10px;padding:12px;border-radius:10px;border:none;background:#1565D8;color:#fff;font-weight:700;font-size:14px;">Entrar</button>
     <div id="bydGateError" style="color:#E85555;font-size:12px;margin-top:10px;display:none;"></div>
-    <div id="bydGateAyuda" style="color:#6E6E6E;font-size:11px;margin-top:14px;line-height:1.5;"></div>
   </form>
 </div>
 <style>
@@ -605,12 +600,15 @@
   #bydGate.fadeOut{ opacity:0; }
 </style>
 <script>
-// La puerta de entrada, con dos formas de pasar:
+// La puerta de entrada. No se le pregunta a nadie si es vendedor o gerencia
+// (lo pidió Nicolás): se interpreta por lo que escribe.
 //
-//   Vendedor  -> su mail y su código, que es su cuenta del Portal de Calidad.
-//                Como el Portal vive en este mismo dominio, entrar acá lo deja
-//                adentro de allá también: una sola app, un solo ingreso.
-//   Gerencia  -> la clave general de siempre, la que ya venían usando.
+//   La clave general de siempre -> pasa, con o sin mail. Se comprueba primero
+//                y acá mismo, sin depender de nada externo, para que ande
+//                aunque no cargue el módulo.
+//   Mail y código -> su cuenta del Portal de Calidad. Como el Portal vive en
+//                este mismo dominio, entrar acá lo deja adentro de allá
+//                también: una sola app, un solo ingreso.
 //
 // Se mantienen las dos a propósito: sacar la general dejaría afuera a
 // cualquiera que todavía no tenga cuenta.
@@ -632,37 +630,7 @@
   var pass   = document.getElementById('bydGatePass');
   var boton  = document.getElementById('bydGateBtn');
   var error  = document.getElementById('bydGateError');
-  var ayuda  = document.getElementById('bydGateAyuda');
-  var bVend  = document.getElementById('bydModoVendedor');
-  var bGer   = document.getElementById('bydModoGerencia');
-  var modo   = 'vendedor';
-
-  function pintarBoton(b, activo){
-    b.style.background = activo ? '#1565D8' : 'transparent';
-    b.style.color = activo ? '#fff' : '#8C8C8C';
-  }
-
-  function elegir(cual){
-    modo = cual;
-    try { localStorage.setItem('bydModo', cual); } catch(e){}
-    pintarBoton(bVend, cual === 'vendedor');
-    pintarBoton(bGer,  cual === 'gerencia');
-    mail.style.display = cual === 'vendedor' ? '' : 'none';
-    pass.placeholder = cual === 'vendedor' ? 'Tu código' : 'Clave de gerencia';
-    ayuda.textContent = cual === 'vendedor'
-      ? 'Tu mail de Yacopini y el código que te pasaron.'
-      : 'La clave de siempre.';
-    error.style.display = 'none';
-    pass.value = '';
-  }
-
-  bVend.addEventListener('click', function(){ elegir('vendedor'); mail.focus(); });
-  bGer.addEventListener('click',  function(){ elegir('gerencia');  pass.focus(); });
-
-  // Se recuerda cómo entró la última vez, que casi siempre es la misma.
-  var guardado = null;
-  try { guardado = localStorage.getItem('bydModo'); } catch(e){}
-  elegir(guardado === 'gerencia' ? 'gerencia' : 'vendedor');
+  try { localStorage.removeItem('bydModo'); } catch(e){} // de la versión con botones
 
   function terminar(ok, texto){
     boton.disabled = false; boton.textContent = 'Entrar';
@@ -674,26 +642,18 @@
   form.addEventListener('submit', function(e){
     e.preventDefault();
     error.style.display = 'none';
-
-    if (modo === 'vendedor' && !mail.value.trim()) {
-      terminar(false, 'Te falta poner tu mail.');
-      return;
-    }
+    var correo = mail.value.trim();
     boton.disabled = true; boton.textContent = 'Entrando…';
 
-    if (modo === 'vendedor') {
+    crypto.subtle.digest('SHA-256', new TextEncoder().encode(pass.value)).then(function(buf){
+      var hex = Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+      if (hex === HASH) { terminar(true); return; }
+
+      if (!correo) { terminar(false, 'Poné tu mail y tu código.'); return; }
       // Si el módulo de abajo todavía no cargó, se avisa en vez de rechazar un
       // código que en realidad estaba bien.
       if (!window.__bydEntrarConCuenta) { terminar(false, 'Un segundo, todavía está cargando. Probá de nuevo.'); return; }
-      window.__bydEntrarConCuenta(mail.value.trim(), pass.value).then(function(r){ terminar(r.ok, r.mensaje); });
-      return;
-    }
-
-    // La clave de gerencia se comprueba acá, sin depender de nada externo,
-    // para que siga funcionando aunque no cargue el módulo.
-    crypto.subtle.digest('SHA-256', new TextEncoder().encode(pass.value)).then(function(buf){
-      var hex = Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
-      terminar(hex === HASH, 'Esa clave no es.');
+      window.__bydEntrarConCuenta(correo, pass.value).then(function(r){ terminar(r.ok, r.mensaje); });
     });
   });
 })();
