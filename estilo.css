@@ -246,4 +246,59 @@ td { border-color: var(--hub-borde) !important; }
 /* Barras de desplazamiento finas como en el Portal */
 * { scrollbar-width: thin; scrollbar-color: var(--hub-borde) transparent; }
 
+
+/* ── Más visual ───────────────────────────────────────────────────────────
+   Lo pidió Lucía: mismas páginas, con más presencia. Las tarjetas se separan
+   del fondo con un relieve suave en vez de un borde, los números crecen, las
+   barras engordan y cada título de sección lleva un punto de color. Los
+   íconos de las fichas los pone visual.js. */
+.kpi, .tcard, .card, .panel, .date-filter-bar, .ficha-card, .promo-card, .model-card, .evento {
+  border-color: transparent !important;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 8px 24px -12px rgba(16, 24, 40, 0.14) !important;
+}
+.kpi { padding: 16px !important; }
+/* Una ficha adentro de otra tarjeta va plana, sobre gris: dos relieves
+   encimados se ven como una caja dentro de otra caja. */
+.tcard .kpi, .card .kpi { box-shadow: none !important; background: var(--hub-panel-2) !important; }
+.kpi .n {
+  font-size: clamp(26px, 7vw, 32px) !important;
+  font-weight: 800 !important;
+  line-height: 1.05;
+}
+.kpi .l { font-size: 12px !important; font-weight: 600 !important; margin-top: 4px !important; }
+.kpi-grid { gap: 12px !important; }
+
+/* Las tarjetas que son enlaces (menú de herramientas) se levantan al pasar */
+a.card { transition: transform .15s ease, box-shadow .15s ease; }
+a.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 4px rgba(16, 24, 40, 0.05), 0 14px 30px -12px rgba(16, 24, 40, 0.22) !important;
+}
+a.card .icon { border-radius: 14px !important; }
+
+/* Títulos de sección con un punto de color */
+.tcard h2::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--hub-azul);
+  margin-right: 8px;
+  vertical-align: 1px;
+}
+
+/* Barras más gruesas y con un brillo sutil arriba */
+.bar-track, .progress-row .ptrack { height: 10px !important; border-radius: 999px !important; background: var(--hub-panel-2) !important; }
+.bar-fill, .progress-row .pfill {
+  border-radius: 999px !important;
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0)) !important;
+}
+
+/* Las variaciones contra el mes pasado, en pastilla */
+.pct-badge { border-radius: 999px !important; font-weight: 700 !important; }
+
+/* Saludo más grande */
+.greeting { font-weight: 800 !important; }
+
 }

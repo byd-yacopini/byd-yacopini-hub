@@ -156,6 +156,12 @@
     }
   } catch (e) {}
 
+  // Los íconos de color de las fichas de números (visual.js) viajan con este
+  // archivo, que ya está en todas las páginas del hub.
+  var vis = document.createElement('script')
+  vis.src = 'visual.js'
+  document.head.appendChild(vis)
+
   // Adentro de un marco no va botón: ya lo tiene la página de afuera.
   if (window.top !== window.self) return
 
