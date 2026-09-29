@@ -53,6 +53,12 @@
     font-size:11px;
     letter-spacing:0.4px;
   }
+  #bydSalir{
+    margin-left:auto; padding:6px 14px; border-radius:999px;
+    border:1px solid rgba(255,255,255,0.35); background:transparent;
+    color:var(--blanco); font-size:12px; font-weight:700; cursor:pointer;
+  }
+  #bydSalir[hidden]{ display:none; }
 
   .tabs{
     display:flex;
@@ -602,30 +608,31 @@
   #bydGate.fadeOut{ opacity:0; }
 </style>
 <script>
-// La puerta de entrada. No se le pregunta a nadie si es vendedor o gerencia
-// (lo pidió Nicolás): se interpreta por lo que escribe.
+// La puerta de entrada. No se le pregunta a nadie qué es (lo pidió Nicolás):
+// se interpreta por lo que escribe.
 //
-//   La clave general de siempre -> pasa, con o sin mail. Se comprueba primero
-//                y acá mismo, sin depender de nada externo, para que ande
-//                aunque no cargue el módulo.
-//   Mail y código -> su cuenta del Portal de Calidad. Como el Portal vive en
-//                este mismo dominio, entrar acá lo deja adentro de allá
-//                también: una sola app, un solo ingreso.
+//   Mail y código -> su cuenta del Portal de Calidad, y según quién es va a
+//                su pantalla: el vendedor a su panel, el jefe al suyo y el
+//                resto se queda acá. Como el Portal vive en este mismo
+//                dominio, entrar acá lo deja adentro de allá también.
+//   Sólo la clave de gerencia, sin mail -> es Nicolás (así entra él). Pasa
+//                como Gerencia, sin cuenta: la solapa Calidad le pide la suya.
 //
-// Se mantienen las dos a propósito: sacar la general dejaría afuera a
-// cualquiera que todavía no tenga cuenta.
+// Lo que importa es que nunca quede alguien adentro como otro. Por eso, al
+// entrar con la clave de gerencia se cierra cualquier cuenta que haya quedado
+// abierta en el teléfono, y con mail se entra siempre por la cuenta (antes, si
+// alguien ponía su mail con la clave de gerencia, el mail se ignoraba).
 //
-// Ojo con qué protege esto. El repo es público y el hash de abajo está a la
-// vista, así que la clave general esconde la pantalla, no los datos. Los
-// números se piden a la base con la sesión iniciada, y ahí sí cada uno ve
-// nada más que lo suyo. Por eso entrar con la cuenta propia no es sólo más
-// cómodo: es lo único que de verdad identifica a la persona.
+// El hash de abajo está a la vista en un repo público: la clave de gerencia
+// esconde la pantalla, no los datos. Los datos se piden con la cuenta.
 (function(){
   var HASH = "a734aecec77bc8826bec68f0264b70228ab419e52a8fcdf05016ebee0465f257";
   var body = document.body;
   function abrir(){ var g=document.getElementById('bydGate'); if(g){ g.classList.add('fadeOut'); setTimeout(function(){ body.classList.remove('gate-locked'); g.remove(); }, 220); } else { body.classList.remove('gate-locked'); } }
   window.__bydAbrir = abrir;
-  if (sessionStorage.getItem('bydGateOk') === '1') { abrir(); return; }
+  // tema.js ya comprobó que esta marca es de la cuenta guardada en el teléfono.
+  var acceso = window.bydAcceso && window.bydAcceso.leer();
+  if (acceso && acceso.tipo === 'gerencia') { abrir(); return; }
 
   var form   = document.getElementById('bydGateForm');
   var mail   = document.getElementById('bydGateMail');
@@ -636,27 +643,37 @@
 
   function terminar(ok, texto){
     boton.disabled = false; boton.textContent = 'Entrar';
-    if (ok) { try { sessionStorage.setItem('bydGateOk','1'); } catch(e){} abrir(); return; }
+    if (ok) { abrir(); return; }
     error.textContent = texto; error.style.display = 'block';
     pass.value = ''; pass.focus();
   }
+  window.__bydMostrarError = function(texto){ terminar(false, texto); };
 
   form.addEventListener('submit', function(e){
     e.preventDefault();
     error.style.display = 'none';
     var correo = mail.value.trim();
+    if (!pass.value) { terminar(false, 'Poné tu mail y tu código.'); return; }
     boton.disabled = true; boton.textContent = 'Entrando…';
 
-    crypto.subtle.digest('SHA-256', new TextEncoder().encode(pass.value)).then(function(buf){
-      var hex = Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
-      if (hex === HASH) { terminar(true); return; }
-
-      if (!correo) { terminar(false, 'Poné tu mail y tu código.'); return; }
-      // Si el módulo de abajo todavía no cargó, se avisa en vez de rechazar un
-      // código que en realidad estaba bien.
-      if (!window.__bydEntrarConCuenta) { terminar(false, 'Un segundo, todavía está cargando. Probá de nuevo.'); return; }
-      window.__bydEntrarConCuenta(correo, pass.value).then(function(r){ if (!r.yendo) terminar(r.ok, r.mensaje); });
-    });
+    if (!correo) {
+      crypto.subtle.digest('SHA-256', new TextEncoder().encode(pass.value)).then(function(buf){
+        var hex = Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+        if (hex !== HASH) { terminar(false, 'Poné tu mail y tu código.'); return; }
+        var acc = window.bydAcceso;
+        if (!acc) { terminar(true); return; }
+        acc.olvidarCuenta(function(){
+          acc.marcar({ uid: null, tipo: 'gerencia', nombre: 'Gerencia', clave: true });
+          terminar(true);
+          if (window.__bydSaludar) window.__bydSaludar('');
+        });
+      });
+      return;
+    }
+    // Si el módulo de abajo todavía no cargó, se avisa en vez de rechazar un
+    // código que en realidad estaba bien.
+    if (!window.__bydEntrarConCuenta) { terminar(false, 'Un segundo, todavía está cargando. Probá de nuevo.'); return; }
+    window.__bydEntrarConCuenta(correo, pass.value).then(function(r){ if (!r.yendo) terminar(r.ok, r.mensaje); });
   });
 })();
 </script>
@@ -679,12 +696,12 @@ const db = createClient(
 
 // Un vendedor no se queda en esta página, que es la del gerente: se lo manda a
 // su Panel de Ventas, donde están "Mi Calidad" y "Avisar un problema". El panel
-// lo reconoce por las mismas dos marcas que deja su propia puerta con código, y
-// el nombre del perfil sale de la misma planilla de Ventas (npm run usuarios),
-// pero no siempre igual escrito: el perfil puede decir "Nicolas Diaz" y la
-// planilla "DIAZ NICOLAS", y el panel compara el nombre letra por letra. Por
-// eso se busca en la planilla (la misma que lee la puerta del panel) la fila
-// con las mismas palabras y se usa el nombre tal cual figura ahí.
+// lo reconoce por el nombre (bydVendorNombre), que tiene que estar escrito
+// igual que en la planilla de Ventas, porque el panel compara letra por letra.
+// El perfil sale de esa misma planilla (npm run usuarios) pero no siempre igual
+// escrito: puede decir "Nicolas Diaz" y la planilla "DIAZ NICOLAS". Por eso se
+// busca la fila con las mismas palabras y se usa el nombre tal cual figura
+// ahí. De esa fila sale también si es Jefe, que tiene su propio panel.
 const PLANILLA_CODIGOS = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSqiPilcsX2Me2tLPndCa5GUkjaRl_b4ljUnmZBIHIEtjy_uL3bEZUrZbm76ZNIdZYNNHceWwCxONPq/pub?gid=0&single=true&output=csv'
 
 // La misma regla que src/lib/nombres.ts: mismas palabras, en cualquier orden.
@@ -699,52 +716,107 @@ const pedirPlanilla = () =>
   (planilla ??= fetch(PLANILLA_CODIGOS + '&nocache=' + Date.now()).then((r) => r.text()).catch(() => null))
 if (document.getElementById('bydGate')) pedirPlanilla()
 
-async function nombreEnLaPlanilla(nombre) {
+// { nombre, rol } tal cual en la planilla, o null si no está o no llegó.
+async function filaEnLaPlanilla(nombre) {
   try {
     const texto = await pedirPlanilla()
-    if (!texto) return nombre
+    if (!texto) return null
     const filas = texto.split(/\r?\n/).map((l) => l.split(','))
     const col = filas[0].findIndex((h) => /vendedor/i.test(h))
+    const colRol = filas[0].findIndex((h) => /^\s*rol\s*$/i.test(h))
     const clave = clavePalabras(nombre)
     const fila = filas.slice(1).find((f) => clavePalabras(f[col]) === clave)
-    if (fila) return fila[col].trim()
+    if (fila) return { nombre: fila[col].trim(), rol: colRol === -1 ? '' : (fila[colRol] || '').trim() }
   } catch (e) {}
-  return nombre // sin planilla, el del perfil: casi siempre es el mismo
+  return null
 }
 
-async function esVendedor() {
-  // getSession lee la sesión guardada en el teléfono, sin ir al servidor.
-  const { data: ses } = await db.auth.getSession()
-  const id = ses?.session?.user?.id
-  if (!id) return false
-  const { data: perfil } = await db.from('perfiles').select('nombre,rol').eq('id', id).maybeSingle()
-  if (perfil?.rol !== 'vendedor') return false
-  const nombre = await nombreEnLaPlanilla(perfil.nombre)
-  try {
-    sessionStorage.removeItem('bydGateOk')
-    sessionStorage.setItem('bydVendorOk', '1')
-    sessionStorage.setItem('bydVendorNombre', nombre)
-  } catch (e) {}
-  location.replace('./panel_ventas.html')
-  return true
+// Si vino desde otra página del hub (tema.js lo mandó a entrar), vuelve ahí.
+// Sólo un nombre de archivo de esta misma carpeta, nunca otro sitio.
+const volver = (() => {
+  const v = new URLSearchParams(location.search).get('volver') || ''
+  return /^[\w-]+\.html$/.test(v) && v !== 'index.html' ? v : null
+})()
+
+// Reconoce a la persona por su cuenta y la manda a su pantalla. Devuelve
+// { yendo } si se va de acá, { ok } si se queda, o { ok:false, mensaje }.
+async function ubicar(user) {
+  const { data: perfil, error } = await db.from('perfiles').select('nombre,rol,activo').eq('id', user.id).maybeSingle()
+  if (error) return { ok: false, mensaje: 'No pudimos leer tu usuario. Probá de nuevo en un momento.' }
+  // Sin perfil activo no se deja la cuenta abierta: la base igual no le
+  // mostraría nada, y adentro parecería que todo está vacío.
+  if (!perfil || !perfil.activo) {
+    await db.auth.signOut()
+    window.bydAcceso?.limpiar()
+    return {
+      ok: false,
+      fuera: true,
+      mensaje: perfil
+        ? 'Tu usuario todavía no está activo. Pedile a Calidad que lo active.'
+        : 'Tu cuenta no tiene usuario en el sistema. Pedile a Calidad que te dé de alta.',
+    }
+  }
+
+  const fila = await filaEnLaPlanilla(perfil.nombre)
+  const nombre = fila?.nombre || perfil.nombre
+  // Lo que decide la base manda: un vendedor es vendedor aunque la planilla
+  // diga otra cosa. "Jefe" sólo existe en la planilla (en la base es gerencia).
+  const tipo = perfil.rol === 'vendedor' ? 'vendedor' : /jefe/i.test(fila?.rol || '') ? 'jefe' : 'gerencia'
+  window.bydAcceso?.marcar({ uid: user.id, tipo, nombre })
+
+  const destino = volver || { vendedor: 'panel_ventas.html', jefe: 'panel_jefe.html' }[tipo]
+  if (destino) { location.replace('./' + destino); return { yendo: true } }
+  saludar(perfil.nombre)
+  return { ok: true }
 }
 
+// El saludo de arriba dice con qué cuenta se entró, y al lado va "Salir":
+// en un teléfono o una PC compartida es la forma de darse cuenta.
+function saludar(nombre) {
+  const el = document.getElementById('greeting')
+  // Alguna cuenta tiene el mail como nombre: eso no se muestra.
+  const primero = /@/.test(nombre || '') ? '' : (nombre || '').trim().split(/\s+/)[0]
+  if (el && primero && !el.dataset.nombre) {
+    el.dataset.nombre = primero
+    el.textContent = el.textContent.replace(/^(Hola|Buen[oa]s [a-zí]+)$/, '$1, ' + primero)
+  }
+  const salir = document.getElementById('bydSalir')
+  if (salir) salir.hidden = false
+}
+document.getElementById('bydSalir')?.addEventListener('click', () => window.bydAcceso?.salir())
+
+window.__bydSaludar = saludar
 window.__bydEntrarConCuenta = async function (email, password) {
-  const { error } = await db.auth.signInWithPassword({ email, password })
-  if (!error) return (await esVendedor()) ? { yendo: true } : { ok: true }
+  const { data, error } = await db.auth.signInWithPassword({ email, password })
+  if (!error) return ubicar(data.user)
   if (error.message === 'Invalid login credentials') {
     return { ok: false, mensaje: 'Ese mail o ese código no coinciden.' }
   }
   return { ok: false, mensaje: 'No pudimos entrar. Probá de nuevo en un momento.' }
 }
 
-// Si ya había entrado con su cuenta, no se le vuelve a pedir nada: el vendedor
-// va a su panel y el resto pasa directo.
+// Si ya había entrado con su cuenta en este teléfono, no se le vuelve a pedir
+// nada: se lo reconoce y va a su pantalla. getUser pregunta al servidor, así
+// que una cuenta borrada no sigue entrando con lo que quedó guardado; si lo
+// que falla es la conexión, se sigue con la cuenta guardada.
 const { data } = await db.auth.getSession()
-if (data.session && !(await esVendedor())) {
-  try { sessionStorage.setItem('bydGateOk', '1') } catch (e) {}
-  if (window.__bydAbrir) window.__bydAbrir()
-}
+if (data.session) {
+  const { data: u, error: e } = await db.auth.getUser()
+  let r
+  if (u?.user) r = await ubicar(u.user)
+  else if (e?.status === 401 || e?.status === 403) {
+    await db.auth.signOut()
+    window.bydAcceso?.limpiar()
+    r = { ok: false, fuera: true, mensaje: 'Tu sesión venció. Entrá de nuevo.' }
+  } else r = await ubicar(data.session.user)
+
+  if (r.ok) window.__bydAbrir?.()
+  else if (r.yendo) {}
+  // Si la pantalla ya se había abierto (la pestaña venía entrada) y la cuenta
+  // quedó afuera, se recarga para que vuelva a aparecer la puerta.
+  else if (!document.getElementById('bydGate')) { if (r.fuera) location.reload() }
+  else window.__bydMostrarError?.(r.mensaje)
+} else if (window.bydAcceso?.leer()?.clave) saludar('')
 </script>
 
   <div class="topbar">
@@ -759,6 +831,7 @@ if (data.session && !(await esVendedor())) {
       <div class="greeting" id="greeting">Hola</div>
       <div class="subtitle">Godoy Cruz · Mendoza</div>
     </div>
+    <button type="button" id="bydSalir" hidden>Salir</button>
   </div>
 
   <div class="main-select-wrap">

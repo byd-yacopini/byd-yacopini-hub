@@ -458,9 +458,12 @@ $('loginForm').addEventListener('submit', async (e) => {
   await cargar()
 })
 
+// Cierra la cuenta en todo el hub (tema.js), no sólo en esta pantalla: si no,
+// el panel de afuera seguiría abierto con la cuenta de quien se fue.
 $('salir').addEventListener('click', async () => {
   await db.auth.signOut()
-  location.reload()
+  if (window.bydAcceso) window.bydAcceso.salir()
+  else location.reload()
 })
 
 // ---------------------------------------------------------------- datos

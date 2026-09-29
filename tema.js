@@ -1,3 +1,114 @@
+// Quién entró. Va en este archivo porque es el único que carga cada página del
+// hub en el <head>, antes de pintar, incluidas las que regenera la
+// sincronización (a esas se lo agrega sw.js).
+//
+// Se entra en index.html: cada uno con su cuenta (mail + código), y el gerente
+// también con la clave de gerencia sola, que cuenta como Gerencia sin cuenta.
+// Ahí se guarda en esta pestaña quién es y qué le toca ('bydAcceso'), y de eso salen
+// las marcas viejas que leen las páginas de Nicolás (bydGateOk, bydVendorOk,
+// bydVendorNombre, bydJefeOk). Acá, en cada página:
+//
+//   - Si la marca de la pestaña no es de la cuenta guardada en el teléfono
+//     (o es de la clave de gerencia pero apareció una cuenta), se borran las
+//     marcas y se manda a index.html, que vuelve a reconocer a la persona.
+//   - Si coincide, se vuelven a escribir las marcas desde 'bydAcceso'. Así una
+//     marca puesta a mano (por ejemplo, con la clave general que todavía piden
+//     algunas páginas) no sobrevive al cambio de página.
+//
+// Esto ordena quién es quién en pantalla; los datos los sigue cuidando el
+// permiso por fila de la base.
+(function () {
+  var URL_BASE = 'https://mgicnwnvtfkrxmkmewnt.supabase.co'
+  var ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1naWNud252dGZrcnhta21ld250Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1Nzk5MDIsImV4cCI6MjEwNTE1NTkwMn0.GLWN_wI6Q_6Qu1EGi02oPNrL9wgTj-zbGsJCoIE-HQE'
+  var CLAVE_CUENTA = 'sb-mgicnwnvtfkrxmkmewnt-auth-token' // la misma que usa el Portal
+  var MARCAS = ['bydGateOk', 'bydVendorOk', 'bydVendorNombre', 'bydJefeOk']
+  // Páginas que nunca pidieron nada para entrar: siguen abiertas.
+  var ABIERTAS = /\/(fichas_tecnicas|ranking_vendedores|tablero_control)\.html$/
+
+  var ruta = location.pathname
+  if (ruta.indexOf('/portal/') !== -1) return // el Portal tiene su propio ingreso
+  var carpeta = ruta.replace(/[^/]*$/, '')
+  var esPuerta = /\/(index\.html)?$/.test(ruta)
+
+  function cuentaGuardada() {
+    try {
+      var s = JSON.parse(localStorage.getItem(CLAVE_CUENTA) || 'null')
+      if (s && s.user && s.user.id) return { id: s.user.id, token: s.access_token }
+    } catch (e) {}
+    return null
+  }
+  function leerAcceso() {
+    try { return JSON.parse(sessionStorage.getItem('bydAcceso') || 'null') } catch (e) { return null }
+  }
+  function limpiar() {
+    try {
+      sessionStorage.removeItem('bydAcceso')
+      MARCAS.forEach(function (m) { sessionStorage.removeItem(m) })
+    } catch (e) {}
+  }
+  // { uid, tipo: 'gerencia' | 'vendedor' | 'jefe', nombre, clave? }
+  function marcar(acceso) {
+    limpiar()
+    try {
+      sessionStorage.setItem('bydAcceso', JSON.stringify(acceso))
+      if (acceso.tipo === 'gerencia') sessionStorage.setItem('bydGateOk', '1')
+      else {
+        sessionStorage.setItem('bydVendorOk', '1')
+        sessionStorage.setItem('bydVendorNombre', acceso.nombre)
+        if (acceso.tipo === 'jefe') sessionStorage.setItem('bydJefeOk', '1')
+      }
+    } catch (e) {}
+  }
+  function irAEntrar(volver) {
+    var destino = carpeta + 'index.html'
+    var pagina = ruta.slice(carpeta.length)
+    if (volver && pagina && !esPuerta) destino += '?volver=' + encodeURIComponent(pagina)
+    // Adentro de un marco (la solapa Calidad) se manda la página de afuera.
+    var ventana = window
+    try { if (window.top.location.origin === location.origin) ventana = window.top } catch (e) {}
+    ventana.location.replace(destino)
+  }
+  // Cierra la cuenta en este teléfono, no sólo en la pestaña: si no, el que
+  // agarra el teléfono después entra con la cuenta del anterior.
+  function olvidarCuenta(fin) {
+    var cuenta = cuentaGuardada()
+    try { localStorage.removeItem(CLAVE_CUENTA) } catch (e) {}
+    if (!cuenta || !cuenta.token) { fin(); return }
+    var listo = false
+    var terminar = function () { if (!listo) { listo = true; fin() } }
+    setTimeout(terminar, 2500) // sin conexión no se queda colgado
+    fetch(URL_BASE + '/auth/v1/logout?scope=local', {
+      method: 'POST',
+      headers: { apikey: ANON, Authorization: 'Bearer ' + cuenta.token },
+    }).then(terminar, terminar)
+  }
+  function salir() {
+    limpiar()
+    olvidarCuenta(function () { irAEntrar(false) })
+  }
+  window.bydAcceso = { cuenta: cuentaGuardada, leer: leerAcceso, marcar: marcar, limpiar: limpiar, salir: salir, olvidarCuenta: olvidarCuenta }
+
+  // Los botones "Salir" de los paneles de Ventas y del Jefe sólo borraban las
+  // marcas de la pestaña. Se los toma antes que su propio código.
+  document.addEventListener('click', function (e) {
+    var b = e.target && e.target.closest && e.target.closest('#logoutBtn')
+    if (!b) return
+    e.preventDefault()
+    e.stopImmediatePropagation()
+    salir()
+  }, true)
+
+  var cuenta = cuentaGuardada()
+  var acceso = leerAcceso()
+  var vale = acceso && (acceso.clave ? !cuenta : cuenta && acceso.uid === cuenta.id)
+  if (vale) { marcar(acceso); return }
+  limpiar()
+  if (esPuerta || ABIERTAS.test(ruta)) return
+  // Se tapa la página mientras se va, para que no asome su puerta vieja.
+  document.documentElement.style.visibility = 'hidden'
+  irAEntrar(true)
+})();
+
 // Modo claro u oscuro para las páginas del hub.
 //
 // Cada página lo carga en el <head>, justo después de estilo.css, sin defer:
