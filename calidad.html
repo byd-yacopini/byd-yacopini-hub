@@ -249,6 +249,10 @@
       <button type="submit" id="btnEntrar">Entrar</button>
     </form>
     <div class="estado error oculto" id="loginError"></div>
+    <!-- Es la misma cuenta del Portal: la recupera la pantalla del Portal. -->
+    <p style="margin-top:14px;font-size:13px;text-align:center;">
+      <a href="portal/#/recuperar-password" style="color:inherit;opacity:.75;">Olvidé mi contraseña</a>
+    </p>
   </div>
 
   <!-- ============ PANEL ============ -->
@@ -448,8 +452,8 @@ $('loginForm').addEventListener('submit', async (e) => {
   if (error) {
     $('loginError').textContent =
       error.message === 'Invalid login credentials'
-        ? 'El email o la contraseña no coinciden.'
-        : error.message
+        ? 'El correo o la contraseña no coinciden.'
+        : 'No pudimos entrar. Revisá la conexión y probá de nuevo.'
     ver($('loginError'), true)
     return
   }

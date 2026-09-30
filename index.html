@@ -600,6 +600,8 @@
     <input id="bydGatePass" type="password" placeholder="Tu código" autocomplete="current-password" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid #4A4A4A;background:#2A2A2A;color:#fff;font-size:16px;text-align:center;box-sizing:border-box;">
     <button type="submit" id="bydGateBtn" style="width:100%;margin-top:10px;padding:12px;border-radius:10px;border:none;background:#1565D8;color:#fff;font-weight:700;font-size:14px;">Entrar</button>
     <div id="bydGateError" style="color:#E85555;font-size:12px;margin-top:10px;display:none;"></div>
+    <div id="bydGateAviso" style="color:#5FD08A;font-size:12px;margin-top:10px;display:none;"></div>
+    <button type="button" id="bydGateOlvide" style="margin-top:14px;background:none;border:none;color:#8C8C8C;font-size:12px;text-decoration:underline;cursor:pointer;">Olvidé mi código</button>
   </form>
 </div>
 <style>
@@ -648,6 +650,26 @@
     pass.value = ''; pass.focus();
   }
   window.__bydMostrarError = function(texto){ terminar(false, texto); };
+
+  // El código es la contraseña de su cuenta del Portal. Si se lo olvidó, se le
+  // manda un mail con un enlace que abre el Portal para elegir uno nuevo.
+  var aviso  = document.getElementById('bydGateAviso');
+  var olvide = document.getElementById('bydGateOlvide');
+  olvide.addEventListener('click', function(){
+    error.style.display = 'none'; aviso.style.display = 'none';
+    var correo = mail.value.trim();
+    if (!correo || correo.indexOf('@') < 0) {
+      error.textContent = 'Escribí tu mail arriba y tocá de nuevo "Olvidé mi código".';
+      error.style.display = 'block'; mail.focus(); return;
+    }
+    if (!window.__bydRecuperar) { error.textContent = 'Un segundo, todavía está cargando. Probá de nuevo.'; error.style.display = 'block'; return; }
+    olvide.disabled = true; olvide.textContent = 'Enviando…';
+    window.__bydRecuperar(correo).then(function(r){
+      olvide.disabled = false; olvide.textContent = 'Olvidé mi código';
+      if (r.ok) { aviso.textContent = r.mensaje; aviso.style.display = 'block'; }
+      else { error.textContent = r.mensaje; error.style.display = 'block'; }
+    });
+  });
 
   form.addEventListener('submit', function(e){
     e.preventDefault();
@@ -786,6 +808,25 @@ function saludar(nombre) {
 document.getElementById('bydSalir')?.addEventListener('click', () => window.bydAcceso?.salir())
 
 window.__bydSaludar = saludar
+
+// El enlace del mail vuelve al Portal, que está en este mismo dominio: ahí se
+// elige el código nuevo y queda adentro también del hub.
+window.__bydRecuperar = async function (email) {
+  const { error } = await db.auth.resetPasswordForEmail(email, {
+    redirectTo: new URL('portal/', location.href).href,
+  })
+  if (!error) {
+    return {
+      ok: true,
+      mensaje: 'Si ese mail tiene cuenta, te llega un enlace para elegir un código nuevo. Revisá también el correo no deseado.',
+    }
+  }
+  if (error.status === 429) {
+    return { ok: false, mensaje: 'Ya pediste varios seguidos. Esperá unos minutos y probá de nuevo.' }
+  }
+  return { ok: false, mensaje: 'No pudimos mandar el mail. Probá de nuevo en un momento.' }
+}
+
 window.__bydEntrarConCuenta = async function (email, password) {
   const { data, error } = await db.auth.signInWithPassword({ email, password })
   if (!error) return ubicar(data.user)
