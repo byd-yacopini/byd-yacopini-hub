@@ -633,8 +633,14 @@
   function abrir(){ var g=document.getElementById('bydGate'); if(g){ g.classList.add('fadeOut'); setTimeout(function(){ body.classList.remove('gate-locked'); g.remove(); }, 220); } else { body.classList.remove('gate-locked'); } }
   window.__bydAbrir = abrir;
   // tema.js ya comprobó que esta marca es de la cuenta guardada en el teléfono.
+  // Se saca la puerta en el acto, sin desvanecerla: al volver atrás desde otra
+  // pantalla, el desvanecido se veía como un pantallazo del inicio de sesión.
   var acceso = window.bydAcceso && window.bydAcceso.leer();
-  if (acceso && acceso.tipo === 'gerencia') { abrir(); return; }
+  if (acceso && acceso.tipo === 'gerencia') {
+    var g = document.getElementById('bydGate'); if (g) g.remove();
+    body.classList.remove('gate-locked');
+    return;
+  }
 
   var form   = document.getElementById('bydGateForm');
   var mail   = document.getElementById('bydGateMail');
@@ -2195,6 +2201,44 @@ if (data.session) {
     sel.value = ultima;
     window.location.href = './portal/';
   }, true);
+})();
+</script>
+<script>
+// Al volver atrás desde otra pantalla, que quede donde estaba: la misma
+// solapa del Tablero y a la misma altura. Tablero o Herramientas ya se
+// recordaba (bydMainView); faltaban la solapa y el scroll. Se guarda en la
+// pestaña, así que al abrir la app de nuevo arranca como siempre, arriba.
+(function () {
+  function guardar(clave, valor) { try { sessionStorage.setItem(clave, valor) } catch (e) {} }
+  function leer(clave) { try { return sessionStorage.getItem(clave) } catch (e) { return null } }
+
+  document.querySelectorAll('.tab-btn').forEach(function (b) {
+    b.addEventListener('click', function () { guardar('bydSubTab', b.dataset.tab) })
+  })
+  var solapa = leer('bydSubTab')
+  if (solapa && solapa !== 'general') {
+    var boton = document.querySelector('.tab-btn[data-tab="' + solapa + '"]')
+    if (boton) boton.click()
+  }
+
+  // La altura se guarda al irse. Al volver, los datos tardan en llegar y la
+  // página todavía es corta: se reintenta hasta que alcance, unos segundos.
+  window.addEventListener('pagehide', function () { guardar('bydScroll', String(window.scrollY)) })
+  var y = Number(leer('bydScroll') || 0)
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual'
+  if (y > 0) {
+    var hasta = Date.now() + 4000
+    var tocado = false
+    var cortar = function () { tocado = true }
+    window.addEventListener('touchstart', cortar, { once: true, passive: true })
+    window.addEventListener('wheel', cortar, { once: true, passive: true })
+    ;(function intentar() {
+      if (tocado) return
+      var max = document.documentElement.scrollHeight - window.innerHeight
+      window.scrollTo(0, Math.min(y, Math.max(0, max)))
+      if (max < y && Date.now() < hasta) setTimeout(intentar, 150)
+    })()
+  }
 })();
 </script>
 </body>
