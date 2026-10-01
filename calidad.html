@@ -113,6 +113,24 @@
   .m.mal{ background:#FBEAEA; color:#8A2020; }
   .vacio{ margin:14px 20px; padding:22px; text-align:center; background:var(--blanco); border-radius:12px; color:var(--gris-medio); font-size:12.5px; line-height:1.6; }
 
+  /* ---------- ranking de NPS ----------
+     Una tabla chica para comparar de un vistazo: posición, NPS y de dónde sale
+     (promotores, pasivos y detractores sobre el total de encuestas). */
+  .ranking{ margin:12px 20px 0; background:var(--blanco); border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,.06); overflow:hidden; }
+  .ranking table{ width:100%; border-collapse:collapse; font-size:12.5px; font-variant-numeric:tabular-nums; }
+  .ranking th{ font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--gris-oscuro);
+               text-align:right; padding:9px 8px; border-bottom:1px solid var(--gris-claro); white-space:nowrap; }
+  .ranking td{ text-align:right; padding:8px; border-bottom:1px solid var(--gris-fondo); white-space:nowrap; }
+  .ranking th.izq, .ranking td.izq{ text-align:left; }
+  .ranking td.pos{ width:28px; font-weight:800; color:var(--gris-oscuro); }
+  .ranking td.quien{ font-weight:700; max-width:0; width:100%; overflow:hidden; text-overflow:ellipsis; }
+  .ranking td.nps .m{ display:inline-block; font-size:11.5px; }
+  .ranking tr.elegido td{ background:#EEF4FD; }
+  .ranking tr.total td{ font-weight:800; border-bottom:0; border-top:1px solid var(--gris-claro); background:var(--gris-fondo); }
+  .ranking .tenue{ color:var(--gris-medio); }
+  /* En un teléfono angosto los pasivos sobran: se deducen del total. */
+  @media (max-width: 420px){ .ranking .pas{ display:none; } }
+
   /* Cuando entra un vendedor, que quede claro de entrada que lo que ve es lo
      suyo y no el resultado del concesionario. */
   .aviso-propio{ margin:10px 20px 0; padding:9px 12px; border-radius:8px; background:var(--blanco);
@@ -213,6 +231,7 @@
 
     /* Vendedores y casos, de a dos por fila. */
     .lista, .casos{ display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; align-items:start; }
+    .ranking{ max-width:760px; }
   }
 </style>
 <link rel="stylesheet" href="estilo.css">
@@ -313,6 +332,14 @@
     <h2 class="sec" id="tituloLista">Cada vendedor</h2>
     <p class="hint" id="hintLista"></p>
     <div class="lista" id="lista"></div>
+
+    <!-- Ranking de NPS de fábrica: todos los vendedores en una tabla, del
+         mejor al peor, para el período elegido. Lo ve sólo gerencia. -->
+    <div class="oculto" id="bloqueRanking">
+      <h2 class="sec">Ranking de NPS por vendedor</h2>
+      <p class="hint" id="hintRanking"></p>
+      <div class="ranking" id="ranking"></div>
+    </div>
 
     <!-- Los casos arrancan plegados y se abren todos de un toque: con varios
          cargados, la lista entera empujaba el resto de la pantalla fuera de
@@ -734,6 +761,7 @@ function pintar() {
   primeraVez = false
 
   pintarLista(r)
+  pintarRanking(desde, hasta)
   pintarCasos(r)
   pintarReclamos(r)
   pintarGrafico()
@@ -785,6 +813,75 @@ function pintarLista(r) {
         </div>
       </div>`
   }).join('')
+}
+
+// El ranking compara a todos los vendedores entre sí, así que no respeta el
+// filtro de arriba: si hay uno elegido, se lo marca en la tabla. Al vendedor
+// no se le muestra (la base sólo le devuelve sus propias encuestas).
+function pintarRanking(desde, hasta) {
+  const esVendedor = sesion?.rol === 'vendedor'
+  ver($('bloqueRanking'), !esVendedor)
+  if (esVendedor) return
+
+  const periodo = periodoTexto()
+  const byd = datos.encuestas.filter((e) => {
+    const d = soloFecha(e.fecha)
+    return e.canal === 'app_byd' && d >= desde && d <= hasta && e.nps !== null && e.nps !== undefined
+  })
+  const porVendedor = new Map()
+  for (const e of byd) {
+    if (!e.vendedor_id) continue
+    if (!porVendedor.has(e.vendedor_id)) porVendedor.set(e.vendedor_id, [])
+    porVendedor.get(e.vendedor_id).push(e)
+  }
+  const desglose = (lista) => ({
+    pro: lista.filter((e) => e.nps >= 9).length,
+    pas: lista.filter((e) => e.nps >= 7 && e.nps <= 8).length,
+    det: lista.filter((e) => e.nps <= 6).length,
+    ...npsDe(lista),
+  })
+  // Mejor NPS arriba; a igual NPS, el que tiene más encuestas (es más firme).
+  const filas = [...porVendedor.entries()]
+    .map(([id, lista]) => ({ id, nombre: datos.vendedores.get(id) ?? 'Sin vendedor', ...desglose(lista) }))
+    .sort((a, b) => b.nps - a.nps || b.total - a.total || a.nombre.localeCompare(b.nombre, 'es'))
+
+  $('hintRanking').textContent = filas.length === 0 ? '' :
+    `NPS de fábrica ${periodo}, de mayor a menor. Solo aparecen los que recibieron encuestas.` +
+    (vendedorElegido ? ' La fila marcada es la del vendedor elegido arriba.' : '')
+
+  if (filas.length === 0) {
+    $('ranking').innerHTML = `<div class="vacio" style="margin:0">Nadie recibió encuestas de fábrica ${periodo}.<br>Probá con otro período.</div>`
+    return
+  }
+
+  const clase = (n) => (n === null ? '' : n >= 70 ? ' bien' : n >= 40 ? ' medio' : ' mal')
+  // A igual NPS comparten el puesto (1, 2, 2, 4).
+  let puesto = 0
+  const cuerpo = filas.map((f, i) => {
+    if (i === 0 || f.nps !== filas[i - 1].nps) puesto = i + 1
+    return `<tr${f.id === vendedorElegido ? ' class="elegido"' : ''}>
+        <td class="izq pos">${puesto}</td>
+        <td class="izq quien">${escapar(f.nombre)}</td>
+        <td class="nps"><span class="m${clase(f.nps)}"><b>${num(f.nps, '%')}</b></span></td>
+        <td>${f.pro}</td><td class="pas">${f.pas}</td><td>${f.det}</td>
+        <td class="tenue">${f.total}</td>
+      </tr>`
+  }).join('')
+  const t = desglose(byd)
+  $('ranking').innerHTML = `
+    <table>
+      <thead><tr>
+        <th class="izq">#</th><th class="izq">Vendedor</th><th>NPS</th>
+        <th title="Promotores (9 y 10)">Prom.</th><th class="pas" title="Pasivos (7 y 8)">Pas.</th><th title="Detractores (0 a 6)">Detr.</th><th>Enc.</th>
+      </tr></thead>
+      <tbody>${cuerpo}
+        <tr class="total">
+          <td class="izq pos"></td><td class="izq quien">Concesionario</td>
+          <td class="nps"><span class="m${clase(t.nps)}"><b>${num(t.nps, '%')}</b></span></td>
+          <td>${t.pro}</td><td class="pas">${t.pas}</td><td>${t.det}</td><td>${t.total}</td>
+        </tr>
+      </tbody>
+    </table>`
 }
 
 // Los casos que cargaron los vendedores, del más nuevo al más viejo. Van
