@@ -89,7 +89,9 @@ body, button, input, select, textarea {
 .topbar, .app-topbar, .header-calc, .main-select-wrap, .main-select-wrap ~ .tabs {
   background: #0a0a0a !important;
 }
-.main-select option { color: var(--hub-tinta); }
+/* Las opciones del desplegable las dibuja Windows con el fondo oscuro de la
+   franja: la letra va blanca o no se lee. */
+.main-select option { background: #1b1c1e; color: #fff; }
 /* En el gestor y en plantillas el encabezado tenía un margen negativo pensado
    para estar dentro de la tarjeta, y el logo quedaba cortado arriba */
 body > .app-topbar { margin: 0 !important; }
