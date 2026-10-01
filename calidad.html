@@ -124,8 +124,15 @@
   .ranking th.izq, .ranking td.izq{ text-align:left; }
   .ranking td.pos{ width:28px; font-weight:800; color:var(--gris-oscuro); }
   .ranking td.quien{ font-weight:700; max-width:0; width:100%; overflow:hidden; text-overflow:ellipsis; }
-  .ranking td.nps .m{ display:inline-block; font-size:11.5px; }
-  .ranking tr.elegido td{ background:#EEF4FD; }
+  /* Color sutil: el número va en negro y un puntito chico al lado dice si es
+     bueno, regular o malo. Sin fondos de color en la tabla. */
+  .ranking td.nps b{ font-weight:800; }
+  .ranking .punto{ display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:6px; vertical-align:1px; background:var(--gris-claro); }
+  .ranking .punto.bien{ background:#7FB883; }
+  .ranking .punto.medio{ background:#E2B860; }
+  .ranking .punto.mal{ background:#D98A80; }
+  .ranking tr.elegido td{ background:#F7F9FC; }
+  .ranking tr.elegido td.pos{ box-shadow:inset 3px 0 0 var(--azul-ev); }
   .ranking tr.total td{ font-weight:800; border-bottom:0; border-top:1px solid var(--gris-claro); background:var(--gris-fondo); }
   .ranking .tenue{ color:var(--gris-medio); }
   /* En un teléfono angosto los pasivos sobran: se deducen del total. */
@@ -862,7 +869,7 @@ function pintarRanking(desde, hasta) {
     return `<tr${f.id === vendedorElegido ? ' class="elegido"' : ''}>
         <td class="izq pos">${puesto}</td>
         <td class="izq quien">${escapar(f.nombre)}</td>
-        <td class="nps"><span class="m${clase(f.nps)}"><b>${num(f.nps, '%')}</b></span></td>
+        <td class="nps"><span class="punto${clase(f.nps)}"></span><b>${num(f.nps, '%')}</b></td>
         <td>${f.pro}</td><td class="pas">${f.pas}</td><td>${f.det}</td>
         <td class="tenue">${f.total}</td>
       </tr>`
@@ -877,7 +884,7 @@ function pintarRanking(desde, hasta) {
       <tbody>${cuerpo}
         <tr class="total">
           <td class="izq pos"></td><td class="izq quien">Concesionario</td>
-          <td class="nps"><span class="m${clase(t.nps)}"><b>${num(t.nps, '%')}</b></span></td>
+          <td class="nps"><span class="punto${clase(t.nps)}"></span><b>${num(t.nps, '%')}</b></td>
           <td>${t.pro}</td><td class="pas">${t.pas}</td><td>${t.det}</td><td>${t.total}</td>
         </tr>
       </tbody>
