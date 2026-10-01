@@ -198,6 +198,36 @@
   .visita-pje{ font-size:19px; font-weight:800; font-variant-numeric:tabular-nums; flex:none; }
   .visita-obs{ margin:6px 0 0; font-size:12px; line-height:1.5; color:var(--carbon); }
 
+  /* ---------- comentarios por nota (sólo vendedores) ---------- */
+  h3.subsec{ font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--gris-oscuro); margin:16px 20px 0; }
+  .grupo-nps{ margin:8px 20px 0; background:var(--blanco); border:1px solid var(--gris-claro); border-radius:12px; overflow:hidden; }
+  .grupo-nps summary{ display:flex; align-items:center; gap:10px; padding:11px 14px; cursor:pointer; list-style:none; font-size:13px; font-weight:700; }
+  .grupo-nps summary::-webkit-details-marker{ display:none; }
+  .grupo-nps summary::after{ content:'▾'; font-size:11px; color:var(--gris-oscuro); transition:transform .15s; }
+  .grupo-nps[open] summary::after{ transform:rotate(180deg); }
+  .grupo-titulo{ flex:1; min-width:0; }
+  .grupo-notas{ font-size:11px; font-weight:600; color:var(--gris-medio); margin-left:4px; }
+  .grupo-n{ font-size:15px; font-weight:800; font-variant-numeric:tabular-nums; }
+  .punto-nps{ width:10px; height:10px; border-radius:50%; flex:none; }
+  .grupo-nps.promotores .punto-nps{ background:#2f9e5f; }
+  .grupo-nps.neutros .punto-nps{ background:#e0b000; }
+  .grupo-nps.detractores .punto-nps{ background:#c62851; }
+  .grupo-nps .casos{ padding:0 12px 12px; }
+  .grupo-nps .vacio{ margin:0; padding:12px; }
+  .chip.nota{ background:var(--gris-fondo); color:var(--gris-oscuro); }
+
+  /* ---------- documentos (sólo vendedores) ---------- */
+  .docs{ padding:6px 20px 0; display:flex; flex-direction:column; gap:8px; }
+  .docs > .vacio{ margin:8px 0 0; }
+  .doc-cat{ font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--gris-oscuro); margin-top:10px; }
+  .doc{ display:flex; align-items:center; gap:12px; width:100%; padding:11px 12px; text-align:left; cursor:pointer;
+        background:var(--blanco); border:1px solid var(--gris-claro); border-radius:12px; font-family:inherit; color:var(--negro); }
+  .doc:hover{ border-color:var(--azul-ev); }
+  .doc-ico{ font-size:20px; flex:none; }
+  .doc-txt{ display:flex; flex-direction:column; min-width:0; }
+  .doc-titulo{ font-size:13.5px; font-weight:700; }
+  .doc-pie{ font-size:11px; color:var(--gris-medio); margin-top:2px; line-height:1.4; }
+
   .pie{ font-size:10.5px; color:var(--gris-medio); text-align:center; padding:22px 24px 0; line-height:1.6; }
   .salir{ display:block; margin:16px auto 0; background:none; border:0; color:var(--gris-medio); font-size:11.5px; font-family:inherit; text-decoration:underline; cursor:pointer; }
 
@@ -369,6 +399,22 @@
     </button>
     <div class="casos oculto" id="reclamos"></div>
 
+    <!-- Sólo vendedores: lo que escribieron sus clientes, por la nota. -->
+    <div class="oculto" id="bloqueComentarios">
+      <h2 class="sec">Comentarios de tus clientes</h2>
+      <p class="hint">Lo que escribieron en las encuestas del período elegido, separado por la nota que pusieron.</p>
+      <h3 class="subsec">App BYD</h3>
+      <div id="comByd"></div>
+      <h3 class="subsec">Encuestas internas (call center)</h3>
+      <div id="comInternas"></div>
+    </div>
+
+    <div class="oculto" id="bloqueDocumentos">
+      <h2 class="sec">Documentos</h2>
+      <p class="hint">Procesos, instructivos y material que carga Calidad. Tocá uno para abrirlo.</p>
+      <div class="docs" id="documentos"><div class="vacio">Cargando…</div></div>
+    </div>
+
     <div class="oculto" id="bloqueMystery">
       <h2 class="sec">Tus visitas de Mystery Shopper</h2>
       <p class="hint">El cliente incógnito que manda BYD. Al lado de cada puntaje, el objetivo.</p>
@@ -521,7 +567,8 @@ async function cargar(callado = false) {
     const { data: ses } = await db.auth.getSession()
     const [ops, enc, vend, det, rec, perf, ms] = await Promise.all([
       db.from('operaciones').select('fecha_venta,vendedor_id'),
-      db.from('encuestas').select('canal,fecha,vendedor_id,nps,tiene_reclamo'),
+      // El comentario y la nota general van para "Comentarios de tus clientes".
+      db.from('encuestas').select('canal,fecha,vendedor_id,nps,tiene_reclamo,comentario,cliente_nombre,nota_general:satisfaccion->general'),
       db.from('vendedores').select('id,nombre,activo,perfil_id'),
       db.from('detecciones').select('created_at,descripcion,cliente_nombre,estado,vendedor_id,reportado_por'),
       db.from('encuestas')
@@ -537,7 +584,10 @@ async function cargar(callado = false) {
     reconocerQuienEntro(ses?.session?.user?.id, perf.data ?? [], vend.data ?? [])
 
     // Sólo el vendedor: la base ya le devuelve únicamente sus visitas.
-    if (sesion?.rol === 'vendedor') pintarMystery(ms.error ? [] : ms.data ?? [])
+    if (sesion?.rol === 'vendedor') {
+      pintarMystery(ms.error ? [] : ms.data ?? [])
+      cargarDocumentos()
+    }
 
     // La detección guarda el perfil de quien la cargó y, si su ficha está
     // vinculada, también el vendedor. Cuando falta lo segundo se recupera por
@@ -711,7 +761,28 @@ function resumen(desde, hasta) {
     listaReclamos: datos.reclamos
       .filter((e) => dentro(e.fecha) && suyo(e.vendedor_id))
       .sort((a, b) => (a.fecha < b.fecha ? 1 : -1)),
+    // En la de BYD la nota es el NPS; en la del call center, la Nota_General.
+    // Igual que en el Portal (src/lib/paneles.ts).
+    comentariosByd: porGrupoNps(byd, (e) => e.nps),
+    comentariosInternas: porGrupoNps(internas, (e) => e.nota_general),
   }
+}
+
+// Promotores (9 y 10), neutros (7 y 8) y detractores (0 a 6), sólo los que
+// dejaron algo escrito, del más nuevo al más viejo. Sin nota no entra en
+// ningún grupo.
+function porGrupoNps(encuestas, notaDe) {
+  const grupos = { promotores: [], neutros: [], detractores: [] }
+  for (const e of encuestas) {
+    const crudo = notaDe(e)
+    const nota = crudo === null || crudo === undefined || crudo === '' ? NaN : Number(crudo)
+    const texto = (e.comentario ?? '').trim()
+    if (!Number.isFinite(nota) || !texto) continue
+    const g = nota >= 9 ? 'promotores' : nota >= 7 ? 'neutros' : 'detractores'
+    grupos[g].push({ ...e, nota, texto })
+  }
+  for (const g of Object.values(grupos)) g.sort((a, b) => (a.fecha < b.fecha ? 1 : -1))
+  return grupos
 }
 
 // ---------------------------------------------------------------- pintar
@@ -771,6 +842,7 @@ function pintar() {
   pintarRanking(desde, hasta)
   pintarCasos(r)
   pintarReclamos(r)
+  if (sesion?.rol === 'vendedor') pintarComentarios(r)
   pintarGrafico()
 }
 
@@ -1066,6 +1138,120 @@ function pintarReclamos(r) {
       </div>`
   }).join('')
 }
+
+// ------------------------------------------- comentarios (sólo vendedores)
+// Lo que escribieron sus clientes en las dos encuestas, separado por la nota
+// que pusieron. Cada grupo arranca plegado; el que se abre queda abierto
+// aunque la pantalla se refresque sola.
+const GRUPOS_NPS = [
+  ['promotores', 'Promotores', 'notas 9 y 10'],
+  ['neutros', 'Neutros', 'notas 7 y 8'],
+  ['detractores', 'Detractores', 'notas 0 a 6'],
+]
+const gruposAbiertos = new Set()
+
+function pintarComentarios(r) {
+  ver($('bloqueComentarios'), true)
+  const periodo = periodoTexto()
+  const bloque = (clave, grupos, vacio) => {
+    const total = GRUPOS_NPS.reduce((s, [g]) => s + grupos[g].length, 0)
+    if (total === 0) return `<div class="vacio">${vacio} ${periodo}.</div>`
+    return GRUPOS_NPS.map(([g, titulo, notas]) => {
+      const lista = grupos[g]
+      const id = clave + '-' + g
+      return `
+        <details class="grupo-nps ${g}" data-id="${id}"${gruposAbiertos.has(id) ? ' open' : ''}>
+          <summary>
+            <span class="punto-nps" aria-hidden="true"></span>
+            <span class="grupo-titulo">${titulo} <span class="grupo-notas">${notas}</span></span>
+            <span class="grupo-n">${lista.length}</span>
+          </summary>
+          <div class="casos">
+            ${lista.length === 0
+              ? '<div class="vacio">Ninguno en este grupo.</div>'
+              : lista.map((e) => {
+                  const [, m, d] = String(e.fecha).split('-')
+                  return `
+                    <div class="caso">
+                      <div class="caso-top">
+                        <div class="caso-quien">${escapar(e.cliente_nombre || 'Cliente sin nombre')}</div>
+                        <span class="chip nota">Nota ${e.nota}</span>
+                        <span class="caso-fecha">${Number(d)}/${Number(m)}</span>
+                      </div>
+                      <p>${escapar(e.texto)}</p>
+                    </div>`
+                }).join('')}
+          </div>
+        </details>`
+    }).join('')
+  }
+  $('comByd').innerHTML = bloque('byd', r.comentariosByd, 'Ningún cliente tuyo dejó comentario en la app BYD')
+  $('comInternas').innerHTML = bloque('int', r.comentariosInternas, 'Ningún cliente tuyo dejó comentario al call center')
+}
+
+document.addEventListener('toggle', (e) => {
+  const d = e.target
+  if (!(d instanceof HTMLDetailsElement) || !d.dataset.id) return
+  if (d.open) gruposAbiertos.add(d.dataset.id)
+  else gruposAbiertos.delete(d.dataset.id)
+}, true)
+
+// --------------------------------------------- documentos (sólo vendedores)
+// Los que carga Calidad en Gestión Documental del Portal, por categoría. Se
+// abre siempre la versión vigente. El archivo es privado: se pide un enlace
+// que dura un minuto en el momento de tocarlo.
+let documentosCargados = false
+async function cargarDocumentos() {
+  if (documentosCargados) return
+  documentosCargados = true
+  ver($('bloqueDocumentos'), true)
+  const [docs, vers] = await Promise.all([
+    db.from('documentos').select('id,categoria,titulo,descripcion,version_vigente_id,activo').order('titulo'),
+    db.from('documento_versiones').select('id,numero,storage_path,nombre_archivo,created_at'),
+  ])
+  if (docs.error || vers.error) {
+    documentosCargados = false
+    $('documentos').innerHTML = '<div class="vacio">No pudimos traer los documentos. Probá de nuevo en un rato.</div>'
+    return
+  }
+  const version = new Map((vers.data ?? []).map((v) => [v.id, v]))
+  const lista = (docs.data ?? []).filter((d) => d.activo !== false && version.has(d.version_vigente_id))
+  if (lista.length === 0) {
+    $('documentos').innerHTML = '<div class="vacio">Todavía no hay documentos cargados.</div>'
+    return
+  }
+  const categorias = [...new Set(lista.map((d) => d.categoria))].sort((a, b) => a.localeCompare(b, 'es'))
+  $('documentos').innerHTML = categorias.map((c) => `
+    <div class="doc-cat">${escapar(c)}</div>
+    ${lista.filter((d) => d.categoria === c).map((d) => {
+      const v = version.get(d.version_vigente_id)
+      const [a, m, dia] = String(v.created_at).slice(0, 10).split('-')
+      return `
+        <button type="button" class="doc" data-ruta="${escapar(v.storage_path)}">
+          <span class="doc-ico" aria-hidden="true">📄</span>
+          <span class="doc-txt">
+            <span class="doc-titulo">${escapar(d.titulo)}</span>
+            <span class="doc-pie">Versión ${v.numero} · ${Number(dia)}/${Number(m)}/${a}${d.descripcion ? ' · ' + escapar(d.descripcion) : ''}</span>
+          </span>
+        </button>`
+    }).join('')}`).join('')
+}
+
+$('documentos').addEventListener('click', async (e) => {
+  const b = e.target.closest('.doc')
+  if (!b) return
+  // La pestaña se abre ya, dentro del toque: si se abre después de esperar
+  // el enlace, el iPhone la bloquea como ventana emergente.
+  const ventana = window.open('', '_blank')
+  const { data, error } = await db.storage.from('documentos').createSignedUrl(b.dataset.ruta, 60)
+  if (error || !data?.signedUrl) {
+    ventana?.close()
+    alert('No se pudo abrir el documento. Probá de nuevo.')
+    return
+  }
+  if (ventana) ventana.location.href = data.signedUrl
+  else location.href = data.signedUrl
+})
 
 // Evolución: una sola serie por gráfico y el valor escrito sobre la barra más
 // alta, para no repetir un número en cada columna.
