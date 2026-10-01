@@ -774,8 +774,8 @@ async function ubicar(user) {
       ok: false,
       fuera: true,
       mensaje: perfil
-        ? 'Tu usuario todavía no está activo. Pedile a Calidad que lo active.'
-        : 'Tu cuenta no tiene usuario en el sistema. Pedile a Calidad que te dé de alta.',
+        ? 'Tu usuario todavía no está activo. Si te acaban de agregar a la planilla, probá de nuevo en 5 minutos.'
+        : 'Tu cuenta no tiene usuario en el sistema. Pedile al gerente que te agregue a la planilla de usuarios.',
     }
   }
 
@@ -827,13 +827,37 @@ window.__bydRecuperar = async function (email) {
   return { ok: false, mensaje: 'No pudimos mandar el mail. Probá de nuevo en un momento.' }
 }
 
+// Alta automática: el gerente escribe a la persona en la planilla de usuarios
+// (Vendedor, Codigo, Rol, mails) y la primera vez que entra con su mail y su
+// código se le crea la cuenta acá; la base lee la planilla, le pone el rol y
+// la activa (0019_alta_desde_planilla.sql). Lo mismo hace el login del Portal
+// (src/lib/altaPlanilla.ts).
+async function crearCuentaDesdePlanilla(email, codigo) {
+  const { data: esta } = await db.rpc('en_planilla_usuarios', { p_email: email, p_codigo: codigo })
+  if (!esta) return null
+  const { data, error } = await db.auth.signUp({ email, password: codigo })
+  return error || !data.session ? null : data.user
+}
+
 window.__bydEntrarConCuenta = async function (email, password) {
   const { data, error } = await db.auth.signInWithPassword({ email, password })
-  if (!error) return ubicar(data.user)
-  if (error.message === 'Invalid login credentials') {
-    return { ok: false, mensaje: 'Ese mail o ese código no coinciden.' }
+  let usuario = data?.user
+  if (error) {
+    if (error.message !== 'Invalid login credentials') {
+      return { ok: false, mensaje: 'No pudimos entrar. Probá de nuevo en un momento.' }
+    }
+    usuario = await crearCuentaDesdePlanilla(email, password)
+    if (!usuario) return { ok: false, mensaje: 'Ese mail o ese código no coinciden. Si te acaban de agregar a la planilla, probá de nuevo en 5 minutos.' }
   }
-  return { ok: false, mensaje: 'No pudimos entrar. Probá de nuevo en un momento.' }
+  // A una cuenta activa no le toca nada; a un vendedor nuevo lo activa. Los
+  // demás roles los activa Calidad: la planilla es pública.
+  const { data: alta } = await db.rpc('alta_desde_planilla', { p_codigo: password })
+  if (alta === 'pendiente') {
+    await db.auth.signOut()
+    window.bydAcceso?.limpiar()
+    return { ok: false, mensaje: 'Tu cuenta quedó creada. Falta que Calidad la active: avisales.' }
+  }
+  return ubicar(usuario)
 }
 
 // Si ya había entrado con su cuenta en este teléfono, no se le vuelve a pedir
