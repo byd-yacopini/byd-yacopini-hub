@@ -23,6 +23,11 @@
   --hub-azul: #2166ab;
   --hub-azul-oscuro: #1a5289;
   --hub-azul-suave: #e8f0f8;
+  /* Decorativos, los mismos del Portal: fondo y títulos, nunca gráficos. */
+  --hub-cielo: #3b9fe8;
+  --hub-violeta: #7b5cf0;
+  --hub-turquesa: #0fa3a3;
+  --hub-rosa: #e0457b;
 
   /* Las variables que ya usan todas las páginas, con los valores del Portal */
   --negro: #1b1c1e;
@@ -50,9 +55,31 @@
 }
 
 html, body {
-  background: var(--hub-fondo) !important;
+  background-color: var(--hub-fondo) !important;
   color: var(--hub-tinta);
   -webkit-font-smoothing: antialiased;
+}
+
+/* Igual que el Portal: manchas celestes y azules muy suaves detrás de todo,
+   que le sacan lo gris al lienzo sin competir con las tarjetas. Fijas, para
+   que no se muevan al hacer scroll. */
+html:not(.embebido) body:not(.embebido) {
+  background-image:
+    radial-gradient(60rem 40rem at 105% -10%, color-mix(in srgb, var(--hub-cielo) 18%, transparent), transparent 60%),
+    radial-gradient(50rem 35rem at -10% 110%, color-mix(in srgb, var(--hub-azul) 12%, transparent), transparent 60%),
+    radial-gradient(40rem 30rem at 40% 50%, color-mix(in srgb, var(--hub-cielo) 8%, transparent), transparent 60%) !important;
+  background-attachment: fixed !important;
+}
+
+/* Cada título de pantalla lleva una rayita de color debajo, como en el Portal. */
+.mainview > h1::after, .title-block h1::after {
+  content: '';
+  display: block;
+  width: 4.5rem;
+  height: 4px;
+  margin-top: 0.6rem;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--hub-azul-oscuro), var(--hub-azul), var(--hub-cielo));
 }
 body, button, input, select, textarea {
   font-family: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif !important;
