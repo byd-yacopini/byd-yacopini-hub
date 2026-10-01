@@ -85,10 +85,20 @@ body, button, input, select, textarea {
   font-family: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif !important;
 }
 
-/* ── Encabezado: la franja negra con el logo BYD queda como siempre ───── */
+/* ── Encabezado: franja azul en degradé, la misma del Portal ──────────────
+   El degradé corre de izquierda a derecha, así las tres piezas apiladas
+   (logo, selector y solapas) se ven como una sola franja. */
 .topbar, .app-topbar, .header-calc, .main-select-wrap, .main-select-wrap ~ .tabs {
-  background: #0a0a0a !important;
+  background: linear-gradient(90deg, var(--hub-azul-oscuro), var(--hub-azul), var(--hub-cielo)) !important;
 }
+.topbar .subtitle { color: rgba(255, 255, 255, 0.75) !important; }
+/* La sombra va debajo de la última pieza de la franja */
+.app-topbar, .header-calc, .main-select-wrap ~ .tabs { box-shadow: 0 6px 18px -8px rgba(33, 102, 171, 0.45); }
+.main-select {
+  background-color: rgba(255, 255, 255, 0.15) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+}
+.main-select option { color: var(--hub-tinta); }
 /* En el gestor y en plantillas el encabezado tenía un margen negativo pensado
    para estar dentro de la tarjeta, y el logo quedaba cortado arriba */
 body > .app-topbar { margin: 0 !important; }
@@ -116,8 +126,8 @@ body > .app-topbar { margin: 0 !important; }
 }
 /* Las solapas del Tablero van dentro de la franja negra */
 .main-select-wrap ~ .tabs button {
-  background: rgba(255, 255, 255, 0.08) !important;
-  color: #d4d4d4 !important;
+  background: rgba(255, 255, 255, 0.15) !important;
+  color: #fff !important;
   border: 1px solid transparent !important;
 }
 .tabs button.active, .tabs button[aria-pressed="true"], .tab-btn.active, .main-select-wrap ~ .tabs button.active, .tabs-bar button.active, .tabbar button.active,
@@ -331,5 +341,67 @@ a.card .icon { border-radius: 14px !important; }
 /* Calculadora de comisiones: el resumen del filtro no entra en una línea en
    el celular y empujaba la página de costado */
 .filtro-resumen { white-space: normal !important; max-width: 100%; }
+
+/* ── Como el Portal ───────────────────────────────────────────────────────
+   Lo pidió Lucía (01/10): que la app se vea como el Portal. Tarjetas con un
+   degradé apenas celeste y borde fino, la primera ficha de cada tablero
+   destacada en azul, y botones y solapas activas en degradé. */
+.card, .tcard, .panel, .date-filter-bar, .ficha-card, .promo-card, .model-card, .evento, .kpi {
+  background-color: var(--hub-panel) !important;
+  background-image: linear-gradient(135deg,
+    color-mix(in srgb, var(--hub-cielo) 10%, transparent),
+    transparent 50%,
+    color-mix(in srgb, var(--hub-azul) 6%, transparent)) !important;
+  border: 1px solid color-mix(in srgb, var(--hub-cielo) 22%, transparent) !important;
+  box-shadow: 0 8px 24px -16px rgba(33, 102, 171, 0.25) !important;
+}
+/* Una ficha adentro de otra tarjeta sigue plana */
+.tcard .kpi, .card .kpi {
+  background-image: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+/* La primera ficha de cada tablero, destacada como el NPS en el Portal */
+.kpi-grid > .kpi:first-child:not(.tcard .kpi):not(.card .kpi) {
+  background-color: var(--hub-azul) !important;
+  background-image: linear-gradient(135deg, var(--hub-cielo), var(--hub-azul) 55%, var(--hub-azul-oscuro)) !important;
+  border-color: transparent !important;
+  box-shadow: 0 12px 28px -12px rgba(33, 102, 171, 0.55) !important;
+}
+.kpi-grid > .kpi:first-child:not(.tcard .kpi):not(.card .kpi) .n { color: #fff !important; }
+.kpi-grid > .kpi:first-child:not(.tcard .kpi):not(.card .kpi) .l,
+.kpi-grid > .kpi:first-child:not(.tcard .kpi):not(.card .kpi) .kpi-usd { color: rgba(255, 255, 255, 0.85) !important; }
+.kpi-grid > .kpi:first-child:not(.tcard .kpi):not(.card .kpi) .pct-badge,
+.kpi-grid > .kpi:first-child:not(.tcard .kpi):not(.card .kpi) .kpi-ico {
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: #fff !important;
+}
+
+/* Botones y solapas activas en degradé, como los del Portal */
+.btn-primary, button.primary, .df-btn-primary, .ficha-btn.ver, .btn-guardar, .login button, #bydGate button, .fab {
+  background: linear-gradient(90deg, var(--hub-cielo), var(--hub-azul)) !important;
+  border-color: transparent !important;
+}
+.btn-primary:hover, button.primary:hover, .df-btn-primary:hover, .ficha-btn.ver:hover, .btn-guardar:hover {
+  background: linear-gradient(90deg, var(--hub-cielo), var(--hub-azul)) !important;
+  filter: brightness(1.1);
+}
+.tabs button.active, .tab-btn.active, .tabs-bar button.active, .tabbar button.active,
+.view-tab.active, .cfgsub-tab.active, .switch button.active, .pill-btn.active,
+.catalogo-filtro-pill.active {
+  background: linear-gradient(90deg, var(--hub-cielo), var(--hub-azul)) !important;
+  border-color: transparent !important;
+  box-shadow: 0 4px 12px -4px rgba(59, 159, 232, 0.5);
+}
+/* Sobre la franja azul, la solapa activa va en blanco con letra azul */
+.main-select-wrap ~ .tabs button.active {
+  background: #fff !important;
+  color: var(--hub-azul) !important;
+  box-shadow: none;
+}
+
+/* Títulos de sección con el punto en degradé */
+.tcard h2::before { background: linear-gradient(135deg, var(--hub-cielo), var(--hub-azul)) !important; }
 
 }
