@@ -123,3 +123,192 @@
   if (document.body) arrancar()
   else document.addEventListener('DOMContentLoaded', arrancar)
 })()
+
+// Compartir fichas técnicas (fichas_tecnicas.html, la regenera la
+// sincronización de Nicolás y no se puede tocar).
+//
+// Los PDF pesan de 3 a 16 MB. El botón original bajaba el archivo entero sin
+// avisar nada y recién ahí abría el compartir del teléfono: con datos móviles
+// tardaba varios segundos, el iPhone ya no aceptaba abrir el compartir porque
+// "pasó mucho desde el toque" y no pasaba nada o salía una descarga rara.
+//
+// Acá se toma el botón antes que su propio código: se muestra el avance y,
+// cuando la ficha llega, un botón para compartirla (un toque nuevo, que el
+// teléfono sí acepta) y otro para guardarla. La ficha queda guardada en el
+// teléfono, así que la segunda vez se comparte en el acto.
+// (El punto y coma de adelante hace falta: el bloque de arriba termina en
+// "})()" y sin él se leerían como una sola llamada.)
+;(function () {
+  if (!/fichas_tecnicas\.html$/.test(location.pathname)) return
+
+  var CACHE = 'byd-fichas-v1'
+  var listas = {} // url -> Blob ya bajado
+
+  // Si el almacenamiento del navegador no contesta enseguida (pasa en modo
+  // privado y en algunos navegadores), se baja la ficha igual: guardarla es
+  // una ayuda, no un paso obligatorio.
+  function guardada(url) {
+    if (!('caches' in window)) return Promise.resolve(null)
+    var buscar = caches.open(CACHE)
+      .then(function (c) { return c.match(url) })
+      .then(function (r) { return r ? r.blob() : null })
+      .catch(function () { return null })
+    var espera = new Promise(function (listo) { setTimeout(function () { listo(null) }, 800) })
+    return Promise.race([buscar, espera])
+  }
+
+  // Baja el PDF contando los bytes para mostrar el porcentaje.
+  function bajar(url, avance) {
+    return fetch(url).then(function (res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status)
+      var total = Number(res.headers.get('content-length')) || 0
+      if (!res.body || !res.body.getReader) return res.blob()
+      var lector = res.body.getReader()
+      var partes = []
+      var recibidos = 0
+      return (function leer() {
+        return lector.read().then(function (r) {
+          if (r.done) return new Blob(partes, { type: 'application/pdf' })
+          partes.push(r.value)
+          recibidos += r.value.length
+          avance(recibidos, total)
+          return leer()
+        })
+      })()
+    }).then(function (blob) {
+      try {
+        if ('caches' in window) {
+          caches.open(CACHE).then(function (c) {
+            c.put(url, new Response(blob, { headers: { 'Content-Type': 'application/pdf' } }))
+          }).catch(function () {})
+        }
+      } catch (e) {}
+      return blob
+    })
+  }
+
+  function guardarArchivo(blob, nombre) {
+    var a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = nombre
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    setTimeout(function () { URL.revokeObjectURL(a.href) }, 60000)
+  }
+
+  function compartir(blob, nombre) {
+    var archivo = new File([blob], nombre, { type: 'application/pdf' })
+    if (navigator.canShare && navigator.share && navigator.canShare({ files: [archivo] })) {
+      navigator.share({ files: [archivo] }).catch(function (err) {
+        if (err && err.name === 'AbortError') return
+        guardarArchivo(blob, nombre)
+      })
+      return
+    }
+    guardarArchivo(blob, nombre)
+  }
+
+  // ---- la ventanita de abajo
+  var css = document.createElement('style')
+  css.textContent =
+    '#fichaHoja{position:fixed;left:12px;right:12px;bottom:calc(16px + env(safe-area-inset-bottom));z-index:1000000;' +
+    'max-width:420px;margin:0 auto;background:#1b1c1e;color:#fff;border-radius:16px;padding:14px 16px;' +
+    'font-family:Inter,system-ui,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.35);display:none}' +
+    '#fichaHoja.ver{display:block}' +
+    '#fichaHoja .t{font-size:14px;font-weight:700;margin:0 0 4px}' +
+    '#fichaHoja .s{font-size:12px;opacity:.75;margin:0}' +
+    '#fichaHoja .barra{height:6px;border-radius:99px;background:rgba(255,255,255,.15);margin-top:10px;overflow:hidden}' +
+    '#fichaHoja .barra i{display:block;height:100%;width:0;background:#3b9fe8;border-radius:99px;transition:width .2s}' +
+    '#fichaHoja .acc{display:flex;gap:8px;margin-top:12px}' +
+    '#fichaHoja .acc button{flex:1;padding:11px;border-radius:999px;border:0;font:700 14px Inter,system-ui,sans-serif;cursor:pointer}' +
+    '#fichaHoja .si{background:linear-gradient(90deg,#3b9fe8,#2166ab);color:#fff}' +
+    '#fichaHoja .no{background:rgba(255,255,255,.12);color:#fff}'
+  document.head.appendChild(css)
+
+  var hoja = document.createElement('div')
+  hoja.id = 'fichaHoja'
+  // Ya es oscura: el modo oscuro de tema.js no la da vuelta.
+  hoja.className = 'tema-conserva'
+  hoja.setAttribute('role', 'status')
+  var pedido = 0 // el último toque; uno cancelado o viejo no muestra nada
+
+  function mostrar(html) {
+    if (!hoja.isConnected) document.body.appendChild(hoja)
+    hoja.innerHTML = html
+    hoja.classList.add('ver')
+  }
+  function cerrar() { hoja.classList.remove('ver'); pedido++ }
+  var mb = function (n) { return (n / 1048576).toFixed(1).replace('.', ',') + ' MB' }
+  var esc = function (t) {
+    return String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] })
+  }
+
+  function ofrecer(blob, nombre, titulo) {
+    mostrar(
+      '<p class="t">' + esc(titulo) + ' está lista</p>' +
+      '<p class="s">' + mb(blob.size) + '</p>' +
+      '<div class="acc"><button type="button" class="no" data-a="guardar">Guardar</button>' +
+      '<button type="button" class="si" data-a="compartir">Compartir</button></div>'
+    )
+    hoja.querySelector('[data-a="compartir"]').onclick = function () { cerrar(); compartir(blob, nombre) }
+    hoja.querySelector('[data-a="guardar"]').onclick = function () { cerrar(); guardarArchivo(blob, nombre) }
+  }
+
+  document.addEventListener('click', function (e) {
+    var btn = e.target && e.target.closest && e.target.closest('.ficha-btn.compartir')
+    if (!btn) return
+    e.preventDefault()
+    e.stopImmediatePropagation()
+
+    var titulo = btn.dataset.nombre || 'La ficha'
+    var nombre = titulo + '.pdf'
+    var url = new URL(btn.dataset.url, location.href).href
+
+    // Ya bajada: se comparte con este mismo toque.
+    if (listas[url]) { compartir(listas[url], nombre); return }
+
+    var este = ++pedido
+    mostrar(
+      '<p class="t">Bajando ' + esc(titulo) + '…</p><p class="s" id="fichaAvance">Un momento</p>' +
+      '<div class="barra"><i id="fichaBarra"></i></div>' +
+      '<div class="acc"><button type="button" class="no" data-a="cancelar">Cancelar</button></div>'
+    )
+    hoja.querySelector('[data-a="cancelar"]').onclick = cerrar
+
+    guardada(url)
+      .then(function (blob) {
+        return blob || bajar(url, function (rec, total) {
+          if (este !== pedido) return
+          var av = document.getElementById('fichaAvance')
+          var barra = document.getElementById('fichaBarra')
+          if (av) av.textContent = total ? mb(rec) + ' de ' + mb(total) : mb(rec)
+          if (barra && total) barra.style.width = Math.round((rec / total) * 100) + '%'
+        })
+      })
+      .then(function (blob) {
+        listas[url] = blob
+        if (este === pedido) ofrecer(blob, nombre, titulo)
+      })
+      .catch(function () {
+        if (este !== pedido) return
+        mostrar(
+          '<p class="t">No se pudo bajar la ficha</p><p class="s">Revisá la conexión y probá de nuevo.</p>' +
+          '<div class="acc"><button type="button" class="no" data-a="cerrar">Cerrar</button></div>'
+        )
+        hoja.querySelector('[data-a="cerrar"]').onclick = cerrar
+      })
+  }, true)
+
+  // Las que ya se bajaron alguna vez quedan listas en memoria al abrir la
+  // página: así Compartir abre el compartir del teléfono en el mismo toque.
+  if ('caches' in window) {
+    caches.open(CACHE).then(function (c) {
+      return c.keys().then(function (claves) {
+        claves.forEach(function (req) {
+          c.match(req).then(function (r) { return r && r.blob() }).then(function (b) { if (b) listas[req.url] = b })
+        })
+      })
+    }).catch(function () {})
+  }
+})()
