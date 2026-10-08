@@ -397,17 +397,36 @@
   $('btnMas').addEventListener('click', function(){ VER_TODAS = !VER_TODAS; render(); });
 
   // ---------- Carga ----------
-  fetch('./patentamientos.json', { cache: 'no-store' })
-    .then(function(r){ if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-    .then(function(d){
-      if (!d || !d.provincias || !Object.keys(d.provincias).length) throw new Error('vacío');
-      DATOS = d; MARCA_PROPIA = d.marcaPropia || MARCA_PROPIA;
-      $('estado').style.display = 'none'; $('contenido').style.display = 'block';
-      llenarFiltros(); render();
-    })
-    .catch(function(){
-      $('estado').innerHTML = '<div class="error">No se pudieron cargar los datos de patentamiento. Probá de nuevo en un rato.</div>';
-    });
+  // Se lee al abrir y se vuelve a leer cada 3 min (solo si la pantalla se está viendo), sin
+  // mover el mes/año que se esté mirando. El parámetro ?v= cambia cada minuto para que el
+  // sitio no entregue una copia vieja guardada en su caché.
+  var ultimaCarga = 0;
+  function cargar(primeraVez){
+    ultimaCarga = Date.now();
+    return fetch('./patentamientos.json?v=' + Math.floor(Date.now() / 60000), { cache: 'no-store' })
+      .then(function(r){ if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function(d){
+        if (!d || !d.provincias || !Object.keys(d.provincias).length) throw new Error('vacío');
+        var provPrevia = $('selProv').value;
+        DATOS = d; MARCA_PROPIA = d.marcaPropia || MARCA_PROPIA;
+        $('estado').style.display = 'none'; $('contenido').style.display = 'block';
+        if (primeraVez){ llenarFiltros(); }
+        else {
+          var provs = Object.keys(DATOS.provincias);
+          $('selProv').innerHTML = provs.map(function(p){ return '<option value="' + esc(p) + '">' + esc(p) + '</option>'; }).join('');
+          $('fProvWrap').style.display = provs.length > 1 ? '' : 'none';
+          if (provs.indexOf(provPrevia) !== -1) $('selProv').value = provPrevia;
+          llenarAnioMes(false);
+        }
+        render();
+      })
+      .catch(function(){
+        if (primeraVez) $('estado').innerHTML = '<div class="error">No se pudieron cargar los datos de patentamiento. Probá de nuevo en un rato.</div>';
+      });
+  }
+  cargar(true);
+  setInterval(function(){ if (!document.hidden) cargar(false); }, 3 * 60 * 1000);
+  document.addEventListener('visibilitychange', function(){ if (!document.hidden && DATOS && Date.now() - ultimaCarga > 3 * 60 * 1000) cargar(false); });
 
   // Botón de volver según quién entró (mismo criterio que el resto de las pantallas).
   var back = $('hubBackBtn');

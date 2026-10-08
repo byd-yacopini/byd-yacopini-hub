@@ -761,6 +761,7 @@
     })();
 
     function loadPanelData(){
+      ultimaCargaPanel = Date.now();
       fetch(TABLERO_API_URL + '?key=' + encodeURIComponent(TABLERO_API_KEY) + (currentDesde && currentHasta ? ('&desde=' + encodeURIComponent(currentDesde) + '&hasta=' + encodeURIComponent(currentHasta)) : ''))
         .then(function(r){ if (!r.ok) throw new Error('bad-status'); return r.json(); })
         .then(function(liveData){
@@ -772,7 +773,10 @@
         .catch(function(){ setBanner(false); renderTableroJefe({}); });
     }
     loadPanelData();
-    setInterval(loadPanelData, 5 * 60 * 1000);
+    var ultimaCargaPanel; // la actualiza loadPanelData()
+    // Cada 3 min, solo si la pestaña se está viendo; al volver a ella se actualiza si pasó ese tiempo.
+    setInterval(function(){ if (!document.hidden) loadPanelData(); }, 3 * 60 * 1000);
+    document.addEventListener("visibilitychange", function(){ if (!document.hidden && Date.now() - ultimaCargaPanel > 3 * 60 * 1000) loadPanelData(); });
 
     // ---- Navegación: vista principal ----
     var mainSelect = document.getElementById('mainViewSelect');

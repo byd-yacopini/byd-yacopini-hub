@@ -2105,6 +2105,7 @@ if (data.session) {
 })();
 
   function loadTablero(){
+    ultimaCarga = Date.now();
     if (!TABLERO_API_URL) {
       renderTablero(FALLBACK_DATA);
       setBanner('snapshot', '<strong>Foto de datos:</strong> vista armada con los números reales de tu planilla al 16/07/2026. Todavía falta conectar la actualización automática.');
@@ -2121,11 +2122,15 @@ if (data.session) {
       })
       .catch(function(){
         renderTablero(FALLBACK_DATA);
-        setBanner('snapshot', '<strong>Sin conexión con la planilla en este momento.</strong> Mostrando la última foto disponible (16/07/2026). Reintentando cada 5 minutos.');
+        setBanner('snapshot', '<strong>Sin conexión con la planilla en este momento.</strong> Mostrando la última foto disponible (16/07/2026). Reintentando cada 3 minutos.');
       });
   }
   loadTablero();
-  setInterval(loadTablero, 5 * 60 * 1000);
+  // Se refresca cada 3 min, pero solo si la pestaña se está viendo (no gasta pedidos a la planilla
+  // en segundo plano) y apenas se vuelve a ella si pasó más de ese tiempo.
+  var ultimaCarga; // la actualiza loadTablero()
+  setInterval(function(){ if (!document.hidden) loadTablero(); }, 3 * 60 * 1000);
+  document.addEventListener('visibilitychange', function(){ if (!document.hidden && Date.now() - ultimaCarga > 3 * 60 * 1000) loadTablero(); });
 
   // ---- PWA misc ----
   if ('serviceWorker' in navigator) {
