@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BYD Yacopini &middot; Patentamiento</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root{
     --negro:#0A0A0A; --carbon:#2A2A2A; --gris-oscuro:#4A4A4A; --gris-medio:#8C8C8C; --gris-claro:#D4D4D4; --gris-fondo:#F2F2F2;
@@ -278,12 +279,23 @@
       $('btnMas').style.display = 'none'; $('pie').textContent = '';
       return;
     }
-    avisoEl.innerHTML = '';
-
+    // Mes en curso: la planilla compara contra los mismos días del mes y del año anterior.
+    var enc = (DATOS.enCurso && DATOS.enCurso[prov] && DATOS.enCurso[prov].periodo === clave(anio, mes)) ? DATOS.enCurso[prov] : null;
     var mesPrev = mesAnterior(anio, mes);
-    var prevMes = periodo(prov, mesPrev.anio, mesPrev.mes);
-    var prevAnio = periodo(prov, anio - 1, mes);
+    var prevMes = enc ? (enc.ePer === clave(mesPrev.anio, mesPrev.mes) ? enc.e : null) : periodo(prov, mesPrev.anio, mesPrev.mes);
+    var prevAnio = enc ? (enc.cPer === clave(anio - 1, mes) ? enc.c : null) : periodo(prov, anio - 1, mes);
     var acum = acumulado(prov, anio, mes), acumPrev = acumulado(prov, anio - 1, mes);
+    if (enc && !acumPrev.completo && prevAnio){
+      // Al año anterior le falta solo el mes en curso (que existe como "mismos días"): se suma ese tramo.
+      var soloFaltaEste = true;
+      for (var mm = 1; mm < mes; mm++) if (!periodo(prov, anio - 1, mm)) soloFaltaEste = false;
+      if (soloFaltaEste){ for (var kk in prevAnio) acumPrev.mapa[kk] = (acumPrev.mapa[kk] || 0) + prevAnio[kk]; acumPrev.completo = true; }
+    }
+    avisoEl.innerHTML = enc
+      ? '<div class="aviso">Mes en curso: los datos llegan hasta hoy. Las variaciones comparan los <b>mismos días</b> del mes anterior y del año anterior, igual que la planilla.</div>'
+      : '';
+    var lblAnio = enc ? 'vs. mismos días año ant.' : 'vs. año anterior';
+    var lblMes = enc ? 'vs. mismos días mes ant.' : 'vs. mes anterior';
 
     var tMes = total(cur), tPrevMes = prevMes ? total(prevMes) : 0, tPrevAnio = prevAnio ? total(prevAnio) : 0;
     var uByd = cur[MARCA_PROPIA] || 0, uBydPrevMes = prevMes ? (prevMes[MARCA_PROPIA] || 0) : 0, uBydPrevAnio = prevAnio ? (prevAnio[MARCA_PROPIA] || 0) : 0;
@@ -300,7 +312,7 @@
 
     // Lectura rápida
     var txt = 'En <b>' + MESES[mes - 1] + ' ' + anio + '</b> se patentaron <b>' + num(tMes) + '</b> 0km en ' + esc(prov);
-    if (vMercadoAnio && vMercadoAnio.v != null) txt += ' (' + (vMercadoAnio.v >= 0 ? '+' : '') + pct(vMercadoAnio.v) + ' vs. ' + MESES[mes - 1].toLowerCase() + ' ' + (anio - 1) + ')';
+    if (vMercadoAnio && vMercadoAnio.v != null) txt += ' (' + (vMercadoAnio.v >= 0 ? '+' : '') + pct(vMercadoAnio.v) + ' ' + (enc ? 'vs. los mismos días de ' : 'vs. ') + MESES[mes - 1].toLowerCase() + ' ' + (anio - 1) + ')';
     txt += '. <span class="byd">' + MARCA_PROPIA + '</span> patentó <b>' + num(uByd) + '</b> unidades, el <b>' + pct(partByd) + '</b> del mercado' +
       (posByd ? ', puesto <b>#' + posByd + '</b> de ' + rk.length + ' marcas' : '') + '.';
     if (acum.completo) txt += ' En el acumulado del año suma <b>' + num(uAcumByd) + '</b> (' + pct(partAcumByd) + ' de ' + num(tAcum) + ').';
@@ -308,10 +320,10 @@
 
     // KPIs
     $('kpis').innerHTML =
-      '<div class="kpi"><div class="n">' + num(tMes) + '</div><div class="l">Mercado del mes (unidades)</div>' + (vMercadoAnio ? badge(vMercadoAnio, 'vs. año anterior') : '') + '</div>' +
-      '<div class="kpi byd"><div class="n">' + num(uByd) + '</div><div class="l">' + MARCA_PROPIA + ' del mes (unidades)</div>' + (vBydMes ? badge(vBydMes, 'vs. mes anterior') : '') + '</div>' +
+      '<div class="kpi"><div class="n">' + num(tMes) + '</div><div class="l">Mercado del mes (unidades)</div>' + (vMercadoAnio ? badge(vMercadoAnio, lblAnio) : '') + '</div>' +
+      '<div class="kpi byd"><div class="n">' + num(uByd) + '</div><div class="l">' + MARCA_PROPIA + ' del mes (unidades)</div>' + (vBydMes ? badge(vBydMes, lblMes) : '') + '</div>' +
       '<div class="kpi byd"><div class="n">' + pct(partByd) + '</div><div class="l">Participación ' + MARCA_PROPIA + '</div>' +
-        (ppDif != null ? '<div class="badge ' + (ppDif > 0.05 ? 'up' : (ppDif < -0.05 ? 'down' : '')) + '">' + (ppDif > 0 ? '+' : '') + dec(ppDif, 2) + ' pp vs. mes anterior</div>' : '') + '</div>' +
+        (ppDif != null ? '<div class="badge ' + (ppDif > 0.05 ? 'up' : (ppDif < -0.05 ? 'down' : '')) + '">' + (ppDif > 0 ? '+' : '') + dec(ppDif, 2) + ' pp ' + lblMes + '</div>' : '') + '</div>' +
       '<div class="kpi byd"><div class="n">' + (posByd ? '#' + posByd : '–') + '</div><div class="l">Puesto de ' + MARCA_PROPIA + ' (de ' + rk.length + ' marcas)</div></div>' +
       '<div class="kpi"><div class="n">' + num(tAcum) + '</div><div class="l">Mercado acumulado ' + anio + (acum.completo ? '' : ' (parcial)') + '</div>' + (vAcum ? badge(vAcum, 'vs. acumulado ' + (anio - 1)) : '') + '</div>' +
       '<div class="kpi byd"><div class="n">' + num(uAcumByd) + '</div><div class="l">' + MARCA_PROPIA + ' acumulado ' + anio + '</div><div class="badge">' + pct(partAcumByd) + ' del mercado</div></div>';
@@ -362,7 +374,7 @@
     } else {
       $('suben').innerHTML = $('bajan').innerHTML = '<p class="note">Falta algún mes del año anterior para comparar el acumulado.</p>';
     }
-    $('pie').textContent = 'Fuente: planilla de patentamientos por marca (hojas mensuales). Última actualización de los datos: ' + DATOS.actualizado + '. "nuevo" = la marca no tenía patentamientos en el período de comparación.';
+    $('pie').textContent = 'Fuente: planilla de patentamientos por marca (hojas mensuales). ' + (DATOS.origenTexto || ('Última actualización de los datos: ' + DATOS.actualizado + '.')) + ' "nuevo" = la marca no tenía patentamientos en el período de comparación.';
   }
 
   // ---------- Filtros ----------
@@ -397,14 +409,89 @@
   $('btnMas').addEventListener('click', function(){ VER_TODAS = !VER_TODAS; render(); });
 
   // ---------- Carga ----------
+  // Los datos salen directo de la planilla de Google, publicada en la web como Excel (todo el
+  // documento: cada hoja mensual nueva aparece sola). Google la republica solo cuando se edita.
+  // Si no se puede leer (sin conexión, la planilla dejó de estar publicada), se usa la última
+  // copia guardada en patentamientos.json.
+  var URL_PLANILLA = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS7-XBF-7Qkl4C1bbTb74lKLIWaWnXjlQHXCkbZpJD9mqrciJWh0Vtxx2ipE0oiEVqvY_UtfqEjPC3P/pub?output=xlsx';
+  var PROVINCIAS = { MZA: 'Mendoza', SJ: 'San Juan' };
+
+  // Cada hoja es un mes ("SEPTIEMBRE MZA"; el sufijo es la provincia). La columna B es el mes,
+  // la D el mismo mes del año anterior y la F el mes previo: los tres encabezados traen la fecha
+  // ("09/26 (a)"). Una marca sin valor ese mes = 0. Si un mismo período aparece en dos hojas, vale
+  // el de la hoja más nueva (puede venir corregido).
+  //
+  // OJO con el mes en curso: su hoja compara "lo que va del mes" contra los MISMOS DÍAS del mes
+  // anterior y del año anterior (no contra meses completos). Por eso de esa hoja solo se toma
+  // la columna del mes; las otras dos se guardan aparte (enCurso) para mostrar la comparación
+  // "mismos días" tal como la trae la planilla, sin mezclarlas con los meses completos.
+  function leerLibro(wb){
+    var hoy = new Date(), hoyKey = hoy.getFullYear() + '-' + ('0' + (hoy.getMonth() + 1)).slice(-2);
+    var hojas = [];
+    wb.SheetNames.forEach(function(nombre){
+      var partes = nombre.trim().split(/\s+/), codigo = partes[partes.length - 1].toUpperCase();
+      var filas = XLSX.utils.sheet_to_json(wb.Sheets[nombre], { header: 1, raw: true, defval: '' });
+      if (filas.length < 3) return;
+      var cols = [1, 3, 5].map(function(c){
+        var m = /(\d{2})\/(\d{2})/.exec(String(filas[0][c] || ''));
+        return m ? '20' + m[2] + '-' + m[1] : null;
+      });
+      if (!cols[0]) return;
+      var mapas = [{}, {}, {}];
+      for (var r = 1; r < filas.length; r++){
+        var marca = String(filas[r][0] || '').trim();
+        if (!marca || marca.toUpperCase() === 'TOTAL') continue;
+        [1, 3, 5].forEach(function(c, i){ var v = Number(filas[r][c]); if (v > 0) mapas[i][marca] = v; });
+      }
+      hojas.push({ prov: PROVINCIAS[codigo] || codigo, cols: cols, mapas: mapas });
+    });
+
+    var provincias = {}, enCurso = {};
+    // 1) Períodos que solo existen como "año anterior" o "mes previo" de una hoja de mes cerrado.
+    hojas.forEach(function(h){
+      if (h.cols[0] === hoyKey) return;
+      provincias[h.prov] = provincias[h.prov] || {};
+      [1, 2].forEach(function(i){ if (h.cols[i]) provincias[h.prov][h.cols[i]] = h.mapas[i]; });
+    });
+    // 2) Cada mes con hoja propia manda: su columna principal reemplaza lo anterior.
+    hojas.forEach(function(h){
+      provincias[h.prov] = provincias[h.prov] || {};
+      provincias[h.prov][h.cols[0]] = h.mapas[0];
+      if (h.cols[0] === hoyKey) enCurso[h.prov] = { periodo: h.cols[0], c: h.mapas[1], cPer: h.cols[1], e: h.mapas[2], ePer: h.cols[2] };
+    });
+    var ordenado = {};
+    Object.keys(provincias).forEach(function(p){
+      ordenado[p] = {};
+      Object.keys(provincias[p]).sort().forEach(function(per){ ordenado[p][per] = provincias[p][per]; });
+    });
+    return { provincias: ordenado, enCurso: enCurso };
+  }
+
+  function obtenerDatos(){
+    function copiaGuardada(){
+      return fetch('./patentamientos.json?v=' + Math.floor(Date.now() / 60000), { cache: 'no-store' })
+        .then(function(r){ if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(function(d){ d.origenTexto = 'Se muestra la última copia guardada (actualizada el ' + d.actualizado + '): no se pudo leer la planilla en este momento.'; return d; });
+    }
+    if (typeof XLSX === 'undefined') return copiaGuardada();
+    return fetch(URL_PLANILLA, { cache: 'no-store' })
+      .then(function(r){ if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
+      .then(function(buf){
+        var libro = leerLibro(XLSX.read(buf, { type: 'array' }));
+        if (!Object.keys(libro.provincias).length) throw new Error('vacío');
+        var ahora = new Date();
+        return { marcaPropia: MARCA_PROPIA, provincias: libro.provincias, enCurso: libro.enCurso,
+                 origenTexto: 'Datos en vivo de la planilla, leídos a las ' + ahora.getHours() + ':' + ('0' + ahora.getMinutes()).slice(-2) + '.' };
+      })
+      .catch(copiaGuardada);
+  }
+
   // Se lee al abrir y se vuelve a leer cada 3 min (solo si la pantalla se está viendo), sin
-  // mover el mes/año que se esté mirando. El parámetro ?v= cambia cada minuto para que el
-  // sitio no entregue una copia vieja guardada en su caché.
+  // mover el mes/año que se esté mirando.
   var ultimaCarga = 0;
   function cargar(primeraVez){
     ultimaCarga = Date.now();
-    return fetch('./patentamientos.json?v=' + Math.floor(Date.now() / 60000), { cache: 'no-store' })
-      .then(function(r){ if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    return obtenerDatos()
       .then(function(d){
         if (!d || !d.provincias || !Object.keys(d.provincias).length) throw new Error('vacío');
         var provPrevia = $('selProv').value;
