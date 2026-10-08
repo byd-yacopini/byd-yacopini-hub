@@ -21,7 +21,7 @@
   .title-block p{ font-size:12.5px; color:var(--gris-oscuro); margin:0; line-height:1.5; }
 
   /* Cuando va embebida en la solapa del Tablero, el hub ya pone logo, título y botón de volver. */
-  .embebido .app-topbar, .embebido .title-block, .embebido #hubBackBtn{ display:none; }
+  .embebido .app-topbar, .embebido .title-block, .embebido #hubBackBtn{ display:none !important; }
   .embebido body, body.embebido{ background:transparent; }
   .embebido .app{ padding-bottom:16px; max-width:none; }
   .embebido .wrap{ padding:0; }
@@ -77,9 +77,21 @@
   .mov-row .d{ font-weight:800; font-variant-numeric:tabular-nums; }
   .mov-row .p{ color:var(--gris-medio); font-size:11px; margin-left:6px; font-weight:600; }
 
+  /* Resumen (?resumen=1): solo la tablita compacta; el resto de la pantalla queda oculto. */
+  #resumenBox{ display:none; }
+  .resumen-modo #resumenBox{ display:block; }
+  .resumen-modo #contenido > :not(#resumenBox){ display:none !important; }
+  .resumen-titulo{ font-size:13px; color:var(--gris-oscuro); margin:0 0 10px; }
+  .resumen-titulo b{ color:var(--negro); }
+  table.rank.resumen{ min-width:0; }
+  table.rank.resumen th:nth-child(1){ text-align:left; }
+  table.rank.resumen td:nth-child(1){ text-align:left; width:auto; font-weight:600; color:var(--carbon); }
+  table.rank.resumen tr.byd td:first-child{ padding-left:6px; }
+
   @media (max-width:560px){
     .part .bar{ display:none; }
     table.rank{ min-width:470px; }
+    table.rank.resumen{ min-width:0; }
   }
   @media (min-width:900px){
     .app{ max-width:1100px; }
@@ -109,6 +121,12 @@
     <div id="estado"></div>
 
     <div id="contenido" style="display:none;">
+      <div id="resumenBox">
+        <p class="resumen-titulo" id="resumenTitulo"></p>
+        <div class="tabla-wrap"><table class="rank resumen" id="resumenTabla"></table></div>
+        <button type="button" class="btn-mas" id="resumenMas"></button>
+        <p class="note" id="resumenNota"></p>
+      </div>
       <div class="filtros">
         <div class="f" id="fProvWrap" style="display:none;"><label for="selProv">Provincia</label><select id="selProv"></select></div>
         <div class="f"><label for="selMes">Mes</label><select id="selMes"></select></div>
@@ -169,6 +187,7 @@
   var SIGLAS = { 'BYD':1, 'BMW':1, 'DFSK':1, 'GAC':1, 'JMEV':1, 'JAC':1, 'JMC':1, 'KYC':1, 'MG':1, 'DS':1, 'RAM':1, 'BAIC':1, 'FAW':1 };
   var VER_TODAS = false;
   var DATOS = null;
+  var RESUMEN = new URLSearchParams(location.search).get('resumen') === '1';
 
   function $(id){ return document.getElementById(id); }
   function esc(s){ var d = document.createElement('div'); d.textContent = (s == null ? '' : String(s)); return d.innerHTML; }
@@ -272,6 +291,29 @@
     return s + '</svg>';
   }
 
+  // ---------- Resumen para el Tablero General (?resumen=1) ----------
+  // Solo marca, unidades, participación y variación contra el mes anterior, del último mes cargado.
+  function renderResumen(cur, prevMes, enCurso, anio, mes, prov){
+    var tMes = total(cur), rk = ranking(cur), posByd = 0;
+    rk.forEach(function(r, i){ if (r.marca === MARCA_PROPIA) posByd = i + 1; });
+    var LIMITE = 10;
+    var visibles = VER_TODAS ? rk : rk.slice(0, LIMITE);
+    if (!VER_TODAS && posByd > LIMITE) visibles = rk.slice(0, LIMITE - 1).concat([rk[posByd - 1]]);
+    var body = visibles.map(function(r){
+      var vM = variacion(r.u, prevMes ? (prevMes[r.marca] || 0) : 0);
+      return '<tr class="' + (r.marca === MARCA_PROPIA ? 'byd' : '') + '"><td>' + esc(bonita(r.marca)) + '</td><td>' + num(r.u) + '</td><td>' + pct(r.u / tMes * 100) + '</td>' +
+        '<td class="' + (prevMes ? vM.cls : 'neutro') + '">' + (prevMes ? vM.txt : '–') + '</td></tr>';
+    }).join('');
+    $('resumenTabla').innerHTML = '<thead><tr><th>Marca</th><th>Patent.</th><th>% Part.</th><th>% mes ant.</th></tr></thead><tbody>' + body + '</tbody>';
+    $('resumenTitulo').innerHTML = MESES[mes - 1] + ' ' + anio + ' &middot; ' + esc(prov) + ' &middot; <b>' + num(tMes) + '</b> unidades';
+    $('resumenNota').textContent = enCurso
+      ? 'Mes en curso: datos hasta hoy. "% mes ant." compara contra los mismos días del mes anterior.'
+      : '"% mes ant." compara contra el mes anterior completo.';
+    var btn = $('resumenMas');
+    btn.style.display = rk.length > LIMITE ? '' : 'none';
+    btn.textContent = VER_TODAS ? 'Ver solo las principales' : 'Ver las ' + rk.length + ' marcas';
+  }
+
   // ---------- Render principal ----------
   function render(){
     var prov = $('selProv').value, anio = +$('selAnio').value, mes = +$('selMes').value;
@@ -300,6 +342,7 @@
       : '';
     var lblAnio = enc ? 'vs. mismos días año ant.' : 'vs. año anterior';
     var lblMes = enc ? 'vs. mismos días mes ant.' : 'vs. mes anterior';
+    if (RESUMEN) return renderResumen(cur, prevMes, !!enc, anio, mes, prov);
 
     var tMes = total(cur), tPrevMes = prevMes ? total(prevMes) : 0, tPrevAnio = prevAnio ? total(prevAnio) : 0;
     var uByd = cur[MARCA_PROPIA] || 0, uBydPrevMes = prevMes ? (prevMes[MARCA_PROPIA] || 0) : 0, uBydPrevAnio = prevAnio ? (prevAnio[MARCA_PROPIA] || 0) : 0;
@@ -411,6 +454,7 @@
   $('selAnio').addEventListener('change', function(){ llenarMeses(+$('selMes').value); render(); });
   $('selMes').addEventListener('change', render);
   $('btnMas').addEventListener('click', function(){ VER_TODAS = !VER_TODAS; render(); });
+  $('resumenMas').addEventListener('click', function(){ VER_TODAS = !VER_TODAS; render(); });
 
   // ---------- Carga ----------
   // Los datos salen directo de la planilla de Google, publicada en la web como Excel (todo el
@@ -529,7 +573,8 @@
   // Embebida en la solapa del Tablero: le avisa al hub cuánto mide para que agrande el marco.
   if (new URLSearchParams(location.search).get('embebido') === '1'){
     document.documentElement.classList.add('embebido'); document.body.classList.add('embebido');
-    var avisar = function(){ parent.postMessage({ tipo: 'alto-patentamiento', alto: Math.ceil(document.documentElement.scrollHeight) }, '*'); };
+    if (RESUMEN) document.body.classList.add('resumen-modo');
+    var avisar = function(){ parent.postMessage({ tipo: RESUMEN ? 'alto-resumen-patentamiento' : 'alto-patentamiento', alto: Math.ceil(document.documentElement.scrollHeight) }, '*'); };
     new ResizeObserver(avisar).observe(document.body);
     window.addEventListener('load', avisar);
     avisar();

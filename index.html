@@ -962,6 +962,12 @@ if (data.session) {
         </div>
 
         <div class="tcard">
+          <h2>Patentamientos — cómo venimos en el mes</h2>
+          <iframe id="marcoResumenPat" title="Resumen de patentamientos" data-src="./patentamiento.html?embebido=1&amp;resumen=1"
+                  style="width:100%;height:340px;border:0;display:block;background:transparent;"></iframe>
+        </div>
+
+        <div class="tcard">
           <h2>Autos en trámite (compras a fábrica)</h2>
           <div class="kpi-grid" style="margin-bottom:0;">
             <div class="kpi"><div class="n" id="kpiStockSinPagarGen">–</div><div class="l">Sin pagar</div><div class="kpi-usd" id="kpiStockSinPagarGenUsd"></div></div>
@@ -2201,6 +2207,15 @@ if (data.session) {
     var destino = e.data.tipo === 'alto-calidad' ? marco : (e.data.tipo === 'alto-patentamiento' ? marcoPat : null);
     if (!destino || e.source !== destino.contentWindow) return;
     destino.style.height = Math.max(520, Math.ceil(e.data.alto)) + 'px';
+  });
+
+  // Resumen de patentamientos dentro de la solapa General (misma pantalla, version compacta).
+  // Se carga al abrir el Tablero con un parametro por minuto, asi no muestra una copia vieja.
+  var marcoResumen = document.getElementById('marcoResumenPat');
+  if (marcoResumen) marcoResumen.setAttribute('src', marcoResumen.dataset.src + '&v=' + Math.floor(Date.now() / 60000));
+  window.addEventListener('message', function (e) {
+    if (!e.data || e.data.tipo !== 'alto-resumen-patentamiento' || !marcoResumen || e.source !== marcoResumen.contentWindow) return;
+    marcoResumen.style.height = Math.max(120, Math.ceil(e.data.alto)) + 'px';
   });
 })();
 </script>
