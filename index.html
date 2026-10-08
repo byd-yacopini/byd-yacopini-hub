@@ -1111,6 +1111,12 @@ if (data.session) {
         </div>
 
         <div class="tcard">
+          <h2>Libres en el concesionario (para asignar a una solicitud nueva)</h2>
+          <div id="stockLibresConcesionario"></div>
+          <p class="note">Unidades del stock con depósito "Carril Gómez" que no figuran en ninguna solicitud (cruce por VIN) y no están reservadas.</p>
+        </div>
+
+        <div class="tcard">
           <h2>Stock por modelo</h2>
           <div id="stockModelo"></div>
           <p class="note" id="stockNote"></p>
@@ -1780,6 +1786,37 @@ if (data.session) {
     renderStockLlegadosLibres(d.stockLlegadosLibres);
   }
 
+  // Unidades del stock con deposito "Carril Gomez" (en el concesionario), sin solicitud ni reserva.
+  function renderStockLibresConcesionario(d){
+    var el = document.getElementById('stockLibresConcesionario');
+    if (!el) return;
+    if (d.stockLibresConcesionarioError){
+      el.innerHTML = '<p class="note">No se pudo calcular: ' + d.stockLibresConcesionarioError + '</p>';
+      return;
+    }
+    var list = d.stockLibresConcesionario;
+    if (!Array.isArray(list)){
+      el.innerHTML = '<p class="note">Este dato todavía no llegó desde la planilla (falta publicar la versión nueva del Apps Script).</p>';
+      return;
+    }
+    if (!list.length){
+      el.innerHTML = '<p class="note">No hay unidades libres en el concesionario: todo lo que está en Carril Gómez ya tiene solicitud o reserva.</p>';
+      return;
+    }
+    var porModelo = {};
+    list.forEach(function(u){ porModelo[u.modelo] = (porModelo[u.modelo] || 0) + 1; });
+    var resumen = Object.keys(porModelo).map(function(m){ return m + ' ' + porModelo[m]; }).join(' · ');
+    var rows = list.map(function(u){
+      return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--gris-fondo);font-size:13px;">' +
+        '<div><b>' + fixCaps(u.modelo) + '</b> · ' + u.color + (u.colorInterior && u.colorInterior !== 'Sin dato' ? ' / ' + u.colorInterior : '') +
+        '<div style="color:var(--gris-medio);font-size:11px;">VIN …' + String(u.vin).slice(-6) + '</div></div>' +
+        '<div style="text-align:right;color:var(--gris-medio);font-size:11.5px;white-space:nowrap;">' + u.dias + ' días en stock</div>' +
+        '</div>';
+    }).join('');
+    el.innerHTML = '<div class="kpi" style="margin-bottom:10px;"><div class="n">' + list.length + '</div><div class="l">Libres en el concesionario</div></div>' +
+      '<p class="note" style="margin:0 0 6px;">' + resumen + '</p>' + rows;
+  }
+
   // Unidades pagadas y arribadas que no aparecen en ninguna Solicitud (por VIN):
   // están disponibles para ofrecer ya, sin cliente asignado.
   function renderStockLlegadosLibres(list){
@@ -2032,6 +2069,7 @@ if (data.session) {
       '<p class="note">Sin deudas este mes.</p>';
 
     renderStockComprasKpis(d);
+    renderStockLibresConcesionario(d);
 
     // Entregas
     document.getElementById('kpiEntregasMes').textContent = d.entregasTotal;
