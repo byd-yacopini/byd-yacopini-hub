@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BYD Yacopini &middot; Patentamiento</title>
+<style>
+  :root{
+    --negro:#0A0A0A; --carbon:#2A2A2A; --gris-oscuro:#4A4A4A; --gris-medio:#8C8C8C; --gris-claro:#D4D4D4; --gris-fondo:#F2F2F2;
+    --blanco:#FFFFFF; --azul-ev:#1565D8; --verde-dm:#388E3C; --ambar:#D89614; --rojo:#C0392B;
+  }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--gris-fondo); color:var(--carbon); font-family:'Segoe UI', Arial, Helvetica, sans-serif; }
+  .app{ max-width:760px; margin:0 auto; padding:0 0 90px; }
+  .app-topbar{ background:var(--negro); padding:20px; display:flex; align-items:center; }
+  .app-topbar svg{ height:32px; width:auto; display:block; }
+  .wrap{ padding:16px; }
+  .title-block{ padding:4px 0 12px; }
+  .title-block h1{ font-size:21px; font-weight:800; margin:0 0 4px; color:var(--negro); }
+  .title-block p{ font-size:12.5px; color:var(--gris-oscuro); margin:0; line-height:1.5; }
+
+  /* Cuando va embebida en la solapa del Tablero, el hub ya pone logo, título y botón de volver. */
+  .embebido .app-topbar, .embebido .title-block, .embebido #hubBackBtn{ display:none; }
+  .embebido body, body.embebido{ background:transparent; }
+  .embebido .app{ padding-bottom:16px; max-width:none; }
+  .embebido .wrap{ padding:0; }
+
+  .filtros{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+  .filtros .f{ flex:1; min-width:110px; }
+  .filtros label{ display:block; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.3px; color:var(--gris-medio); margin-bottom:4px; }
+  .filtros select{ width:100%; font-size:13px; font-weight:600; padding:9px 10px; border:1px solid var(--gris-claro); border-radius:8px; background:var(--blanco); color:var(--negro); font-family:inherit; }
+
+  .aviso{ background:#FFF7E6; border:1px solid #F0D48A; color:#7A5A00; font-size:12px; border-radius:10px; padding:10px 12px; margin-bottom:14px; line-height:1.5; }
+  .error{ background:#FBEAEA; border:1px solid #E7B8B8; color:#8A2020; font-size:12.5px; border-radius:10px; padding:12px 14px; line-height:1.5; }
+
+  .lectura{ background:var(--negro); color:#fff; border-radius:14px; padding:16px 18px; margin-bottom:14px; font-size:13.5px; line-height:1.6; }
+  .lectura b{ color:#fff; }
+  .lectura .byd{ color:#7FB1FF; font-weight:700; }
+
+  .kpi-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:14px; }
+  .kpi{ background:var(--blanco); border:1px solid var(--gris-claro); border-radius:12px; padding:14px; }
+  .kpi.byd{ border-color:var(--azul-ev); }
+  .kpi .n{ font-size:24px; font-weight:800; color:var(--negro); font-variant-numeric:tabular-nums; }
+  .kpi .l{ font-size:11px; color:var(--gris-medio); font-weight:600; margin-top:2px; }
+  .badge{ display:inline-block; margin-top:6px; font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:20px; background:var(--gris-fondo); color:var(--gris-oscuro); }
+  .badge.up{ background:#E3F5EA; color:#1B7F4C; }
+  .badge.down{ background:#FCEBEB; color:#A32D2D; }
+
+  .tcard{ background:var(--blanco); border-radius:14px; padding:16px 18px; margin-bottom:14px; border:1px solid var(--gris-claro); }
+  .tcard h2{ font-size:12px; text-transform:uppercase; letter-spacing:.5px; color:var(--gris-medio); font-weight:700; margin:0 0 14px; }
+  .note{ font-size:11.5px; color:var(--gris-medio); line-height:1.5; margin:10px 0 0; }
+  .leyenda{ display:flex; gap:14px; font-size:11.5px; color:var(--gris-oscuro); margin-bottom:8px; flex-wrap:wrap; }
+  .leyenda span{ display:inline-flex; align-items:center; gap:5px; }
+  .leyenda i{ width:10px; height:10px; border-radius:3px; display:inline-block; }
+  svg.grafico{ width:100%; height:auto; display:block; }
+
+  .tabla-wrap{ overflow-x:auto; }
+  table.rank{ width:100%; border-collapse:collapse; font-size:12px; min-width:540px; }
+  table.rank th{ text-align:right; color:var(--gris-medio); font-weight:700; font-size:10px; text-transform:uppercase; padding:0 6px 8px 0; border-bottom:1px solid var(--gris-claro); white-space:nowrap; }
+  table.rank th:nth-child(2), table.rank th:nth-child(1){ text-align:left; }
+  table.rank td{ padding:7px 6px 7px 0; border-bottom:1px solid var(--gris-fondo); text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  table.rank td:nth-child(1){ text-align:left; color:var(--gris-medio); width:26px; }
+  table.rank td:nth-child(2){ text-align:left; font-weight:600; color:var(--carbon); }
+  table.rank tr.byd td{ background:#EAF1FC; font-weight:800; color:var(--negro); }
+  table.rank tr.byd td:first-child{ border-radius:8px 0 0 8px; padding-left:6px; }
+  .part{ display:inline-flex; align-items:center; gap:6px; }
+  .part .bar{ display:inline-block; height:6px; border-radius:4px; background:var(--azul-ev); opacity:.55; }
+  .pos{ color:#1B7F4C; font-weight:700; } .neg{ color:#A32D2D; font-weight:700; } .neutro{ color:var(--gris-medio); }
+  .btn-mas{ margin-top:12px; width:100%; padding:10px; border-radius:10px; border:1px solid var(--gris-claro); background:var(--blanco); color:var(--carbon); font-weight:700; font-size:12.5px; font-family:inherit; cursor:pointer; }
+
+  .dos-col{ display:grid; grid-template-columns:1fr; gap:14px; }
+  .mov-row{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; font-size:12.5px; padding:7px 0; border-bottom:1px solid var(--gris-fondo); }
+  .mov-row:last-child{ border-bottom:none; }
+  .mov-row .m{ font-weight:600; color:var(--carbon); }
+  .mov-row .d{ font-weight:800; font-variant-numeric:tabular-nums; }
+  .mov-row .p{ color:var(--gris-medio); font-size:11px; margin-left:6px; font-weight:600; }
+
+  @media (max-width:560px){
+    .part .bar{ display:none; }
+    table.rank{ min-width:470px; }
+  }
+  @media (min-width:900px){
+    .app{ max-width:1100px; }
+    .kpi-grid{ grid-template-columns:repeat(3,1fr); }
+    .dos-col{ grid-template-columns:1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="app-topbar">
+  <svg viewBox="12 4 529 102" xmlns="http://www.w3.org/2000/svg" aria-label="BYD Yacopini">
+    <defs><style>.st0{fill:#FFFFFF;}</style></defs>
+    <path class="st0" d="M162.93,19.18c-8.06-12.16-21.88-14.53-31.23-14.75-8.23-.19-43.9-.23-64.67-.24-40.91-.03-17.51-.01-54.36-.01v19.54c43.75,0,95.68-.1,118.41.25,4.06.06,8.08.47,11.27,3.3,2.97,2.64,4.02,6.79,2.69,10.4-2.14,5.83-8.07,7.28-13.96,7.37-9.01.14-33.77.19-52.24.22-45.3.06-25.68.03-66.16.03v19.49c43.72,0,95.76-.09,118.41.25,7.06.1,14.53,2.56,14.53,10.43s-7.46,10.45-14.53,10.56c-22.59.33-74.66.24-118.41.24v19.53c43.88,0,101.32.16,119.03-.25,9.35-.22,23.18-2.59,31.23-14.75,7.56-11.41,5.71-26.27-4.22-35.8,9.93-9.54,11.78-24.39,4.21-35.8"/>
+    <path class="st0" d="M520.08,15.93c-13.35-9.58-27.85-10.94-39.61-11.21-11.58-.27-29.05-.39-44.5-.45-37.67-.15-15.02-.08-50.91-.08v19.6c38.19,0,64.97-.32,94.46.52,8.66.24,17.95,1.16,26.31,6.96,7.92,5.5,12.62,14.26,12.62,23.72s-4.57,18.24-12.49,23.74c-8.36,5.81-17.65,6.72-26.31,6.96-29.49.83-56.27.51-94.46.51l-.13,19.59c38.41,0,66.03.14,95.41-.54,11.76-.27,26.26-1.63,39.61-11.21,12.67-9.09,20.33-23.36,20.33-39.05s-7.67-29.97-20.33-39.05"/>
+    <path class="st0" d="M227.22,48.06c-10.23-.2-13.49-3.54-13.56-13.73-.07-9.42-.02-20.58-.02-30.14h-22.56c0,9.67-.19,29.24.19,38.7.74,18.38,6.77,24.11,25.55,24.75,13.02.44,23.36.29,41.36.28v-19.69c-14.43,0-20.31.04-30.96-.16"/>
+    <path class="st0" d="M339.04,34.68c-.07,9.92-3.3,13.18-13.56,13.38-4.89.09-17.75.14-28.33.16h0s-.1.01-.1.01c-10.81,0-22.34-.02-29.1-.02v57.57h26.52v-37.88c.81,0,1.68,0,2.58,0h0s.1,0,.1,0v.02c13.8,0,31.04-.06,37.55-.26,19.93-.61,26-6.23,26.73-24.78.1-2.48.16-5.62.19-9.06V4.18h-22.56c0,9.8.04,20.81-.03,30.5"/>
+  </svg>
+</div>
+
+<div class="app">
+  <div class="wrap">
+    <div class="title-block">
+      <h1>Patentamiento</h1>
+      <p>Patentamientos de 0km por marca: cómo viene el mercado y dónde está BYD.</p>
+    </div>
+
+    <div id="estado"></div>
+
+    <div id="contenido" style="display:none;">
+      <div class="filtros">
+        <div class="f" id="fProvWrap" style="display:none;"><label for="selProv">Provincia</label><select id="selProv"></select></div>
+        <div class="f"><label for="selMes">Mes</label><select id="selMes"></select></div>
+        <div class="f"><label for="selAnio">Año</label><select id="selAnio"></select></div>
+      </div>
+      <div id="avisoPeriodo"></div>
+
+      <div class="lectura" id="lectura"></div>
+
+      <div class="kpi-grid" id="kpis"></div>
+
+      <div class="tcard">
+        <h2 id="tituloMercado">Mercado mes a mes</h2>
+        <div class="leyenda" id="leyendaMercado"></div>
+        <div id="graficoMercado"></div>
+      </div>
+
+      <div class="tcard">
+        <h2>BYD: unidades y participación por mes</h2>
+        <div id="graficoByd"></div>
+        <p class="note">Debajo de cada barra, la participación de BYD sobre el total de patentamientos de ese mes.</p>
+      </div>
+
+      <div class="tcard">
+        <h2 id="tituloRanking">Ranking de marcas</h2>
+        <div class="tabla-wrap"><table class="rank" id="tablaRanking"></table></div>
+        <button type="button" class="btn-mas" id="btnMas"></button>
+      </div>
+
+      <div class="dos-col">
+        <div class="tcard">
+          <h2>Marcas que más crecieron (acumulado año)</h2>
+          <div id="suben"></div>
+        </div>
+        <div class="tcard">
+          <h2>Marcas que más cayeron (acumulado año)</h2>
+          <div id="bajan"></div>
+        </div>
+      </div>
+      <p class="note" id="pie"></p>
+    </div>
+  </div>
+</div>
+
+<a id="hubBackBtn" href="./index.html" style="position:fixed;bottom:18px;left:18px;z-index:999999;
+  width:44px;height:44px;border-radius:50%;background:#0A0A0A;color:#fff;display:flex;
+  align-items:center;justify-content:center;text-decoration:none;font-family:Arial,sans-serif;
+  font-size:20px;box-shadow:0 4px 14px rgba(0,0,0,0.3);" aria-label="Volver al inicio">&larr;</a>
+
+<script>
+(function(){
+  var MARCA_PROPIA = 'BYD';
+  var MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  var MESES_CORTO = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  var SIGLAS = { 'BYD':1, 'BMW':1, 'DFSK':1, 'GAC':1, 'JMEV':1, 'JAC':1, 'JMC':1, 'KYC':1, 'MG':1, 'DS':1, 'RAM':1, 'BAIC':1, 'FAW':1 };
+  var VER_TODAS = false;
+  var DATOS = null;
+
+  function $(id){ return document.getElementById(id); }
+  function esc(s){ var d = document.createElement('div'); d.textContent = (s == null ? '' : String(s)); return d.innerHTML; }
+  function num(n){ return Math.round(n).toLocaleString('es-AR'); }
+  function dec(n, d){ return n.toLocaleString('es-AR', { minimumFractionDigits: d, maximumFractionDigits: d }); }
+  function pct(n){ return dec(n, 1) + '%'; }
+  function clave(anio, mes){ return anio + '-' + (mes < 10 ? '0' : '') + mes; }
+  function bonita(marca){
+    return String(marca).split(' ').map(function(w){
+      return w.split('/').map(function(x){
+        if (SIGLAS[x]) return x;
+        return x.charAt(0) + x.slice(1).toLowerCase();
+      }).join('/');
+    }).join(' ');
+  }
+
+  // ---------- Acceso a los datos (provincia → período → marca → unidades) ----------
+  function periodo(prov, anio, mes){ return (DATOS.provincias[prov] || {})[clave(anio, mes)] || null; }
+  function total(map){ var t = 0; for (var k in map) t += map[k]; return t; }
+  function mesAnterior(anio, mes){ return mes === 1 ? { anio: anio - 1, mes: 12 } : { anio: anio, mes: mes - 1 }; }
+
+  // Acumulado del año hasta `mes`: solo vale si están cargados todos los meses de 1 a `mes`.
+  function acumulado(prov, anio, mes){
+    var out = {}, completo = true;
+    for (var m = 1; m <= mes; m++){
+      var p = periodo(prov, anio, m);
+      if (!p){ completo = false; continue; }
+      for (var k in p) out[k] = (out[k] || 0) + p[k];
+    }
+    return { mapa: out, completo: completo };
+  }
+
+  function variacion(actual, previo){
+    if (!previo) return actual > 0 ? { txt: 'nuevo', cls: 'pos' } : { txt: '–', cls: 'neutro' };
+    var v = (actual - previo) / previo * 100;
+    return { txt: (v > 0 ? '+' : '') + pct(v), cls: v > 0.05 ? 'pos' : (v < -0.05 ? 'neg' : 'neutro'), v: v };
+  }
+  function badge(v, sufijo){
+    if (!v || v.txt === '–') return '';
+    var cls = v.txt === 'nuevo' ? 'up' : (v.v > 0.05 ? 'up' : (v.v < -0.05 ? 'down' : ''));
+    return '<div class="badge ' + cls + '">' + esc(v.txt) + ' ' + esc(sufijo) + '</div>';
+  }
+
+  function ranking(map){
+    return Object.keys(map).map(function(k){ return { marca: k, u: map[k] }; }).sort(function(a, b){ return b.u - a.u || (a.marca < b.marca ? -1 : 1); });
+  }
+
+  // ---------- Gráficos SVG ----------
+  function graficoMercado(prov, anio, mesSel){
+    var W = 480, H = 200, padL = 32, padR = 4, padT = 16, padB = 22;
+    var cur = [], prev = [], max = 1;
+    for (var m = 1; m <= 12; m++){
+      var a = periodo(prov, anio, m), b = periodo(prov, anio - 1, m);
+      cur.push(a ? total(a) : null); prev.push(b ? total(b) : null);
+      max = Math.max(max, cur[m - 1] || 0, prev[m - 1] || 0);
+    }
+    var tope = Math.ceil(max / 500) * 500;
+    var slot = (W - padL - padR) / 12, barW = Math.min(14, slot / 2 - 3), plotH = H - padT - padB;
+    var s = '<svg class="grafico" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Patentamientos del mercado por mes">';
+    [0, 0.5, 1].forEach(function(f){
+      var y = padT + plotH - f * plotH;
+      s += '<line x1="' + padL + '" y1="' + y + '" x2="' + (W - padR) + '" y2="' + y + '" stroke="#E4E4E4" stroke-width="1"/>' +
+           '<text x="' + (padL - 5) + '" y="' + (y + 3) + '" font-size="10" fill="#8C8C8C" text-anchor="end">' + num(tope * f) + '</text>';
+    });
+    for (var i = 0; i < 12; i++){
+      var cx = padL + slot * i + slot / 2;
+      if (i + 1 === mesSel) s += '<rect x="' + (cx - slot / 2 + 1) + '" y="' + padT + '" width="' + (slot - 2) + '" height="' + plotH + '" fill="#EAF1FC" rx="4"/>';
+      if (prev[i] != null){ var hp = prev[i] / tope * plotH; s += '<rect x="' + (cx - barW - 1) + '" y="' + (padT + plotH - hp) + '" width="' + barW + '" height="' + hp + '" fill="#C9CED6" rx="2"/>'; }
+      if (cur[i] != null){
+        var hc = cur[i] / tope * plotH;
+        s += '<rect x="' + (cx + 1) + '" y="' + (padT + plotH - hc) + '" width="' + barW + '" height="' + hc + '" fill="#1565D8" rx="2"/>' +
+             '<text x="' + (cx + 1 + barW / 2) + '" y="' + (padT + plotH - hc - 3) + '" font-size="9" fill="#4A4A4A" text-anchor="middle">' + num(cur[i]) + '</text>';
+      }
+      s += '<text x="' + cx + '" y="' + (H - 7) + '" font-size="11" fill="' + (i + 1 === mesSel ? '#0A0A0A' : '#8C8C8C') + '" font-weight="' + (i + 1 === mesSel ? '700' : '400') + '" text-anchor="middle">' + MESES_CORTO[i] + '</text>';
+    }
+    return s + '</svg>';
+  }
+
+  function graficoByd(prov, anio, mesSel){
+    var W = 480, H = 190, padL = 4, padR = 4, padT = 18, padB = 36;
+    var vals = [], max = 1;
+    for (var m = 1; m <= 12; m++){
+      var p = periodo(prov, anio, m);
+      if (!p){ vals.push(null); continue; }
+      var u = p[MARCA_PROPIA] || 0, t = total(p);
+      vals.push({ u: u, part: t ? u / t * 100 : 0 }); max = Math.max(max, u);
+    }
+    var slot = (W - padL - padR) / 12, barW = Math.min(26, slot - 10), plotH = H - padT - padB;
+    var s = '<svg class="grafico" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Unidades y participación de BYD por mes">';
+    s += '<line x1="' + padL + '" y1="' + (padT + plotH) + '" x2="' + (W - padR) + '" y2="' + (padT + plotH) + '" stroke="#D4D4D4"/>';
+    for (var i = 0; i < 12; i++){
+      var cx = padL + slot * i + slot / 2, v = vals[i];
+      if (v){
+        var h = v.u / max * plotH, sel = (i + 1 === mesSel);
+        s += '<rect x="' + (cx - barW / 2) + '" y="' + (padT + plotH - h) + '" width="' + barW + '" height="' + h + '" fill="' + (sel ? '#1565D8' : '#8FB4EC') + '" rx="3"/>' +
+             '<text x="' + cx + '" y="' + (padT + plotH - h - 4) + '" font-size="12" fill="#0A0A0A" font-weight="700" text-anchor="middle">' + num(v.u) + '</text>' +
+             '<text x="' + cx + '" y="' + (H - 6) + '" font-size="10.5" fill="' + (sel ? '#1565D8' : '#4A4A4A') + '" font-weight="' + (sel ? '800' : '600') + '" text-anchor="middle">' + pct(v.part) + '</text>';
+      }
+      s += '<text x="' + cx + '" y="' + (H - 22) + '" font-size="11" fill="' + (i + 1 === mesSel ? '#0A0A0A' : '#8C8C8C') + '" font-weight="' + (i + 1 === mesSel ? '700' : '400') + '" text-anchor="middle">' + MESES_CORTO[i] + '</text>';
+    }
+    return s + '</svg>';
+  }
+
+  // ---------- Render principal ----------
+  function render(){
+    var prov = $('selProv').value, anio = +$('selAnio').value, mes = +$('selMes').value;
+    var cur = periodo(prov, anio, mes);
+    var avisoEl = $('avisoPeriodo');
+    if (!cur){
+      avisoEl.innerHTML = '<div class="aviso">Todavía no hay patentamientos cargados para <b>' + MESES[mes - 1] + ' ' + anio + '</b>. Elegí otro mes.</div>';
+      ['lectura', 'kpis', 'graficoMercado', 'graficoByd', 'tablaRanking', 'suben', 'bajan', 'leyendaMercado'].forEach(function(id){ $(id).innerHTML = ''; });
+      $('btnMas').style.display = 'none'; $('pie').textContent = '';
+      return;
+    }
+    avisoEl.innerHTML = '';
+
+    var mesPrev = mesAnterior(anio, mes);
+    var prevMes = periodo(prov, mesPrev.anio, mesPrev.mes);
+    var prevAnio = periodo(prov, anio - 1, mes);
+    var acum = acumulado(prov, anio, mes), acumPrev = acumulado(prov, anio - 1, mes);
+
+    var tMes = total(cur), tPrevMes = prevMes ? total(prevMes) : 0, tPrevAnio = prevAnio ? total(prevAnio) : 0;
+    var uByd = cur[MARCA_PROPIA] || 0, uBydPrevMes = prevMes ? (prevMes[MARCA_PROPIA] || 0) : 0, uBydPrevAnio = prevAnio ? (prevAnio[MARCA_PROPIA] || 0) : 0;
+    var partByd = tMes ? uByd / tMes * 100 : 0, partBydPrevMes = prevMes && tPrevMes ? uBydPrevMes / tPrevMes * 100 : null;
+    var rk = ranking(cur), posByd = 0;
+    rk.forEach(function(r, i){ if (r.marca === MARCA_PROPIA) posByd = i + 1; });
+    var tAcum = total(acum.mapa), tAcumPrev = acumPrev.completo ? total(acumPrev.mapa) : 0;
+    var uAcumByd = acum.mapa[MARCA_PROPIA] || 0, partAcumByd = tAcum ? uAcumByd / tAcum * 100 : 0;
+
+    var vMercadoAnio = prevAnio ? variacion(tMes, tPrevAnio) : null;
+    var vBydMes = prevMes ? variacion(uByd, uBydPrevMes) : null;
+    var vAcum = acumPrev.completo ? variacion(tAcum, tAcumPrev) : null;
+    var ppDif = partBydPrevMes != null ? partByd - partBydPrevMes : null;
+
+    // Lectura rápida
+    var txt = 'En <b>' + MESES[mes - 1] + ' ' + anio + '</b> se patentaron <b>' + num(tMes) + '</b> 0km en ' + esc(prov);
+    if (vMercadoAnio && vMercadoAnio.v != null) txt += ' (' + (vMercadoAnio.v >= 0 ? '+' : '') + pct(vMercadoAnio.v) + ' vs. ' + MESES[mes - 1].toLowerCase() + ' ' + (anio - 1) + ')';
+    txt += '. <span class="byd">' + MARCA_PROPIA + '</span> patentó <b>' + num(uByd) + '</b> unidades, el <b>' + pct(partByd) + '</b> del mercado' +
+      (posByd ? ', puesto <b>#' + posByd + '</b> de ' + rk.length + ' marcas' : '') + '.';
+    if (acum.completo) txt += ' En el acumulado del año suma <b>' + num(uAcumByd) + '</b> (' + pct(partAcumByd) + ' de ' + num(tAcum) + ').';
+    $('lectura').innerHTML = txt;
+
+    // KPIs
+    $('kpis').innerHTML =
+      '<div class="kpi"><div class="n">' + num(tMes) + '</div><div class="l">Mercado del mes (unidades)</div>' + (vMercadoAnio ? badge(vMercadoAnio, 'vs. año anterior') : '') + '</div>' +
+      '<div class="kpi byd"><div class="n">' + num(uByd) + '</div><div class="l">' + MARCA_PROPIA + ' del mes (unidades)</div>' + (vBydMes ? badge(vBydMes, 'vs. mes anterior') : '') + '</div>' +
+      '<div class="kpi byd"><div class="n">' + pct(partByd) + '</div><div class="l">Participación ' + MARCA_PROPIA + '</div>' +
+        (ppDif != null ? '<div class="badge ' + (ppDif > 0.05 ? 'up' : (ppDif < -0.05 ? 'down' : '')) + '">' + (ppDif > 0 ? '+' : '') + dec(ppDif, 2) + ' pp vs. mes anterior</div>' : '') + '</div>' +
+      '<div class="kpi byd"><div class="n">' + (posByd ? '#' + posByd : '–') + '</div><div class="l">Puesto de ' + MARCA_PROPIA + ' (de ' + rk.length + ' marcas)</div></div>' +
+      '<div class="kpi"><div class="n">' + num(tAcum) + '</div><div class="l">Mercado acumulado ' + anio + (acum.completo ? '' : ' (parcial)') + '</div>' + (vAcum ? badge(vAcum, 'vs. acumulado ' + (anio - 1)) : '') + '</div>' +
+      '<div class="kpi byd"><div class="n">' + num(uAcumByd) + '</div><div class="l">' + MARCA_PROPIA + ' acumulado ' + anio + '</div><div class="badge">' + pct(partAcumByd) + ' del mercado</div></div>';
+
+    // Gráficos
+    $('tituloMercado').textContent = 'Mercado mes a mes: ' + anio + ' vs. ' + (anio - 1);
+    $('leyendaMercado').innerHTML = '<span><i style="background:#1565D8"></i>' + anio + '</span><span><i style="background:#C9CED6"></i>' + (anio - 1) + '</span>';
+    $('graficoMercado').innerHTML = graficoMercado(prov, anio, mes);
+    $('graficoByd').innerHTML = graficoByd(prov, anio, mes);
+
+    // Ranking
+    $('tituloRanking').textContent = 'Ranking de marcas · ' + MESES[mes - 1] + ' ' + anio;
+    var maxPart = rk.length ? rk[0].u / tMes * 100 : 1;
+    var visibles = VER_TODAS ? rk : rk.slice(0, 15);
+    if (!VER_TODAS && posByd > 15) visibles = rk.slice(0, 14).concat([rk[posByd - 1]]);
+    var head = '<thead><tr><th>#</th><th>Marca</th><th>Unid.</th><th>Part.</th><th>vs. año ant.</th><th>vs. mes ant.</th><th>Acum. año</th><th>Var. acum.</th></tr></thead>';
+    var body = visibles.map(function(r){
+      var pos = rk.indexOf(r) + 1;
+      var part = r.u / tMes * 100;
+      var vA = variacion(r.u, prevAnio ? (prevAnio[r.marca] || 0) : 0), vM = variacion(r.u, prevMes ? (prevMes[r.marca] || 0) : 0);
+      var ac = acum.mapa[r.marca] || 0, vAc = variacion(ac, acumPrev.completo ? (acumPrev.mapa[r.marca] || 0) : 0);
+      return '<tr class="' + (r.marca === MARCA_PROPIA ? 'byd' : '') + '"><td>' + pos + '</td><td>' + esc(bonita(r.marca)) + '</td><td>' + num(r.u) + '</td>' +
+        '<td><span class="part"><span class="bar" style="width:' + Math.max(2, Math.round(part / maxPart * 40)) + 'px"></span>' + pct(part) + '</span></td>' +
+        '<td class="' + (prevAnio ? vA.cls : 'neutro') + '">' + (prevAnio ? vA.txt : '–') + '</td>' +
+        '<td class="' + (prevMes ? vM.cls : 'neutro') + '">' + (prevMes ? vM.txt : '–') + '</td>' +
+        '<td>' + num(ac) + '</td><td class="' + (acumPrev.completo ? vAc.cls : 'neutro') + '">' + (acumPrev.completo ? vAc.txt : '–') + '</td></tr>';
+    }).join('');
+    $('tablaRanking').innerHTML = head + '<tbody>' + body + '</tbody>';
+    var btn = $('btnMas');
+    btn.style.display = rk.length > 15 ? '' : 'none';
+    btn.textContent = VER_TODAS ? 'Ver solo las principales' : 'Ver las ' + rk.length + ' marcas';
+
+    // Quién crece / quién cae (acumulado, por unidades absolutas)
+    function movimientos(){
+      if (!acumPrev.completo) return null;
+      var marcas = {}; Object.keys(acum.mapa).forEach(function(k){ marcas[k] = 1; }); Object.keys(acumPrev.mapa).forEach(function(k){ marcas[k] = 1; });
+      return Object.keys(marcas).map(function(k){ var a = acum.mapa[k] || 0, b = acumPrev.mapa[k] || 0; return { marca: k, a: a, b: b, d: a - b }; });
+    }
+    var mov = movimientos();
+    function filaMov(r){
+      var v = variacion(r.a, r.b);
+      return '<div class="mov-row"><span class="m">' + esc(bonita(r.marca)) + '<span class="p">' + num(r.b) + ' → ' + num(r.a) + '</span></span>' +
+        '<span class="d ' + (r.d >= 0 ? 'pos' : 'neg') + '">' + (r.d > 0 ? '+' : '') + num(r.d) + '<span class="p">' + esc(v.txt) + '</span></span></div>';
+    }
+    if (mov){
+      $('suben').innerHTML = mov.filter(function(r){ return r.d > 0; }).sort(function(a, b){ return b.d - a.d; }).slice(0, 5).map(filaMov).join('') || '<p class="note">Sin datos.</p>';
+      $('bajan').innerHTML = mov.filter(function(r){ return r.d < 0; }).sort(function(a, b){ return a.d - b.d; }).slice(0, 5).map(filaMov).join('') || '<p class="note">Sin datos.</p>';
+    } else {
+      $('suben').innerHTML = $('bajan').innerHTML = '<p class="note">Falta algún mes del año anterior para comparar el acumulado.</p>';
+    }
+    $('pie').textContent = 'Fuente: planilla de patentamientos por marca (hojas mensuales). Última actualización de los datos: ' + DATOS.actualizado + '. "nuevo" = la marca no tenía patentamientos en el período de comparación.';
+  }
+
+  // ---------- Filtros ----------
+  function periodosDe(prov){ return Object.keys(DATOS.provincias[prov] || {}).sort(); }
+  function llenarFiltros(){
+    var provs = Object.keys(DATOS.provincias);
+    $('selProv').innerHTML = provs.map(function(p){ return '<option value="' + esc(p) + '">' + esc(p) + '</option>'; }).join('');
+    $('fProvWrap').style.display = provs.length > 1 ? '' : 'none';
+    llenarAnioMes(true);
+  }
+  function llenarAnioMes(irAlUltimo){
+    var prov = $('selProv').value, per = periodosDe(prov);
+    var anios = []; per.forEach(function(p){ var a = +p.slice(0, 4); if (anios.indexOf(a) === -1) anios.push(a); });
+    anios.sort(function(a, b){ return b - a; });
+    var anioPrevio = +$('selAnio').value, mesPrevio = +$('selMes').value;
+    $('selAnio').innerHTML = anios.map(function(a){ return '<option value="' + a + '">' + a + '</option>'; }).join('');
+    if (irAlUltimo || anios.indexOf(anioPrevio) === -1){
+      var ultimo = per[per.length - 1]; $('selAnio').value = ultimo.slice(0, 4);
+      llenarMeses(+ultimo.slice(5, 7));
+    } else { $('selAnio').value = anioPrevio; llenarMeses(mesPrevio); }
+  }
+  function llenarMeses(mesDeseado){
+    var prov = $('selProv').value, anio = +$('selAnio').value;
+    var meses = periodosDe(prov).filter(function(p){ return +p.slice(0, 4) === anio; }).map(function(p){ return +p.slice(5, 7); });
+    $('selMes').innerHTML = meses.map(function(m){ return '<option value="' + m + '">' + MESES[m - 1] + '</option>'; }).join('');
+    $('selMes').value = String(meses.indexOf(mesDeseado) !== -1 ? mesDeseado : meses[meses.length - 1]);
+  }
+
+  $('selProv').addEventListener('change', function(){ llenarAnioMes(true); render(); });
+  $('selAnio').addEventListener('change', function(){ llenarMeses(+$('selMes').value); render(); });
+  $('selMes').addEventListener('change', render);
+  $('btnMas').addEventListener('click', function(){ VER_TODAS = !VER_TODAS; render(); });
+
+  // ---------- Carga ----------
+  fetch('./patentamientos.json', { cache: 'no-store' })
+    .then(function(r){ if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(d){
+      if (!d || !d.provincias || !Object.keys(d.provincias).length) throw new Error('vacío');
+      DATOS = d; MARCA_PROPIA = d.marcaPropia || MARCA_PROPIA;
+      $('estado').style.display = 'none'; $('contenido').style.display = 'block';
+      llenarFiltros(); render();
+    })
+    .catch(function(){
+      $('estado').innerHTML = '<div class="error">No se pudieron cargar los datos de patentamiento. Probá de nuevo en un rato.</div>';
+    });
+
+  // Botón de volver según quién entró (mismo criterio que el resto de las pantallas).
+  var back = $('hubBackBtn');
+  try {
+    if (sessionStorage.getItem('bydJefeOk') === '1') back.href = './panel_jefe.html';
+    else if (sessionStorage.getItem('bydVendorOk') === '1') back.href = './panel_ventas.html';
+  } catch (e) {}
+
+  // Embebida en la solapa del Tablero: le avisa al hub cuánto mide para que agrande el marco.
+  if (new URLSearchParams(location.search).get('embebido') === '1'){
+    document.documentElement.classList.add('embebido'); document.body.classList.add('embebido');
+    var avisar = function(){ parent.postMessage({ tipo: 'alto-patentamiento', alto: Math.ceil(document.documentElement.scrollHeight) }, '*'); };
+    new ResizeObserver(avisar).observe(document.body);
+    window.addEventListener('load', avisar);
+    avisar();
+  }
+})();
+</script>
+</body>
+</html>

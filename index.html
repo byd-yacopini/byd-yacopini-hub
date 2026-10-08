@@ -922,6 +922,7 @@ if (data.session) {
     <button class="tab-btn" data-tab="solicitudes">Solicitudes</button>
     <button class="tab-btn" data-tab="stock">Stock</button>
     <button class="tab-btn" data-tab="entregas">Entregas</button>
+    <button class="tab-btn" data-tab="patentamiento">Patentamiento</button>
     <button class="tab-btn" data-tab="calidad">Calidad</button>
   </div>
 
@@ -1170,6 +1171,15 @@ if (data.session) {
         </div>
       </div>
 
+      <!-- Patentamiento. Igual que Calidad: la pantalla vive en patentamiento.html
+           (con sus datos en patentamientos.json) y aca se muestra embebida. Tiene
+           su propio filtro de mes/año porque sus datos no vienen de la planilla
+           del Tablero. -->
+      <style>#tab-patentamiento.section.active{ column-count:1; }</style>
+      <div class="section" id="tab-patentamiento">
+        <iframe id="marcoPatentamiento" title="Patentamiento" data-src="./patentamiento.html?embebido=1"
+                style="width:100%;border:0;display:block;min-height:520px;"></iframe>
+      </div>
 
       <!-- Calidad. La pantalla vive en calidad.html y aca se muestra embebida,
            para no tener los mismos numeros escritos en dos lugares.
@@ -2163,20 +2173,27 @@ if (data.session) {
     });
   }
 
+  // Solapas que muestran otra pantalla adentro de un marco. Las dos traen su
+  // propia navegacion (Calidad por semana, Patentamiento por mes), por eso en
+  // ninguna de las dos se muestra el filtro del Tablero.
+  var marcoPat = document.getElementById('marcoPatentamiento');
+  var conMarco = { calidad: marco, patentamiento: marcoPat };
+
   document.querySelectorAll('.tab-btn').forEach(function (b) {
     b.addEventListener('click', function () {
-      var esCalidad = b.dataset.tab === 'calidad';
-      mostrarLoDelTablero(!esCalidad);
-      if (esCalidad && !marco.getAttribute('src')) marco.setAttribute('src', marco.dataset.src);
+      var m = conMarco[b.dataset.tab];
+      mostrarLoDelTablero(!m);
+      if (m && !m.getAttribute('src')) m.setAttribute('src', m.dataset.src);
     });
   });
 
   // La pantalla embebida avisa cuanto mide y el marco se agranda, asi no
   // quedan dos barras de scroll, una adentro de la otra.
   window.addEventListener('message', function (e) {
-    if (e.source !== marco.contentWindow) return;
-    if (!e.data || e.data.tipo !== 'alto-calidad') return;
-    marco.style.height = Math.max(520, Math.ceil(e.data.alto)) + 'px';
+    if (!e.data) return;
+    var destino = e.data.tipo === 'alto-calidad' ? marco : (e.data.tipo === 'alto-patentamiento' ? marcoPat : null);
+    if (!destino || e.source !== destino.contentWindow) return;
+    destino.style.height = Math.max(520, Math.ceil(e.data.alto)) + 'px';
   });
 })();
 </script>
