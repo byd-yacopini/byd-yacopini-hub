@@ -2188,7 +2188,9 @@ if (data.session) {
     b.addEventListener('click', function () {
       var m = conMarco[b.dataset.tab];
       mostrarLoDelTablero(!m);
-      if (m && !m.getAttribute('src')) m.setAttribute('src', m.dataset.src);
+      // Patentamiento se pide con un parametro que cambia cada minuto: asi el navegador no muestra
+      // una version vieja de esa pantalla guardada de antes.
+      if (m && !m.getAttribute('src')) m.setAttribute('src', m.dataset.src + (b.dataset.tab === 'patentamiento' ? '&v=' + Math.floor(Date.now() / 60000) : ''));
     });
   });
 
