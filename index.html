@@ -2211,8 +2211,18 @@ if (data.session) {
 
   // Resumen de patentamientos dentro de la solapa General (misma pantalla, version compacta).
   // Se carga al abrir el Tablero con un parametro por minuto, asi no muestra una copia vieja.
+  // Importante: el marco se carga RECIEN cuando la puerta de acceso ya se abrio. Si se cargara antes,
+  // la pantalla de patentamiento (que exige sesion) redirigiria al inicio de sesion adentro del marco,
+  // que a su vez cargaria otro marco, y asi sin fin: el login quedaba trabado. Tampoco se carga si esta
+  // pagina ya esta dentro de un marco.
   var marcoResumen = document.getElementById('marcoResumenPat');
-  if (marcoResumen) marcoResumen.setAttribute('src', marcoResumen.dataset.src + '&v=' + Math.floor(Date.now() / 60000));
+  function cargarResumen() {
+    if (!marcoResumen || marcoResumen.getAttribute('src') || window.top !== window) return;
+    if (document.body.classList.contains('gate-locked')) return;
+    marcoResumen.setAttribute('src', marcoResumen.dataset.src + '&v=' + Math.floor(Date.now() / 60000));
+  }
+  cargarResumen();
+  new MutationObserver(cargarResumen).observe(document.body, { attributes: true, attributeFilter: ['class'] });
   window.addEventListener('message', function (e) {
     if (!e.data || e.data.tipo !== 'alto-resumen-patentamiento' || !marcoResumen || e.source !== marcoResumen.contentWindow) return;
     marcoResumen.style.height = Math.max(120, Math.ceil(e.data.alto)) + 'px';
