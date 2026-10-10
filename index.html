@@ -2378,7 +2378,216 @@ if (data.session) {
   }
   window.addEventListener('afterprint', function () { if (limpiezaPdf) limpiezaPdf(); });
 
+  // ---- PDF como archivo (iPhone / iPad) ----
+  // En iOS (sobre todo con la app instalada en la pantalla de inicio) window.print() no hace nada. Ahi se arma
+  // el PDF en el propio telefono: se "fotografia" cada bloque de la solapa (con las mismas reglas de impresion)
+  // y se acomoda en hojas A4; despues se ofrece Compartir / Abrir. Se puede forzar en cualquier equipo con ?pdf=archivo.
+  var LIBS_PDF = ['https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+                  'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'];
+  function esIOS() {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  }
+  function cargarScriptPdf(src) {
+    return new Promise(function (ok, mal) {
+      if (document.querySelector('script[src="' + src + '"]')) return ok();
+      var s = document.createElement('script'); s.src = src; s.onload = ok;
+      s.onerror = function () { mal(new Error('No se pudo cargar una herramienta para armar el PDF (revisá la conexión).')); };
+      document.head.appendChild(s);
+    });
+  }
+  function overlayPdf(html) {
+    var o = document.getElementById('pdfOverlay');
+    if (!o) {
+      o = document.createElement('div'); o.id = 'pdfOverlay';
+      o.style.cssText = 'position:fixed;inset:0;z-index:2147483000;background:rgba(10,10,10,.6);display:flex;align-items:center;justify-content:center;padding:20px;';
+      document.body.appendChild(o);
+    }
+    o.innerHTML = '<div style="background:#fff;color:#2A2A2A;border-radius:16px;padding:20px;max-width:360px;width:100%;font:14px/1.5 \'Segoe UI\',Arial,sans-serif;text-align:center;">' + html + '</div>';
+    return o;
+  }
+  function cerrarOverlayPdf() { var o = document.getElementById('pdfOverlay'); if (o && o.parentNode) o.parentNode.removeChild(o); }
+  window.__cerrarOverlayPdf = cerrarOverlayPdf;
+
+  // Aplica a un documento (esta pagina o un marco) las reglas @media print como reglas normales.
+  function simularImpresion(doc) {
+    var css = '';
+    Array.prototype.forEach.call(doc.styleSheets, function (ss) {
+      try {
+        Array.prototype.forEach.call(ss.cssRules, function (r) {
+          if (r.type === 4 && r.media && r.media.mediaText.indexOf('print') !== -1) {
+            Array.prototype.forEach.call(r.cssRules, function (x) { css += x.cssText + '\n'; });
+          }
+        });
+      } catch (e) {}
+    });
+    var st = doc.createElement('style'); st.textContent = css; doc.head.appendChild(st);
+    return function () { if (st.parentNode) st.parentNode.removeChild(st); };
+  }
+
+  // html2canvas no entiende color-mix() (lo usa la hoja de estilos comun para degrades y bordes suaves):
+  // durante la captura se reemplaza por colores planos equivalentes.
+  function neutralizarColores(doc) {
+    var st = doc.createElement('style');
+    st.textContent =
+      'html:not(.zz) body:not(.zz){background-image:none !important;background-color:#fff !important;}' +
+      '.card,.tcard,.panel,.date-filter-bar,.ficha-card,.promo-card,.model-card,.evento,.kpi{background-image:none !important;background-color:#fff !important;' +
+      'border:1px solid #D4D4D4 !important;box-shadow:none !important;}' +
+      '.tcard .kpi,.card .kpi{background-color:#F5F7FA !important;border:0 !important;}' +
+      '.kpi-ico{background:#E8F0FD !important;}';
+    doc.head.appendChild(st);
+    return function () { if (st.parentNode) st.parentNode.removeChild(st); };
+  }
+
+  // html2canvas no sabe dibujar conic-gradient (los graficos de torta): se reemplazan por un SVG equivalente.
+  function tortasASvg(doc) {
+    var deshacer = [];
+    Array.prototype.forEach.call(doc.querySelectorAll('.pie-chart'), function (el) {
+      var bg = el.style.background || el.style.backgroundImage || '';
+      var m = /conic-gradient\((.*)\)\s*$/.exec(bg);
+      if (!m) return;
+      var tramos = m[1].split(/,(?![^(]*\))/).map(function (s) { return s.trim(); });
+      var NS = 'http://www.w3.org/2000/svg', R = 50, svg = doc.createElementNS(NS, 'svg');
+      svg.setAttribute('viewBox', '0 0 100 100'); svg.setAttribute('width', '100%'); svg.setAttribute('height', '100%');
+      tramos.forEach(function (t) {
+        var p = /^(.*?)\s+([\d.]+)deg\s+([\d.]+)deg$/.exec(t); if (!p) return;
+        var a0 = (parseFloat(p[2]) - 90) * Math.PI / 180, a1 = (parseFloat(p[3]) - 90) * Math.PI / 180;
+        var grande = (parseFloat(p[3]) - parseFloat(p[2])) > 180 ? 1 : 0;
+        var path = doc.createElementNS(NS, 'path');
+        if (parseFloat(p[3]) - parseFloat(p[2]) >= 359.9) {
+          path = doc.createElementNS(NS, 'circle'); path.setAttribute('cx', 50); path.setAttribute('cy', 50); path.setAttribute('r', R);
+        } else {
+          path.setAttribute('d', 'M50 50 L' + (50 + R * Math.cos(a0)) + ' ' + (50 + R * Math.sin(a0)) + ' A' + R + ' ' + R + ' 0 ' + grande + ' 1 ' +
+            (50 + R * Math.cos(a1)) + ' ' + (50 + R * Math.sin(a1)) + ' Z');
+        }
+        path.setAttribute('fill', p[1]);
+        svg.appendChild(path);
+      });
+      var fondoAntes = el.style.background;
+      el.style.background = 'transparent'; el.appendChild(svg);
+      deshacer.push(function () { el.style.background = fondoAntes; if (svg.parentNode) svg.parentNode.removeChild(svg); });
+    });
+    return function () { deshacer.forEach(function (f) { f(); }); };
+  }
+
+  function visible(el) { return el.offsetHeight > 0 && el.offsetWidth > 0; }
+  function hijosVisibles(el) { return Array.prototype.filter.call(el.children, visible); }
+  // Bloques "tarjeta" para no cortar una tarjeta a la mitad al pasar de hoja.
+  function expandirBloques(lista, nivel) {
+    var out = [];
+    lista.forEach(function (el) {
+      var hijos = hijosVisibles(el);
+      if (nivel < 4 && el.offsetHeight > 520 && hijos.length >= 2) out = out.concat(expandirBloques(hijos, nivel + 1));
+      else out.push(el);
+    });
+    return out;
+  }
+  function bloquesDe(raiz) {
+    var el = raiz, hijos = hijosVisibles(el);
+    while (hijos.length === 1) { el = hijos[0]; hijos = hijosVisibles(el); }
+    if (!hijos.length) return [el];
+    return expandirBloques(hijos, 0);
+  }
+
+  function armarPdfDesdeBloques(bloques, nombre) {
+    var jsPDF = window.jspdf.jsPDF, pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+    var M = 10, ANCHO = 190, ALTO = 277, y = M, primera = true, paginas = 1;
+    return bloques.reduce(function (p, el) {
+      return p.then(function () {
+        return window.html2canvas(el, { scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false }).then(function (cv) {
+          if (!cv.width || !cv.height) return;
+          var hMm = cv.height / cv.width * ANCHO;
+          if (hMm <= ALTO) {
+            if (y + hMm > M + ALTO && !primera) { pdf.addPage(); paginas++; y = M; }
+            pdf.addImage(cv.toDataURL('image/jpeg', 0.92), 'JPEG', M, y, ANCHO, hMm);
+            y += hMm + 3; primera = false;
+          } else {
+            // Bloque mas alto que una hoja: se corta en tramos de una hoja.
+            var pxPorHoja = Math.floor(ALTO / ANCHO * cv.width);
+            for (var sy = 0; sy < cv.height; sy += pxPorHoja) {
+              var h = Math.min(pxPorHoja, cv.height - sy), tmp = document.createElement('canvas');
+              tmp.width = cv.width; tmp.height = h;
+              tmp.getContext('2d').drawImage(cv, 0, sy, cv.width, h, 0, 0, cv.width, h);
+              if (!primera) { pdf.addPage(); paginas++; y = M; }
+              pdf.addImage(tmp.toDataURL('image/jpeg', 0.92), 'JPEG', M, M, ANCHO, h / cv.width * ANCHO);
+              y = M + h / cv.width * ANCHO + 3; primera = false;
+            }
+          }
+        });
+      });
+    }, Promise.resolve()).then(function () { return { pdf: pdf, paginas: paginas }; });
+  }
+
+  function generarPdfArchivo(tab) {
+    var titulo = TITULOS_PDF[tab], periodo = periodoDelTablero();
+    var esMarco = tab === 'patentamiento' || tab === 'calidad';
+    var marcoEl = tab === 'patentamiento' ? marcoPat : (tab === 'calidad' ? marco : null);
+    overlayPdf('<b>Armando el PDF de ' + titulo + '…</b><div style="color:#8C8C8C;font-size:12.5px;margin-top:6px;">Puede tardar unos segundos. No cierres la pantalla.</div>');
+    var restaurar = [], anchoOriginal = null, docObj = document;
+
+    function restaurarTodo() { while (restaurar.length) { try { restaurar.pop()(); } catch (e) {} } }
+
+    Promise.all(LIBS_PDF.map(cargarScriptPdf)).then(function () {
+      if (esMarco) {
+        if (!marcoEl || !marcoEl.contentDocument) throw new Error('La solapa todavía no cargó.');
+        docObj = marcoEl.contentDocument;
+        var w = marcoEl.contentWindow;
+        restaurar.push(simularImpresion(docObj));
+        try { w.dispatchEvent(new Event('beforeprint')); restaurar.push(function () { w.dispatchEvent(new Event('afterprint')); }); } catch (e) {}
+        var raizM = docObj.documentElement, temaM = raizM.getAttribute('data-tema');
+        if (temaM) { raizM.removeAttribute('data-tema'); restaurar.push(function () { raizM.setAttribute('data-tema', temaM); }); }
+        var anchoM = docObj.body.style.width;
+        docObj.body.style.width = '760px';
+        restaurar.push(function () { docObj.body.style.width = anchoM; });
+      } else {
+        prepararPdf(tab);
+        restaurar.push(function () { if (limpiezaPdf) limpiezaPdf(); });
+        restaurar.push(simularImpresion(document));
+        var raiz = document.documentElement, tema = raiz.getAttribute('data-tema');
+        if (tema) { raiz.removeAttribute('data-tema'); restaurar.push(function () { raiz.setAttribute('data-tema', tema); }); }
+        anchoOriginal = document.body.style.cssText;
+        document.body.style.width = '760px'; document.body.style.maxWidth = '760px'; document.body.style.margin = '0 auto';
+        restaurar.push(function () { document.body.style.cssText = anchoOriginal; });
+      }
+      restaurar.push(neutralizarColores(docObj));
+      restaurar.push(tortasASvg(docObj));
+      return new Promise(function (ok) { setTimeout(ok, 350); });   // deja acomodar el diseño
+    }).then(function () {
+      var bloques;
+      if (esMarco) {
+        var raizDoc = tab === 'calidad' ? docObj.getElementById('panel') : (docObj.querySelector('.app') || docObj.body);
+        bloques = bloquesDe(raizDoc);
+      } else {
+        var enc = document.getElementById('pdfEncabezado');
+        bloques = [enc].concat(bloquesDe(document.getElementById('tab-' + tab)));
+      }
+      return armarPdfDesdeBloques(bloques);
+    }).then(function (res) {
+      restaurarTodo();
+      var nombre = 'Tablero BYD ' + titulo + (periodo ? ' ' + periodo : '') + '.pdf';
+      var blob = res.pdf.output('blob');
+      var archivo = new File([blob], nombre, { type: 'application/pdf' });
+      var url = URL.createObjectURL(blob);
+      var puedeCompartir = !!(navigator.canShare && navigator.canShare({ files: [archivo] }));
+      var o = overlayPdf('<div style="font-size:30px;line-height:1">&#9989;</div><b>PDF listo</b>' +
+        '<div style="color:#8C8C8C;font-size:12.5px;margin:6px 0 14px;">' + res.paginas + (res.paginas === 1 ? ' página' : ' páginas') + ' · ' + Math.max(1, Math.round(blob.size / 1024)) + ' KB</div>' +
+        (puedeCompartir ? '<button id="pdfCompartir" type="button" style="display:block;width:100%;padding:12px;border-radius:10px;border:0;background:#1565D8;color:#fff;font-weight:700;font-size:14px;font-family:inherit;margin-bottom:8px;">Compartir</button>' : '') +
+        '<button id="pdfAbrir" type="button" style="display:block;width:100%;padding:12px;border-radius:10px;border:1px solid #D4D4D4;background:#fff;color:#2A2A2A;font-weight:700;font-size:14px;font-family:inherit;margin-bottom:8px;">Abrir / descargar</button>' +
+        '<button id="pdfCerrar" type="button" style="display:block;width:100%;padding:10px;border:0;background:transparent;color:#8C8C8C;font-weight:600;font-size:13px;font-family:inherit;">Cerrar</button>');
+      var bc = o.querySelector('#pdfCompartir');
+      if (bc) bc.addEventListener('click', function () { navigator.share({ files: [archivo], title: nombre }).catch(function () {}); });
+      o.querySelector('#pdfAbrir').addEventListener('click', function () { window.open(url, '_blank'); });
+      o.querySelector('#pdfCerrar').addEventListener('click', cerrarOverlayPdf);
+      window.__ultimoPdf = { nombre: nombre, paginas: res.paginas, bytes: blob.size };
+    }).catch(function (err) {
+      restaurarTodo();
+      overlayPdf('<b>No se pudo armar el PDF</b><div style="color:#8A2020;font-size:12.5px;margin:8px 0 12px;">' + String(err && err.message || err).replace(/</g, '&lt;') + '</div>' +
+        '<button id="pdfCerrar" type="button" style="display:block;width:100%;padding:10px;border-radius:10px;border:1px solid #D4D4D4;background:#fff;font-weight:700;font-size:13px;font-family:inherit;">Cerrar</button>')
+        .querySelector('#pdfCerrar').addEventListener('click', cerrarOverlayPdf);
+    });
+  }
+
   function generarPdf(tab) {
+    if (esIOS() || new URLSearchParams(location.search).get('pdf') === 'archivo') { generarPdfArchivo(tab); return; }
     if (tab === 'patentamiento' || tab === 'calidad') {
       var f = tab === 'patentamiento' ? marcoPat : marco;
       if (!f || !f.contentWindow) return;
