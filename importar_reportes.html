@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BYD Yacopini &middot; Importar reportes</title>
+<script src="tema.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.min.js"></script>
+<style>
+  :root{
+    --negro:#0A0A0A; --carbon:#2A2A2A; --gris-oscuro:#4A4A4A; --gris-medio:#8C8C8C; --gris-claro:#D4D4D4; --gris-fondo:#F2F2F2;
+    --blanco:#FFFFFF; --azul-ev:#1565D8; --verde:#1B7F4C; --ambar:#D89614; --rojo:#C0392B;
+  }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--gris-fondo); color:var(--carbon); font-family:'Segoe UI', Arial, Helvetica, sans-serif; }
+  .app{ max-width:980px; margin:0 auto; padding:0 0 90px; }
+  .app-topbar{ background:var(--negro); padding:20px; }
+  .app-topbar b{ color:#fff; font-size:15px; letter-spacing:.3px; }
+  .wrap{ padding:16px; }
+  h1{ font-size:21px; font-weight:800; margin:4px 0 4px; color:var(--negro); }
+  .sub{ font-size:12.5px; color:var(--gris-oscuro); margin:0 0 14px; line-height:1.5; }
+
+  .modo{ background:#FFF7E6; border:1px solid #F0D48A; color:#7A5A00; font-size:12.5px; border-radius:10px; padding:10px 12px; margin-bottom:14px; line-height:1.5; }
+  .modo b{ color:#5C4300; }
+
+  .drop{ display:block; background:var(--blanco); border:2px dashed var(--gris-claro); border-radius:14px; padding:26px 16px; text-align:center; margin-bottom:14px; cursor:pointer; }
+  .drop.over{ border-color:var(--azul-ev); background:#F2F7FF; }
+  .drop b{ display:block; font-size:15px; color:var(--negro); margin-bottom:4px; }
+  .drop span{ font-size:12.5px; color:var(--gris-medio); }
+  .drop input{ display:none; }
+
+  .estado-planilla{ font-size:12px; color:var(--gris-medio); margin:0 0 14px; }
+  .estado-planilla.ok{ color:var(--verde); }
+  .estado-planilla.mal{ color:var(--rojo); }
+
+  .rep{ background:var(--blanco); border:1px solid var(--gris-claro); border-radius:14px; padding:16px 18px; margin-bottom:14px; }
+  .rep h2{ font-size:16px; margin:0 0 2px; color:var(--negro); }
+  .rep .meta{ font-size:12px; color:var(--gris-medio); margin:0 0 12px; line-height:1.5; }
+  .stats{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:12px; }
+  .st{ background:var(--gris-fondo); border-radius:10px; padding:10px 12px; }
+  .st .n{ font-size:22px; font-weight:800; font-variant-numeric:tabular-nums; color:var(--negro); }
+  .st .l{ font-size:11px; font-weight:600; color:var(--gris-oscuro); margin-top:2px; line-height:1.3; }
+  .st.nuevas .n{ color:var(--verde); } .st.act .n{ color:var(--azul-ev); } .st.fuera .n{ color:var(--ambar); }
+  .alerta{ font-size:12.5px; line-height:1.5; border-radius:10px; padding:9px 12px; margin:0 0 8px; }
+  .alerta.info{ background:#EEF4FF; border:1px solid #C9DAFB; color:#1F3F7A; }
+  .alerta.aviso{ background:#FFF7E6; border:1px solid #F0D48A; color:#7A5A00; }
+  .alerta.error{ background:#FBEAEA; border:1px solid #E7B8B8; color:#8A2020; }
+  details{ margin-top:8px; }
+  summary{ cursor:pointer; font-size:12.5px; font-weight:700; color:var(--azul-ev); padding:4px 0; }
+  .tabla-wrap{ overflow-x:auto; }
+  table.t{ border-collapse:collapse; font-size:12px; width:100%; margin-top:6px; }
+  table.t th{ text-align:left; color:var(--gris-medio); font-size:10.5px; text-transform:uppercase; padding:4px 8px 6px 0; border-bottom:1px solid var(--gris-claro); white-space:nowrap; }
+  table.t td{ padding:5px 8px 5px 0; border-bottom:1px solid var(--gris-fondo); vertical-align:top; }
+  .viejo{ color:var(--rojo); text-decoration:line-through; } .nuevo{ color:var(--verde); font-weight:700; }
+  .btn{ margin-top:12px; padding:10px 16px; border-radius:10px; border:1px solid var(--gris-claro); background:var(--gris-fondo); color:var(--gris-medio); font-weight:700; font-size:13px; font-family:inherit; cursor:not-allowed; }
+  @media (max-width:600px){ .stats{ grid-template-columns:repeat(2,1fr); } }
+</style>
+</head>
+<body>
+<div class="app-topbar"><b>BYD Yacopini &middot; Importar reportes</b></div>
+<a id="hubBackBtn" href="./index.html" style="position:fixed;bottom:18px;left:18px;z-index:999999;width:44px;height:44px;border-radius:50%;background:#0A0A0A;color:#fff;display:flex;align-items:center;justify-content:center;text-decoration:none;font-family:Arial,sans-serif;font-size:20px;box-shadow:0 4px 14px rgba(0,0,0,0.3);" aria-label="Volver al inicio">&larr;</a>
+<div class="app"><div class="wrap">
+  <h1>Importar reportes del CRM</h1>
+  <p class="sub">Subí los reportes tal cual los bajás del CRM. La app reconoce cada uno, lo compara con lo que ya está en la planilla y te muestra qué entraría. Podés subir varios a la vez.</p>
+
+  <div class="modo"><b>Vista previa:</b> esta pantalla todavía <b>no modifica la planilla</b>. Solo lee y compara.</div>
+
+  <label class="drop" id="drop">
+    <b>Arrastrá los archivos acá o tocá para elegirlos</b>
+    <span>Archivos .xlsx tal como salen del CRM (se descarta la fila "Yacopini | Sistema" y la columna Acciones)</span>
+    <input type="file" id="archivos" accept=".xlsx,.xls,.csv" multiple>
+  </label>
+  <p class="estado-planilla" id="estadoPlanilla">Leyendo la planilla actual…</p>
+  <div id="limpieza"></div>
+  <div id="resultados"></div>
+</div></div>
+
+<script>
+(function(){
+  // Esta pantalla es de gerencia: un vendedor vuelve a su panel (el Apps Script igual valida el mail).
+  try { var ac = window.bydAcceso && window.bydAcceso.leer(); if (ac && ac.tipo === "vendedor"){ location.replace("./panel_ventas.html"); return; } } catch (e) {}
+  // ---------- Qué reportes existen y cómo se reconocen ----------
+  // firma: encabezados que identifican al reporte. clave: columna(s) que identifican una fila de forma
+  // única (null = no tiene, se compara la fila entera). modo 'foto': el reporte es el estado actual
+  // (lo que ya no aparece salió del stock), no un historial. volatiles: columnas que cambian solas.
+  var REPORTES = [
+    { id:'leads',        titulo:'Leads',            hoja:'Leads',             firma:['Fecha Recepción','Recepcion id'],                       clave:['Recepcion id'],     fecha:'Fecha Recepción' },
+    { id:'solicitudes',  titulo:'Solicitudes',      hoja:'Solicitudes',       firma:['Número Solicitud','Precio Facturación'],                clave:['Número Solicitud'], fecha:'Fecha' },
+    { id:'pruebas',      titulo:'Pruebas de manejo',hoja:'Pruebas de manejo', firma:['Fecha prueba de manejo','Vehículo de prueba'],          clave:null,                 fecha:'Fecha prueba de manejo' },
+    { id:'entregas',     titulo:'Entregas',         hoja:'Entregas',          firma:['Fecha y Hora de Entrega','VIN','Tipo Entrega'],         clave:['VIN'],              fecha:'Fecha y Hora de Entrega' },
+    { id:'stock',        titulo:'Stock',            hoja:'Stock',             firma:['Modelo','Vin','Destino','Días stock'],                  clave:['Vin'],              fecha:null, modo:'foto', volatiles:['Días stock'] },
+    { id:'consulta',     titulo:'Consulta de precios', hoja:'Consulta Precios', firma:['Origen','Cotización inicial','Fecha respuesta'],      clave:null,                 fecha:'Fecha' },
+    { id:'tasaciones',   titulo:'Tasaciones',       hoja:'Tasasiones',        firma:['Fecha tasación','Dominio','Precio toma'],               clave:null,                 fecha:'Fecha' },
+    { id:'presupuestos', titulo:'Presupuestos',     hoja:'Presupuestos',      firma:['#','Creado por','Autorizado'],                          clave:['#'],                fecha:'Fecha' }
+  ];
+  var DESCARTAR = /^acciones/i;
+
+  var PLANILLA = null;      // { 'Leads': {nombres:[], filas:[{...}]}, ... }
+  var PLANILLA_ERROR = '';
+
+  function $(id){ return document.getElementById(id); }
+  function esc(s){ var d = document.createElement('div'); d.textContent = (s == null ? '' : String(s)); return d.innerHTML; }
+  function num(n){ return Math.round(n).toLocaleString('es-AR'); }
+  function sinAcentos(s){ return String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim().replace(/\s+/g, ' '); }
+
+  // ---------- Lectura de un libro/hoja a { nombres, filas } ----------
+  // Detecta la fila de encabezados buscando la que contiene la firma (así sirve con o sin banner).
+  function leerTabla(matriz, firma){
+    var fila = -1, i, j;
+    var firmaN = firma.map(sinAcentos);
+    for (i = 0; i < Math.min(6, matriz.length); i++){
+      var celdas = (matriz[i] || []).map(sinAcentos);
+      var ok = firmaN.every(function(f){ return celdas.indexOf(f) !== -1; });
+      if (ok){ fila = i; break; }
+    }
+    if (fila === -1) return null;
+    var nombres = [], vistos = {};
+    (matriz[fila] || []).forEach(function(v){
+      var n = String(v == null ? '' : v).trim(); if (!n) n = '_vacia';
+      if (vistos[n]){ vistos[n]++; n = n + '#' + vistos[n]; } else vistos[n] = 1;
+      nombres.push(n);
+    });
+    var filas = [];
+    for (i = fila + 1; i < matriz.length; i++){
+      var r = matriz[i] || [], o = {}, algo = false;
+      for (j = 0; j < nombres.length; j++){
+        var v = r[j]; if (v == null) v = '';
+        o[nombres[j]] = v; if (String(v).trim() !== '') algo = true;
+      }
+      if (algo) filas.push(o);
+    }
+    return { nombres: nombres, filas: filas };
+  }
+
+  // ---------- Normalización para comparar ----------
+  function pad(n){ return (n < 10 ? '0' : '') + n; }
+  function nv(v){
+    if (v == null) return '';
+    if (v instanceof Date){
+      // La planilla guarda fechas reales; el reporte las trae como texto "09-10-2026" (con hora solo si la tiene).
+      var t = v;   // la lectura del .xlsx agrega ~48 segundos: se ignoran porque se compara hasta el minuto
+      var f = pad(t.getDate()) + '-' + pad(t.getMonth() + 1) + '-' + t.getFullYear();
+      return (t.getHours() || t.getMinutes()) ? f + ' ' + pad(t.getHours()) + ':' + pad(t.getMinutes()) : f;
+    }
+    var s = String(v).trim().replace(/\s+/g, ' ');
+    if (/^-?\d+(\.\d+)?$/.test(s)) return String(Number(s));   // 1360.00 == 1360
+    return s;
+  }
+  function esDescartada(n){ return n === '_vacia' || /^_vacia#/.test(n) || DESCARTAR.test(n.replace(/#\d+$/, '')); }
+
+  // Fecha de una fila a partir de texto dd-mm-aaaa o aaaa-mm-dd (ignora el "549" pegado del CRM).
+  function fechaDe(v){
+    var s = nv(v), m;
+    if ((m = /(\d{4})-(\d{2})-(\d{2})/.exec(s))) return new Date(+m[1], +m[2] - 1, +m[3]);
+    if ((m = /(?:^|[^\d])(\d{1,2})-(\d{1,2})-(\d{4})/.exec(s))) return new Date(+m[3], +m[2] - 1, +m[1]);
+    return null;
+  }
+  function fmtF(d){ return d ? pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear() : '–'; }
+
+  // ---------- Comparación de un reporte contra su solapa ----------
+  function comparar(def, rep){
+    var hoja = PLANILLA[def.hoja];
+    var res = { def: def, filas: rep.filas.length, alertas: [], nuevas: [], actualizadas: [], iguales: 0, ausentes: [], repetidas: 0, conflicto: 0 };
+
+    var colsRep = rep.nombres.filter(function(n){ return !esDescartada(n); });
+    var colsHoja = hoja.nombres.filter(function(n){ return !esDescartada(n); });
+    var comunes = colsRep.filter(function(n){ return colsHoja.indexOf(n) !== -1; });
+    var soloRep = colsRep.filter(function(n){ return colsHoja.indexOf(n) === -1; });
+    var soloHoja = colsHoja.filter(function(n){ return colsRep.indexOf(n) === -1; });
+    res.comunes = comunes.length;
+    if (soloRep.length) res.alertas.push({ t:'info', m:'El reporte trae columnas nuevas que la solapa no tiene: <b>' + esc(soloRep.join(', ')) + '</b>. Se agregarían <b>al final de la solapa</b>.' });
+    if (soloHoja.length) res.alertas.push({ t:'info', m:'La solapa tiene columnas que este reporte no trae: ' + esc(soloHoja.join(', ')) + '. No se tocarían.' });
+
+    var volat = def.volatiles || [];
+    var cmpCols = comunes.filter(function(c){ return volat.indexOf(c) === -1; });
+    function claveDe(o){
+      if (def.clave) return def.clave.map(function(c){ return nv(o[c]); }).join('|');
+      return comunes.map(function(c){ return nv(o[c]); }).join('¦');
+    }
+
+    // Claves repetidas dentro del propio reporte
+    var vistasRep = {}, unicas = [];
+    rep.filas.forEach(function(o){
+      var k = claveDe(o); if (!k.replace(/[|¦]/g, '')) return;
+      if (vistasRep[k] === undefined){ vistasRep[k] = o; unicas.push(o); return; }
+      res.repetidas++;
+      var a = vistasRep[k], distinto = comunes.some(function(c){ return nv(a[c]) !== nv(o[c]); });
+      if (distinto) res.conflicto++;
+    });
+    if (res.repetidas) res.alertas.push({ t:'aviso', m:'El reporte trae <b>' + num(res.repetidas) + '</b> filas con una clave que ya apareció antes en el mismo reporte' + (res.conflicto ? ' (<b>' + num(res.conflicto) + '</b> con contenido distinto)' : ' (idénticas)') + '. Se toma una sola por clave.' });
+
+    // Índice de la planilla
+    var idx = {}, dupHoja = 0;
+    hoja.filas.forEach(function(o){
+      var k = claveDe(o); if (!k.replace(/[|¦]/g, '')) return;
+      if (def.clave){ if (idx[k]) dupHoja++; else idx[k] = o; }
+      else { idx[k] = (idx[k] || 0) + 1; }
+    });
+    if (dupHoja) res.alertas.push({ t:'aviso', m:'La solapa ya tiene <b>' + num(dupHoja) + '</b> filas con clave repetida (duplicados previos).' });
+
+    var enReporte = {};
+    if (def.clave){
+      unicas.forEach(function(o){
+        var k = claveDe(o); enReporte[k] = 1;
+        var viejo = idx[k];
+        if (!viejo){ res.nuevas.push(o); return; }
+        var difs = cmpCols.filter(function(c){ return nv(o[c]) !== nv(viejo[c]); });
+        if (difs.length) res.actualizadas.push({ clave: k, fila: o, viejo: viejo, difs: difs });
+        else res.iguales++;
+      });
+    } else {
+      var usados = {};
+      unicas.forEach(function(o){ /* sin clave: cada fila cuenta, también las idénticas entre sí */ });
+      rep.filas.forEach(function(o){
+        var k = claveDe(o); if (!k.replace(/¦/g, '')) return;
+        enReporte[k] = (enReporte[k] || 0) + 1;
+        if ((idx[k] || 0) - (usados[k] || 0) > 0){ usados[k] = (usados[k] || 0) + 1; res.iguales++; }
+        else res.nuevas.push(o);
+      });
+      res.repetidas = 0; res.conflicto = 0;
+      res.alertas = res.alertas.filter(function(a){ return a.m.indexOf('clave que ya apareció') === -1; });
+    }
+
+    // Si casi todo "cambió", casi seguro la estructura de la solapa no coincide con la del reporte.
+    var cambiadasPct = def.clave && unicas.length ? res.actualizadas.length / unicas.length : 0;
+    if (cambiadasPct > 0.6){
+      var frec = {}; res.actualizadas.forEach(function(a){ a.difs.forEach(function(c){ frec[c] = (frec[c] || 0) + 1; }); });
+      var masCambiadas = Object.keys(frec).filter(function(c){ return frec[c] >= res.actualizadas.length * 0.9; });
+      res.alertas.unshift({ t:'error', m:'Casi todas las filas figuran como actualizadas: las columnas <b>' + esc(masCambiadas.join(', ')) + '</b> no coinciden. Suele pasar cuando la solapa tiene <b>columnas extra o desplazadas</b> respecto del reporte. Hay que revisar la estructura de la solapa antes de cargar.' });
+    }
+
+    // Filas de la planilla que no vienen en el reporte
+    var ds = rep.filas.map(function(o){ return def.fecha ? fechaDe(o[def.fecha]) : null; }).filter(Boolean);
+    var desde = ds.length ? new Date(Math.min.apply(null, ds)) : null, hasta = ds.length ? new Date(Math.max.apply(null, ds)) : null;
+    res.desde = desde; res.hasta = hasta;
+    var vistosAus = {};
+    hoja.filas.forEach(function(o){
+      var k = claveDe(o); if (!k.replace(/[|¦]/g, '')) return;
+      var estaba = def.clave ? enReporte[k] : ((enReporte[k] || 0) > (vistosAus[k] || 0));
+      if (!def.clave) vistosAus[k] = (vistosAus[k] || 0) + 1;
+      if (estaba) return;
+      if (def.modo === 'foto'){ res.ausentes.push(o); return; }
+      var f = def.fecha ? fechaDe(o[def.fecha]) : null;
+      if (f && desde && hasta && f >= desde && f <= hasta) res.ausentes.push(o);
+    });
+
+    // Chequeos de calidad conocidos
+    if (rep.nombres.indexOf('Fecha Cierre') !== -1){
+      var sucias = rep.filas.filter(function(o){ return /^\d{3,}\d{2}-\d{2}-\d{4}/.test(nv(o['Fecha Cierre'])); }).length;
+      if (sucias) res.alertas.push({ t:'info', m:'<b>' + num(sucias) + '</b> filas traen la <i>Fecha Cierre</i> con números pegados delante (error del CRM). Al cargar se corregiría.' });
+    }
+    if (rep.nombres.some(function(n){ return DESCARTAR.test(n); })) res.alertas.push({ t:'info', m:'La columna <i>Acciones</i> (botones del CRM) se descarta.' });
+    if (def.modo === 'foto') res.alertas.push({ t:'info', m:'Este reporte es una <b>foto del estado actual</b>: lo que no aparece ya no está en stock. Por eso se reemplazaría la solapa completa, y "Días stock" no cuenta como cambio.' });
+    return res;
+  }
+
+  // ---------- Dibujo ----------
+  function filaResumen(o, cols){ return cols.map(function(c){ return esc(nv(o[c])); }); }
+  function tablaHtml(cols, filas){
+    return '<div class="tabla-wrap"><table class="t"><thead><tr>' + cols.map(function(c){ return '<th>' + esc(c) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+      filas.map(function(r){ return '<tr>' + r.map(function(c){ return '<td>' + c + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>';
+  }
+  function dibujar(nombreArchivo, r){
+    var d = r.def, cols = d.mostrar || [];
+    var html = '<div class="rep"><h2>' + esc(d.titulo) + '</h2><p class="meta">Archivo: ' + esc(nombreArchivo) + ' · solapa de la planilla: <b>' + esc(d.hoja) + '</b> · ' + num(r.filas) + ' filas' +
+      (r.desde ? ' · del ' + fmtF(r.desde) + ' al ' + fmtF(r.hasta) : '') + '</p>';
+    html += '<div class="stats">' +
+      '<div class="st nuevas"><div class="n">' + num(r.nuevas.length) + '</div><div class="l">Nuevas<br>(se agregarían)</div></div>' +
+      '<div class="st act"><div class="n">' + num(r.actualizadas.length) + '</div><div class="l">Actualizadas<br>(ya estaban y cambiaron)</div></div>' +
+      '<div class="st"><div class="n">' + num(r.iguales) + '</div><div class="l">Sin cambios</div></div>' +
+      '<div class="st fuera"><div class="n">' + num(r.ausentes.length) + '</div><div class="l">' + (d.modo === 'foto' ? 'Ya no están<br>(salieron del stock)' : 'En la planilla y no vienen<br>en este período') + '</div></div></div>';
+    r.alertas.forEach(function(a){ html += '<div class="alerta ' + a.t + '">' + a.m + '</div>'; });
+
+    var vista = d.vista || d.firma.slice(0, 4);
+    if (r.nuevas.length) html += '<details><summary>Ver filas nuevas (primeras ' + Math.min(10, r.nuevas.length) + ' de ' + num(r.nuevas.length) + ')</summary>' +
+      tablaHtml(vista, r.nuevas.slice(0, 10).map(function(o){ return filaResumen(o, vista); })) + '</details>';
+    if (r.actualizadas.length) html += '<details><summary>Ver qué cambió (primeras ' + Math.min(10, r.actualizadas.length) + ' de ' + num(r.actualizadas.length) + ')</summary>' +
+      tablaHtml(['Clave', 'Campo', 'Antes', 'Ahora'], r.actualizadas.slice(0, 10).map(function(a){
+        var c = a.difs[0];
+        return [esc(a.clave), esc(c) + (a.difs.length > 1 ? ' <span style="color:#8C8C8C">(+' + (a.difs.length - 1) + ' más)</span>' : ''), '<span class="viejo">' + esc(nv(a.viejo[c])) + '</span>', '<span class="nuevo">' + esc(nv(a.fila[c])) + '</span>'];
+      })) + '</details>';
+    if (r.ausentes.length) html += '<details><summary>Ver las que no vienen (primeras ' + Math.min(10, r.ausentes.length) + ' de ' + num(r.ausentes.length) + ')</summary>' +
+      tablaHtml(vista, r.ausentes.slice(0, 10).map(function(o){ return filaResumen(o, vista); })) + '</details>';
+    html += '<button class="btn" disabled title="Todavía no está habilitada la carga">Cargar en la planilla (todavía no disponible)</button></div>';
+    return html;
+  }
+  // Columnas que se muestran para identificar filas
+  REPORTES.forEach(function(d){
+    d.vista = { leads:['Fecha Recepción','Cliente','Vendedor','Estado','Recepcion id'], solicitudes:['Fecha','Número Solicitud','Modelo','Vendedor','Cliente'],
+      pruebas:['Fecha prueba de manejo','Cliente','Vehículo de prueba','Vendedor'], entregas:['Fecha y Hora de Entrega','Apellido cliente','VIN','Vendedor'],
+      stock:['Modelo','Vin','Color','Días stock'], consulta:['Fecha','Marca','Modelo','Cliente'], tasaciones:['Fecha','Dominio','Marca','Cliente apellido'],
+      presupuestos:['#','Fecha','Creado por','Cliente'] }[d.id];
+  });
+
+  // ---------- Duplicados que ya hay en la planilla ----------
+  // Con clave (Leads, Solicitudes, Entregas, Stock, Presupuestos): filas con la misma clave. Si son
+  // idénticas se deja una sola; si el contenido difiere NO se borra nada automáticamente (se muestra).
+  // Sin clave (Pruebas, Consulta de precios, Tasaciones): solo filas totalmente idénticas, y se
+  // listan aparte porque dos filas iguales podrían ser dos hechos reales.
+  function duplicadosDe(def, hoja){
+    var cols = hoja.nombres.filter(function(n){ return !esDescartada(n); });
+    var grupos = {};
+    hoja.filas.forEach(function(o){
+      var k = def.clave ? def.clave.map(function(c){ return nv(o[c]); }).join('|') : cols.map(function(c){ return nv(o[c]); }).join('¦');
+      if (!k.replace(/[|¦]/g, '')) return;
+      (grupos[k] = grupos[k] || []).push(o);
+    });
+    var r = { claves: 0, sobrantes: 0, identicas: 0, conflicto: 0, ejemplosConflicto: [] };
+    Object.keys(grupos).forEach(function(k){
+      var g = grupos[k]; if (g.length < 2) return;
+      r.claves++; r.sobrantes += g.length - 1;
+      var distinto = g.some(function(o){ return cols.some(function(c){ return nv(o[c]) !== nv(g[0][c]); }); });
+      if (distinto){
+        r.conflicto += g.length - 1;
+        if (r.ejemplosConflicto.length < 5){
+          var campos = cols.filter(function(c){ return g.some(function(o){ return nv(o[c]) !== nv(g[0][c]); }); });
+          r.ejemplosConflicto.push({ clave: k, campos: campos.slice(0, 4), vals: g.slice(0, 3).map(function(o){ return campos.slice(0, 2).map(function(c){ return nv(o[c]); }).join(' / '); }) });
+        }
+      } else r.identicas += g.length - 1;
+    });
+    return r;
+  }
+  function dibujarLimpieza(){
+    var filas = '', hay = false;
+    REPORTES.forEach(function(d){
+      var h = PLANILLA[d.hoja]; if (!h) return;
+      var r = duplicadosDe(d, h);
+      if (!r.sobrantes) return;
+      hay = true;
+      filas += '<tr><td><b>' + esc(d.titulo) + '</b>' + (d.clave ? '' : ' <span style="color:#8C8C8C">(sin ID: solo filas idénticas)</span>') + '</td><td>' + num(h.filas.length) + '</td><td>' + num(r.sobrantes) + '</td><td>' + num(r.identicas) + '</td><td>' +
+        (r.conflicto ? '<b style="color:#C0392B">' + num(r.conflicto) + '</b>' : '0') + '</td></tr>';
+    });
+    if (!hay){ $('limpieza').innerHTML = ''; return; }
+    var det = '';
+    REPORTES.forEach(function(d){
+      var h = PLANILLA[d.hoja]; if (!h || !d.clave) return;
+      var r = duplicadosDe(d, h);
+      if (r.ejemplosConflicto.length) det += '<details><summary>' + esc(d.titulo) + ': ejemplos con contenido distinto</summary>' + tablaHtml(['Clave', 'Campos que difieren', 'Valores'],
+        r.ejemplosConflicto.map(function(e){ return [esc(e.clave), esc(e.campos.join(', ')), esc(e.vals.join('  ↔  '))]; })) + '</details>';
+    });
+    $('limpieza').innerHTML = '<div class="rep"><h2>Duplicados que ya hay en la planilla</h2><p class="meta">Al cargar, se deja <b>una sola fila</b> por cada una. Si las copias difieren entre sí, queda la que viene en el reporte; si no está en el reporte, la última cargada, y te lo muestro antes.</p>' +
+      '<div class="tabla-wrap"><table class="t"><thead><tr><th>Solapa</th><th>Filas</th><th>Sobrantes</th><th>Idénticas</th><th>Con contenido distinto</th></tr></thead><tbody>' + filas + '</tbody></table></div>' + det + '</div>';
+  }
+
+  // ---------- Entrada de archivos ----------
+  function procesarArchivos(lista){
+    var salida = $('resultados'); salida.innerHTML = '';
+    if (!PLANILLA){ salida.innerHTML = '<div class="alerta error">No se pudo leer la planilla actual, así que no se puede comparar. ' + esc(PLANILLA_ERROR) + '</div>'; return; }
+    lista.forEach(function(arch){
+      var wb;
+      try { wb = XLSX.read(arch.buffer, { type: 'array', cellDates: true }); } catch (e) {
+        salida.insertAdjacentHTML('beforeend', '<div class="alerta error"><b>' + esc(arch.name) + ':</b> no se pudo abrir como planilla.</div>'); return;
+      }
+      var hecho = false;
+      for (var s = 0; s < wb.SheetNames.length && !hecho; s++){
+        var matriz = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[s]], { header: 1, raw: true, defval: '' });
+        for (var d = 0; d < REPORTES.length; d++){
+          var rep = leerTabla(matriz, REPORTES[d].firma);
+          if (rep){ salida.insertAdjacentHTML('beforeend', dibujar(arch.name, comparar(REPORTES[d], rep))); hecho = true; break; }
+        }
+      }
+      if (!hecho) salida.insertAdjacentHTML('beforeend', '<div class="alerta error"><b>' + esc(arch.name) + ':</b> no reconozco este reporte. Revisá que sea uno de: ' + REPORTES.map(function(r){ return esc(r.titulo); }).join(', ') + '.</div>');
+    });
+  }
+  window.__procesarArchivos = procesarArchivos;
+
+  function leerArchivos(files){
+    var pend = Array.prototype.slice.call(files), out = [];
+    (function sig(){
+      var f = pend.shift(); if (!f) return procesarArchivos(out);
+      var fr = new FileReader();
+      fr.onload = function(){ out.push({ name: f.name, buffer: new Uint8Array(fr.result) }); sig(); };
+      fr.readAsArrayBuffer(f);
+    })();
+  }
+  var drop = $('drop');
+  $('archivos').addEventListener('change', function(e){ leerArchivos(e.target.files); });
+  ['dragenter', 'dragover'].forEach(function(ev){ drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.add('over'); }); });
+  ['dragleave', 'drop'].forEach(function(ev){ drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.remove('over'); }); });
+  drop.addEventListener('drop', function(e){ if (e.dataTransfer && e.dataTransfer.files.length) leerArchivos(e.dataTransfer.files); });
+
+  // ---------- Planilla actual, en vivo (Apps Script + sesión del hub) ----------
+  // Misma dirección y clave que usa el Tablero; además el Apps Script exige la sesión de Supabase y
+  // que el mail esté autorizado, porque estas solapas traen datos de clientes.
+  var APPS_URL = 'https://script.google.com/macros/s/AKfycbzTYBoM56BBMj2B-8hUG_MIuOh7r5qG4qq2sGlTRM-y6QyFm0XHqgE6XUG5OQB022iy/exec';
+  var APPS_KEY = 'i4uH92SO1sFyNYi8PJ2dsGb9LDM-Xoq3';
+  var SUPA_URL = 'https://mgicnwnvtfkrxmkmewnt.supabase.co';
+  var SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1naWNud252dGZrcnhta21ld250Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1Nzk5MDIsImV4cCI6MjEwNTE1NTkwMn0.GLWN_wI6Q_6Qu1EGi02oPNrL9wgTj-zbGsJCoIE-HQE';
+  function cargarPlanillaEnVivo(){
+    var est = $('estadoPlanilla');
+    function fallo(m){ PLANILLA_ERROR = m; est.className = 'estado-planilla mal'; est.textContent = m; }
+    if (!window.supabase){ return fallo('No se pudo cargar el acceso del hub.'); }
+    var db = window.supabase.createClient(SUPA_URL, SUPA_ANON);
+    db.auth.getSession().then(function(r){
+      var ses = r && r.data && r.data.session;
+      if (!ses){ location.replace('./index.html?volver=importar_reportes.html'); throw new Error('sin sesión'); }
+      return fetch(APPS_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ key: APPS_KEY, action: 'importadorLeer', token: ses.access_token }) });
+    }).then(function(r){ return r.json(); }).then(function(j){
+      if (!j || j.error || !j.hojas) throw new Error(j && j.error ? j.error : 'respuesta vacía');
+      var res = {};
+      REPORTES.forEach(function(d){
+        var h = j.hojas[d.hoja]; if (!h) return;
+        var t = leerTabla(h.valores, d.firma.slice(0, 1));
+        if (t) res[d.hoja] = t;
+      });
+      PLANILLA = res; dibujarLimpieza();
+      est.className = 'estado-planilla ok';
+      est.textContent = 'Planilla actual leída (' + esc(j.usuario || '') + '): ' + Object.keys(res).map(function(k){ return k + ' (' + num(res[k].filas.length) + ')'; }).join(' · ');
+    }).catch(function(e){ if (String(e.message) !== 'sin sesión') fallo('No se pudo leer la planilla: ' + (e.message || e)); });
+  }
+
+  // ---------- Planilla actual ----------
+  // En producción las solapas las entrega el Apps Script (acción de solo lectura). Para probar en
+  // local se puede apuntar a un libro .xlsx con ?planilla=archivo.xlsx.
+  function cargarPlanilla(){
+    var est = $('estadoPlanilla');
+    var url = new URLSearchParams(location.search).get('planilla');
+    if (!url){ return cargarPlanillaEnVivo(); }
+    fetch(url, { cache: 'no-store' }).then(function(r){ if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); }).then(function(buf){
+      var wb = XLSX.read(new Uint8Array(buf), { type: 'array', cellDates: true }), res = {};
+      REPORTES.forEach(function(d){
+        if (wb.SheetNames.indexOf(d.hoja) === -1) return;
+        var m = XLSX.utils.sheet_to_json(wb.Sheets[d.hoja], { header: 1, raw: true, defval: '' });
+        var t = leerTabla(m, d.firma.filter(function(f){ return f !== 'Recepcion id' || true; }).slice(0, 1));
+        if (t) res[d.hoja] = t;
+      });
+      PLANILLA = res;
+      dibujarLimpieza();
+      est.className = 'estado-planilla ok';
+      est.textContent = 'Planilla actual leída: ' + Object.keys(res).map(function(k){ return k + ' (' + num(res[k].filas.length) + ')'; }).join(' · ');
+    }).catch(function(e){ PLANILLA_ERROR = String(e.message || e); est.className = 'estado-planilla mal'; est.textContent = 'No se pudo leer la planilla: ' + PLANILLA_ERROR; });
+  }
+  cargarPlanilla();
+})();
+</script>
+</body>
+</html>
