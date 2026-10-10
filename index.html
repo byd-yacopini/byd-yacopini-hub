@@ -970,6 +970,9 @@ if (data.session) {
     <div class="mainview active" id="view-tablero">
 
       <div class="snapshot-banner" id="dataBanner">Cargando datos…</div>
+      <!-- Aviso de estructura: aparece si los titulos de alguna solapa de la planilla no coinciden con
+           sus datos (por ejemplo, el CRM agrego una columna). Evita leer numeros falsos sin darse cuenta. -->
+      <div id="avisoEstructura" hidden style="background:#FBEAEA;border:1px solid #E7B8B8;color:#8A2020;border-radius:12px;padding:12px 14px;margin:0 0 12px;font-size:13px;line-height:1.5;"></div>
 
       <div class="date-filter-bar" id="dateFilterBar">
         <div class="df-field"><label for="dfMes">Mes</label><select id="dfMes"></select></div>
@@ -1828,6 +1831,19 @@ if (data.session) {
     renderStockLlegadosLibres(d.stockLlegadosLibres);
   }
 
+  // Si el Apps Script detecta que los titulos de una solapa no coinciden con sus datos, se avisa arriba:
+  // los numeros que dependen de esa solapa no son confiables hasta corregir el encabezado.
+  function renderAvisoEstructura(d){
+    var el = document.getElementById('avisoEstructura');
+    if (!el) return;
+    var av = d && d.avisosEstructura;
+    if (!Array.isArray(av) || !av.length){ el.hidden = true; el.innerHTML = ''; return; }
+    el.innerHTML = '<b>Atención: hay datos que pueden estar mal.</b> Los títulos de la planilla no coinciden con sus datos ' +
+      '(suele pasar cuando el reporte del CRM trae columnas nuevas). Hasta corregir el encabezado, los números que dependen de esa solapa no son confiables.' +
+      '<ul style="margin:6px 0 0 18px;padding:0;">' + av.map(function(t){ return '<li>' + String(t).replace(/</g, '&lt;') + '</li>'; }).join('') + '</ul>';
+    el.hidden = false;
+  }
+
   // Unidades del stock con deposito "Carril Gomez" (en el concesionario), sin solicitud ni reserva.
   function renderStockLibresConcesionario(d){
     var el = document.getElementById('stockLibresConcesionario');
@@ -2116,6 +2132,7 @@ if (data.session) {
 
     renderStockComprasKpis(d);
     renderStockLibresConcesionario(d);
+    renderAvisoEstructura(d);
 
     // Entregas
     document.getElementById('kpiEntregasMes').textContent = d.entregasTotal;
