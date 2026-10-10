@@ -53,7 +53,16 @@
   table.t th{ text-align:left; color:var(--gris-medio); font-size:10.5px; text-transform:uppercase; padding:4px 8px 6px 0; border-bottom:1px solid var(--gris-claro); white-space:nowrap; }
   table.t td{ padding:5px 8px 5px 0; border-bottom:1px solid var(--gris-fondo); vertical-align:top; }
   .viejo{ color:var(--rojo); text-decoration:line-through; } .nuevo{ color:var(--verde); font-weight:700; }
-  .btn{ margin-top:12px; padding:10px 16px; border-radius:10px; border:1px solid var(--gris-claro); background:var(--gris-fondo); color:var(--gris-medio); font-weight:700; font-size:13px; font-family:inherit; cursor:not-allowed; }
+  .carga{ margin-top:14px; padding-top:12px; border-top:1px solid var(--gris-fondo); }
+  .chk{ display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--gris-oscuro); margin-bottom:10px; }
+  .btn{ margin-top:4px; margin-right:8px; padding:10px 16px; border-radius:10px; border:1px solid var(--gris-claro); background:var(--blanco); color:var(--carbon); font-weight:700; font-size:13px; font-family:inherit; cursor:pointer; }
+  .btn.principal{ background:var(--azul-ev); border-color:var(--azul-ev); color:#fff; }
+  .btn.peligro{ background:#fff; border-color:#E7B8B8; color:var(--rojo); }
+  .btn:disabled{ opacity:.55; cursor:not-allowed; }
+  .carga-res{ margin-top:10px; }
+  .carga-res .resumen{ background:#F5F9FF; border:1px solid #C9DAFB; border-radius:10px; padding:12px 14px; font-size:13px; line-height:1.7; color:var(--carbon); }
+  .carga-res .resumen ul{ margin:6px 0 0 18px; padding:0; }
+  .carga-res .ok{ background:#E3F5EA; border:1px solid #B5E0C5; color:#145C37; border-radius:10px; padding:12px 14px; font-size:13px; line-height:1.6; }
   @media (max-width:600px){ .stats{ grid-template-columns:repeat(2,1fr); } }
 </style>
 </head>
@@ -64,7 +73,7 @@
   <h1>Importar reportes del CRM</h1>
   <p class="sub">Subí los reportes tal cual los bajás del CRM. La app reconoce cada uno, lo compara con lo que ya está en la planilla y te muestra qué entraría. Podés subir varios a la vez.</p>
 
-  <div class="modo"><b>Vista previa:</b> esta pantalla todavía <b>no modifica la planilla</b>. Solo lee y compara.</div>
+  <div class="modo"><b>Cómo funciona:</b> primero se compara y ves qué cambiaría. La planilla <b>no se toca</b> hasta que confirmás. Antes de cada carga se guarda un respaldo y podés volver atrás.</div>
 
   <label class="drop" id="drop">
     <b>Arrastrá los archivos acá o tocá para elegirlos</b>
@@ -261,9 +270,11 @@
     return '<div class="tabla-wrap"><table class="t"><thead><tr>' + cols.map(function(c){ return '<th>' + esc(c) + '</th>'; }).join('') + '</tr></thead><tbody>' +
       filas.map(function(r){ return '<tr>' + r.map(function(c){ return '<td>' + c + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>';
   }
-  function dibujar(nombreArchivo, r){
+  var CARGAS = [];   // por tarjeta: { def, rep } para poder enviarlo al servidor al confirmar
+  function dibujar(nombreArchivo, r, rep){
     var d = r.def, cols = d.mostrar || [];
-    var html = '<div class="rep"><h2>' + esc(d.titulo) + '</h2><p class="meta">Archivo: ' + esc(nombreArchivo) + ' · solapa de la planilla: <b>' + esc(d.hoja) + '</b> · ' + num(r.filas) + ' filas' +
+    var idxCarga = CARGAS.push({ def: d, rep: rep, nombre: nombreArchivo }) - 1;
+    var html = '<div class="rep" data-carga="' + idxCarga + '"><h2>' + esc(d.titulo) + '</h2><p class="meta">Archivo: ' + esc(nombreArchivo) + ' · solapa de la planilla: <b>' + esc(d.hoja) + '</b> · ' + num(r.filas) + ' filas' +
       (r.desde ? ' · del ' + fmtF(r.desde) + ' al ' + fmtF(r.hasta) : '') + '</p>';
     html += '<div class="stats">' +
       '<div class="st nuevas"><div class="n">' + num(r.nuevas.length) + '</div><div class="l">Nuevas<br>(se agregarían)</div></div>' +
@@ -282,7 +293,11 @@
       })) + '</details>';
     if (r.ausentes.length) html += '<details><summary>Ver las que no vienen (primeras ' + Math.min(10, r.ausentes.length) + ' de ' + num(r.ausentes.length) + ')</summary>' +
       tablaHtml(vista, r.ausentes.slice(0, 10).map(function(o){ return filaResumen(o, vista); })) + '</details>';
-    html += '<button class="btn" disabled title="Todavía no está habilitada la carga">Cargar en la planilla (todavía no disponible)</button></div>';
+    var hayBloqueo = r.alertas.some(function(a){ return a.t === 'error'; });
+    html += '<div class="carga">' +
+      '<label class="chk"><input type="checkbox" class="chkDup" checked> Dejar una sola fila por cada duplicado de la solapa</label>' +
+      '<button type="button" class="btn principal btn-cargar"' + (hayBloqueo ? ' disabled title="Hay un problema de estructura en la solapa: corregilo antes de cargar"' : '') + '>Cargar en la planilla</button>' +
+      '<div class="carga-res"></div></div></div>';
     return html;
   }
   // Columnas que se muestran para identificar filas
@@ -345,7 +360,7 @@
 
   // ---------- Entrada de archivos ----------
   function procesarArchivos(lista){
-    var salida = $('resultados'); salida.innerHTML = '';
+    var salida = $('resultados'); salida.innerHTML = ''; CARGAS = [];
     if (!PLANILLA){ salida.innerHTML = '<div class="alerta error">No se pudo leer la planilla actual, así que no se puede comparar. ' + esc(PLANILLA_ERROR) + '</div>'; return; }
     lista.forEach(function(arch){
       var wb;
@@ -357,7 +372,7 @@
         var matriz = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[s]], { header: 1, raw: true, defval: '' });
         for (var d = 0; d < REPORTES.length; d++){
           var rep = leerTabla(matriz, REPORTES[d].firma);
-          if (rep){ salida.insertAdjacentHTML('beforeend', dibujar(arch.name, comparar(REPORTES[d], rep))); hecho = true; break; }
+          if (rep){ salida.insertAdjacentHTML('beforeend', dibujar(arch.name, comparar(REPORTES[d], rep), rep)); hecho = true; break; }
         }
       }
       if (!hecho) salida.insertAdjacentHTML('beforeend', '<div class="alerta error"><b>' + esc(arch.name) + ':</b> no reconozco este reporte. Revisá que sea uno de: ' + REPORTES.map(function(r){ return esc(r.titulo); }).join(', ') + '.</div>');
@@ -387,11 +402,104 @@
   var APPS_KEY = 'i4uH92SO1sFyNYi8PJ2dsGb9LDM-Xoq3';
   var SUPA_URL = 'https://mgicnwnvtfkrxmkmewnt.supabase.co';
   var SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1naWNud252dGZrcnhta21ld250Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1Nzk5MDIsImV4cCI6MjEwNTE1NTkwMn0.GLWN_wI6Q_6Qu1EGi02oPNrL9wgTj-zbGsJCoIE-HQE';
+  var DB = null;
+  function obtenerDb(){ if (!DB && window.supabase) DB = window.supabase.createClient(SUPA_URL, SUPA_ANON); return DB; }
+
+  // Pide una accion al Apps Script con la sesion del hub. En pruebas locales se puede reemplazar con window.__servidorFalso.
+  function pedirServidor(accion, extra){
+    if (window.__servidorFalso) return window.__servidorFalso(accion, extra);
+    var db = obtenerDb();
+    if (!db) return Promise.reject(new Error('No se pudo cargar el acceso del hub.'));
+    return db.auth.getSession().then(function(r){
+      var ses = r && r.data && r.data.session;
+      if (!ses) throw new Error('Tu sesión venció. Entrá de nuevo al hub.');
+      var cuerpo = { key: APPS_KEY, action: accion, token: ses.access_token };
+      Object.keys(extra || {}).forEach(function(k){ cuerpo[k] = extra[k]; });
+      return fetch(APPS_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(cuerpo) });
+    }).then(function(r){ return r.json(); }).then(function(j){
+      if (!j) throw new Error('Respuesta vacía del servidor.');
+      if (j.error && !j.requiereConfirmacion) throw new Error(j.error);
+      return j;
+    });
+  }
+
+  // Valores que viajan al servidor: fechas como texto "dd-mm-aaaa [hh:mm]", el resto tal cual.
+  function valorViaja(v){
+    if (v == null) return '';
+    if (v instanceof Date) return nv(v);
+    return v;
+  }
+  function cuerpoReporte(c){
+    var nombres = c.rep.nombres;
+    return { reporte: c.def.id, nombres: nombres, filas: c.rep.filas.map(function(o){ return nombres.map(function(n){ return valorViaja(o[n]); }); }) };
+  }
+
+  function listaResumen(r){
+    var li = [];
+    if (r.reemplazo) li.push('Se <b>reemplaza la solapa completa</b> con el reporte: de <b>' + num(r.filasAntes) + '</b> a <b>' + num(r.filasFinal) + '</b> filas.');
+    else {
+      li.push('Se agregan <b>' + num(r.nuevas) + '</b> filas nuevas.');
+      li.push('Se actualizan <b>' + num(r.actualizadas) + '</b> filas que ya estaban y cambiaron.');
+      if (r.completadas) li.push('Se completan las columnas nuevas en <b>' + num(r.completadas) + '</b> filas.');
+      li.push('Se quitan <b>' + num(r.duplicadosEliminados) + '</b> filas duplicadas.');
+      li.push('La solapa pasa de <b>' + num(r.filasAntes) + '</b> a <b>' + num(r.filasFinal) + '</b> filas.');
+      if (r.columnasNuevas && r.columnasNuevas.length) li.push('Se agregan al final las columnas: <b>' + esc(r.columnasNuevas.join(', ')) + '</b>.');
+    }
+    return '<ul>' + li.map(function(t){ return '<li>' + t + '</li>'; }).join('') + '</ul>';
+  }
+
+  function refrescarPlanilla(){ if (new URLSearchParams(location.search).get("planilla")) return; cargarPlanillaEnVivo(); }
+
+  function tarjetaDe(el){ while (el && !(el.dataset && el.dataset.carga !== undefined)) el = el.parentNode; return el; }
+
+  document.addEventListener('click', function(e){
+    var b = e.target.closest ? e.target.closest('button') : null;
+    if (!b) return;
+    var card = tarjetaDe(b); if (!card) return;
+    var c = CARGAS[+card.dataset.carga]; if (!c) return;
+    var res = card.querySelector('.carga-res');
+    var limpiar = card.querySelector('.chkDup').checked;
+
+    if (b.classList.contains('btn-cargar') || b.classList.contains('btn-recalcular')){
+      b.disabled = true; res.innerHTML = '<div class="resumen">Calculando qué cambiaría…</div>';
+      pedirServidor('importadorAplicar', Object.assign(cuerpoReporte(c), { simular: true, limpiarDuplicados: limpiar })).then(function(j){
+        b.disabled = false;
+        var r = j.resumen;
+        var aviso = j.requiereConfirmacion ? '<div class="alerta aviso"><b>Ojo:</b> ' + esc(j.error) + ' Si es correcto, confirmá igual.</div>' : '';
+        res.innerHTML = '<div class="resumen"><b>Esto es lo que va a pasar en la solapa “' + esc(c.def.hoja) + '”:</b>' + listaResumen(r) +
+          '<div style="margin-top:6px;color:#4A4A4A;font-size:12px;">Antes de escribir se guarda un respaldo de la solapa.</div></div>' + aviso +
+          '<button type="button" class="btn principal btn-confirmar" data-reduccion="' + (j.requiereConfirmacion ? '1' : '') + '">Confirmar y cargar</button>' +
+          '<button type="button" class="btn btn-cancelar">Cancelar</button>';
+      }).catch(function(err){ b.disabled = false; res.innerHTML = '<div class="alerta error">No se pudo calcular: ' + esc(err.message || err) + '</div>'; });
+    } else if (b.classList.contains('btn-cancelar')){
+      res.innerHTML = '';
+    } else if (b.classList.contains('btn-confirmar')){
+      var reduccion = b.dataset.reduccion === '1';
+      b.disabled = true; res.innerHTML = '<div class="resumen">Cargando en la planilla… puede tardar un momento, no cierres la pantalla.</div>';
+      pedirServidor('importadorAplicar', Object.assign(cuerpoReporte(c), { simular: false, limpiarDuplicados: limpiar, confirmarReduccion: reduccion })).then(function(j){
+        if (!j.ok) throw new Error(j.error || 'No se pudo cargar.');
+        res.innerHTML = '<div class="ok"><b>Listo, la solapa “' + esc(c.def.hoja) + '” quedó actualizada.</b>' + listaResumen(j.resumen) +
+          '<div style="font-size:12px;">Respaldo guardado como <i>' + esc(j.respaldo) + '</i>.</div></div>' +
+          '<button type="button" class="btn peligro btn-deshacer">Deshacer esta carga</button>';
+        refrescarPlanilla();   // vuelve a leer la planilla para que los numeros de arriba reflejen lo nuevo
+      }).catch(function(err){ res.innerHTML = '<div class="alerta error"><b>No se cargó nada nuevo.</b> ' + esc(err.message || err) + '</div>'; });
+    } else if (b.classList.contains('btn-deshacer')){
+      if (!window.confirm('Se vuelve la solapa “' + c.def.hoja + '” al estado anterior a la carga. ¿Seguro?')) return;
+      b.disabled = true; res.innerHTML = '<div class="resumen">Volviendo atrás…</div>';
+      pedirServidor('importadorDeshacer', { reporte: c.def.id }).then(function(j){
+        if (!j.ok) throw new Error(j.error || 'No se pudo deshacer.');
+        res.innerHTML = '<div class="ok"><b>Listo, la solapa “' + esc(c.def.hoja) + '” volvió al estado anterior.</b><div style="font-size:12px;">Restaurado desde <i>' + esc(j.restaurado) + '</i>.</div></div>' +
+          '<button type="button" class="btn btn-cargar">Cargar de nuevo</button>';
+        refrescarPlanilla();
+      }).catch(function(err){ res.innerHTML = '<div class="alerta error">No se pudo deshacer: ' + esc(err.message || err) + '</div>'; });
+    }
+  });
+
   function cargarPlanillaEnVivo(){
     var est = $('estadoPlanilla');
     function fallo(m){ PLANILLA_ERROR = m; est.className = 'estado-planilla mal'; est.textContent = m; }
     if (!window.supabase){ return fallo('No se pudo cargar el acceso del hub.'); }
-    var db = window.supabase.createClient(SUPA_URL, SUPA_ANON);
+    var db = obtenerDb();
     db.auth.getSession().then(function(r){
       var ses = r && r.data && r.data.session;
       if (!ses){ location.replace('./index.html?volver=importar_reportes.html'); throw new Error('sin sesión'); }
