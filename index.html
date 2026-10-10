@@ -890,6 +890,39 @@ if (data.session) {
 } else if (window.bydAcceso?.leer()?.clave) saludar('')
 </script>
 
+  <!-- Reporte en PDF: cada solapa del Tablero se imprime/guarda como PDF con un encabezado propio.
+       En pantalla no se ve; solo aparece al generar el PDF (clase "imprimiendo" en el body). -->
+  <style>
+    .pdf-fila{ column-span:all; display:flex; justify-content:flex-end; margin:0 0 10px; }
+    .btn-pdf{ display:inline-flex; align-items:center; gap:6px; border:1px solid var(--gris-claro, #D4D4D4); background:#fff; color:#2A2A2A;
+      font:700 12.5px/1 'Segoe UI', Arial, sans-serif; padding:9px 13px; border-radius:10px; cursor:pointer; }
+    .btn-pdf:hover{ border-color:#1565D8; color:#1565D8; }
+    .btn-pdf svg{ width:15px; height:15px; }
+    #pdfEncabezado{ display:none; }
+    .filtro-print{ display:none; }
+    @page{ size:A4; margin:12mm; }
+    @media print{
+      body.imprimiendo{ background:#fff !important; }
+      body.imprimiendo .topbar, body.imprimiendo .main-select-wrap, body.imprimiendo .tabs, body.imprimiendo #installHint,
+      body.imprimiendo #dataBanner, body.imprimiendo #dateFilterBar, body.imprimiendo #bydBotonTema, body.imprimiendo .pdf-fila,
+      body.imprimiendo .filter-row, body.imprimiendo .note, body.imprimiendo .solo-pantalla, body.imprimiendo .btn-mas,
+      body.imprimiendo .no-print, body.imprimiendo #hubBackBtn{ display:none !important; }
+      body.imprimiendo .section:not(.active){ display:none !important; }
+      body.imprimiendo .section.active{ column-count:1 !important; }
+      body.imprimiendo .tcard, body.imprimiendo .kpi, body.imprimiendo .progress-row{ break-inside:avoid; page-break-inside:avoid; }
+      body.imprimiendo *{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+      body.imprimiendo .wrap{ max-width:none !important; padding:0 !important; margin:0 !important; }
+      body.imprimiendo #pdfEncabezado{ display:flex !important; align-items:center; gap:14px; background:#0A0A0A; color:#fff; padding:14px 18px; border-radius:10px; margin:0 0 14px; }
+      body.imprimiendo #pdfEncabezado svg{ height:30px; width:auto; flex:none; }
+      body.imprimiendo #pdfEncabezado .t{ font:800 18px/1.2 'Segoe UI', Arial, sans-serif; }
+      body.imprimiendo #pdfEncabezado .s{ font:500 12px/1.4 'Segoe UI', Arial, sans-serif; color:#C9CED6; margin-top:2px; }
+      body.imprimiendo .filtro-print{ display:block; font:600 12px/1.4 'Segoe UI', Arial, sans-serif; color:#4A4A4A; margin:0 0 8px; }
+      html[data-tema="oscuro"]{ filter:none !important; background:#fff !important; }
+      html[data-tema="oscuro"] body{ background:#fff !important; }
+    }
+  </style>
+  <div id="pdfEncabezado"></div>
+
   <div class="topbar">
     <svg viewBox="12 4 529 102" xmlns="http://www.w3.org/2000/svg" style="height:30px;width:auto;display:block;">
       <defs><style>.st0{fill:#FFFFFF;}</style></defs>
@@ -1823,7 +1856,7 @@ if (data.session) {
         '</div>';
     }).join('');
     el.innerHTML = '<div class="kpi" style="margin-bottom:10px;"><div class="n">' + list.length + '</div><div class="l">Libres en el concesionario</div></div>' +
-      '<p class="note" style="margin:0 0 6px;">' + resumen + '</p>' + rows;
+      '<p style="margin:0 0 6px;font-size:12px;color:var(--gris-oscuro);">' + resumen + '</p>' + '<div class="solo-pantalla">' + rows + '</div>';
   }
 
   // Unidades pagadas y arribadas que no aparecen en ninguna Solicitud (por VIN):
@@ -1843,8 +1876,12 @@ if (data.session) {
         '<div style="text-align:right;color:var(--gris-medio);font-size:11.5px;white-space:nowrap;">' + (u.fechaArribo ? 'Llegó ' + u.fechaArribo : '') + '</div>' +
         '</div>';
     }).join('');
+    var porModelo = {};
+    list.forEach(function(u){ porModelo[u.modelo] = (porModelo[u.modelo] || 0) + 1; });
+    var resumen = Object.keys(porModelo).map(function(m){ return m + ' ' + porModelo[m]; }).join(' · ');
     el.innerHTML = '<h3 style="font-size:12px;text-transform:uppercase;letter-spacing:0.4px;color:var(--gris-oscuro);margin:16px 0 6px;">Sin cliente asociado — disponibles para ofrecer ya (' + list.length + ')</h3>' +
-      rows +
+      '<p style="margin:0 0 6px;font-size:12px;color:var(--gris-oscuro);">' + resumen + '</p>' +
+      '<div class="solo-pantalla">' + rows + '</div>' +
       '<p class="note" style="margin-top:8px;">Cruce por VIN entre "stock 2026" y "Solicitudes": estas unidades pagadas y arribadas no aparecen en ninguna solicitud cargada.</p>';
   }
 
@@ -2270,6 +2307,81 @@ if (data.session) {
   }
   cargarResumen();
   new MutationObserver(cargarResumen).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  // ---- Reporte en PDF por solapa ----
+  // Solapas propias del Tablero: se imprime esta misma pantalla con un encabezado y solo el resumen
+  // (sin filtros, notas ni listas largas). Patentamiento y Calidad viven en un marco: imprimen su
+  // propia pantalla, que ya trae sus reglas de impresion. Ningun dato de clientes sale en el PDF.
+  var TITULOS_PDF = { general: 'General', leads: 'Leads', solicitudes: 'Solicitudes', stock: 'Stock', entregas: 'Entregas', patentamiento: 'Patentamiento', calidad: 'Calidad' };
+  var ICONO_PDF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l5 5v13a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M14 3v5h5M12 11v6M9.5 14.5L12 17l2.5-2.5"/></svg>';
+  var limpiezaPdf = null;
+
+  function periodoDelTablero() {
+    var m = document.getElementById('dfMes'), a = document.getElementById('dfAnio');
+    if (m && a && m.selectedIndex >= 0) return m.options[m.selectedIndex].text + ' ' + a.value;
+    return '';
+  }
+  function fechaHoraAhora() {
+    var d = new Date(), p = function (n) { return (n < 10 ? '0' : '') + n; };
+    return p(d.getDate()) + '/' + p(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+  function prepararPdf(tab) {
+    var secc = document.getElementById('tab-' + tab);
+    var titulo = TITULOS_PDF[tab], periodo = periodoDelTablero();
+    var logo = document.querySelector('.topbar svg');
+    var enc = document.getElementById('pdfEncabezado');
+    enc.innerHTML = (logo ? logo.outerHTML : '') + '<div><div class="t">Tablero de control · ' + titulo + '</div><div class="s">' +
+      (periodo ? periodo + ' · ' : '') + 'Godoy Cruz · Mendoza · Generado el ' + fechaHoraAhora() + '</div></div>';
+
+    // Los filtros no se imprimen; en su lugar queda escrito que valor tenian.
+    var agregados = [];
+    secc.querySelectorAll('.filter-row').forEach(function (fr) {
+      var sel = fr.querySelector('select'), lab = fr.querySelector('label');
+      if (!sel || sel.selectedIndex < 0) return;
+      var d = document.createElement('div');
+      d.className = 'filtro-print';
+      d.textContent = (lab ? lab.textContent : '') + ': ' + sel.options[sel.selectedIndex].text;
+      fr.parentNode.insertBefore(d, fr);
+      agregados.push(d);
+    });
+
+    var tituloOriginal = document.title;
+    document.title = 'Tablero BYD ' + titulo + (periodo ? ' ' + periodo : '');
+    var alturaMarco = marcoResumen ? marcoResumen.style.height : '';
+    if (marcoResumen && tab === 'general') marcoResumen.style.height = (parseInt(alturaMarco, 10) || 453) + 90 + 'px';
+    document.body.classList.add('imprimiendo');
+
+    limpiezaPdf = function () {
+      document.body.classList.remove('imprimiendo');
+      document.title = tituloOriginal;
+      agregados.forEach(function (d) { if (d.parentNode) d.parentNode.removeChild(d); });
+      if (marcoResumen && tab === 'general') marcoResumen.style.height = alturaMarco;
+      enc.innerHTML = '';
+      limpiezaPdf = null;
+    };
+  }
+  window.addEventListener('afterprint', function () { if (limpiezaPdf) limpiezaPdf(); });
+
+  function generarPdf(tab) {
+    if (tab === 'patentamiento' || tab === 'calidad') {
+      var f = tab === 'patentamiento' ? marcoPat : marco;
+      if (!f || !f.contentWindow) return;
+      try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e) { window.alert('No se pudo generar el PDF de esta solapa.'); }
+      return;
+    }
+    prepararPdf(tab);
+    setTimeout(function () { window.print(); }, 60);
+  }
+
+  Object.keys(TITULOS_PDF).forEach(function (tab) {
+    var secc = document.getElementById('tab-' + tab);
+    if (!secc) return;
+    var fila = document.createElement('div');
+    fila.className = 'pdf-fila no-print';
+    fila.innerHTML = '<button type="button" class="btn-pdf" data-pdf="' + tab + '" title="Guardar esta solapa como PDF para compartir">' + ICONO_PDF + 'Generar PDF</button>';
+    secc.insertBefore(fila, secc.firstChild);
+    fila.querySelector('button').addEventListener('click', function () { generarPdf(tab); });
+  });
+
   window.addEventListener('message', function (e) {
     if (!e.data || e.data.tipo !== 'alto-resumen-patentamiento' || !marcoResumen || e.source !== marcoResumen.contentWindow) return;
     marcoResumen.style.height = Math.max(120, Math.ceil(e.data.alto)) + 'px';

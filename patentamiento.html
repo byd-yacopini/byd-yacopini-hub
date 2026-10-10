@@ -93,6 +93,21 @@
     table.rank{ min-width:470px; }
     table.rank.resumen{ min-width:0; }
   }
+  /* PDF (botón "Generar PDF" del Tablero): sin controles, con el encabezado visible y solo el resumen. */
+  @media print{
+    @page{ size:A4; margin:12mm; }
+    *{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    body, .embebido body, body.embebido{ background:#fff !important; }
+    .app{ max-width:none; padding-bottom:0; }
+    .filtros, #fProvWrap, .btn-mas, #hubBackBtn, #bydBotonTema, .note, #avisoPeriodo{ display:none !important; }
+    .embebido .app-topbar{ display:block !important; background:#0A0A0A !important; border-radius:10px; margin-bottom:12px; }
+    .embebido .title-block{ display:block !important; }
+    .tcard, .kpi, .lectura{ break-inside:avoid; page-break-inside:avoid; }
+    .tabla-wrap{ overflow:visible; }
+    table.rank{ min-width:0; }
+    .dos-col{ grid-template-columns:1fr !important; }
+    html[data-tema="oscuro"]{ filter:none !important; background:#fff !important; }
+  }
   @media (min-width:900px){
     .app{ max-width:1100px; }
     .kpi-grid{ grid-template-columns:repeat(3,1fr); }
@@ -569,6 +584,17 @@
     if (sessionStorage.getItem('bydJefeOk') === '1') back.href = './panel_jefe.html';
     else if (sessionStorage.getItem('bydVendorOk') === '1') back.href = './panel_ventas.html';
   } catch (e) {}
+
+  // Al imprimir/guardar como PDF: el título lleva el período elegido (los filtros no se imprimen).
+  (function(){
+    var h1 = document.querySelector('.title-block h1'), original = h1 ? h1.textContent : '', tituloDoc = document.title;
+    window.addEventListener('beforeprint', function(){
+      if (!h1 || !DATOS || !$('selMes').value) return;
+      h1.textContent = 'Patentamiento · ' + MESES[+$('selMes').value - 1] + ' ' + $('selAnio').value + ' · ' + $('selProv').value;
+      document.title = 'Tablero BYD Patentamiento ' + MESES[+$('selMes').value - 1] + ' ' + $('selAnio').value;
+    });
+    window.addEventListener('afterprint', function(){ if (h1) h1.textContent = original; document.title = tituloDoc; });
+  })();
 
   // Embebida en la solapa del Tablero: le avisa al hub cuánto mide para que agrande el marco.
   if (new URLSearchParams(location.search).get('embebido') === '1'){

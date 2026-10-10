@@ -270,6 +270,19 @@
     .lista, .casos{ display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; align-items:start; }
     .ranking{ max-width:760px; }
   }
+  /* PDF (botón "Generar PDF" del Tablero): resumen sin controles ni datos de clientes. */
+  .solo-impresion{ display:none; }
+  @media print{
+    @page{ size:A4; margin:12mm; }
+    *{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    body{ background:#fff !important; }
+    .no-print, .tabs, .filtro, .avisar, .periodo button, .desplegar, .salir, .pie, #hubBackBtn, #bydBotonTema,
+    #bloqueComentarios, #bloqueDocumentos, #bloqueMystery, #avisoPropio, #cargando, .hint{ display:none !important; }
+    .solo-impresion{ display:block !important; background:#0A0A0A; color:#fff; padding:14px 18px; border-radius:10px; margin:0 0 14px; font:800 18px/1.2 'Segoe UI', Arial, sans-serif; }
+    .solo-impresion small{ display:block; font:500 12px/1.4 'Segoe UI', Arial, sans-serif; color:#C9CED6; margin-top:2px; }
+    .tiles > *, .lista > *, .ranking > *, .grafico{ break-inside:avoid; page-break-inside:avoid; }
+    html[data-tema="oscuro"]{ filter:none !important; background:#fff !important; }
+  }
 </style>
 <link rel="stylesheet" href="estilo.css">
 <script src="tema.js"></script>
@@ -313,6 +326,8 @@
 
   <!-- ============ PANEL ============ -->
   <div class="oculto" id="panel">
+    <!-- Solo se ve al imprimir / guardar como PDF (desde el Tablero). -->
+    <div class="solo-impresion" id="encabezadoPrint"></div>
     <div class="tabs">
       <button type="button" id="tabSemana" aria-pressed="false">Por semana</button>
       <button type="button" id="tabMes" aria-pressed="true">Por mes</button>
@@ -380,7 +395,10 @@
 
     <!-- Los casos arrancan plegados y se abren todos de un toque: con varios
          cargados, la lista entera empujaba el resto de la pantalla fuera de
-         vista y había que scrollear mucho para volver arriba. -->
+         vista y había que scrollear mucho para volver arriba.
+         Las detecciones y los reclamos traen nombres y comentarios de clientes:
+         no salen en el PDF (no-print). -->
+    <div class="no-print">
     <h2 class="sec">Detecciones tempranas</h2>
     <p class="hint" id="hintCasos"></p>
     <button type="button" class="desplegar oculto" id="desplegar" aria-expanded="false" aria-controls="casos">
@@ -398,6 +416,7 @@
       <span class="flecha" aria-hidden="true">▾</span>
     </button>
     <div class="casos oculto" id="reclamos"></div>
+    </div>
 
     <!-- Sólo vendedores: lo que escribieron sus clientes, por la nota. -->
     <div class="oculto" id="bloqueComentarios">
@@ -1417,6 +1436,22 @@ if (EMBEBIDO) {
   else if (b && sessionStorage.getItem('bydVendorOk') === '1') b.href = './panel_ventas.html'
 })()
 
+
+// PDF desde el Tablero: el encabezado de la hoja lleva el período elegido y la fecha.
+;(function () {
+  const enc = document.getElementById('encabezadoPrint')
+  if (!enc) return
+  const titulo = document.title
+  window.addEventListener('beforeprint', function () {
+    const rango = (document.getElementById('rango') || {}).textContent || ''
+    const sub = (document.getElementById('subrango') || {}).textContent || ''
+    const d = new Date(), p = (n) => (n < 10 ? '0' : '') + n
+    const fecha = p(d.getDate()) + '/' + p(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes())
+    enc.innerHTML = 'BYD Yacopini · Calidad<small>' + [rango, sub].filter(Boolean).join(' · ') + ' · Generado el ' + fecha + '</small>'
+    document.title = 'Tablero BYD Calidad' + (rango ? ' ' + rango : '')
+  })
+  window.addEventListener('afterprint', function () { enc.innerHTML = ''; document.title = titulo })
+})()
 arrancar()
 </script>
 </body>
