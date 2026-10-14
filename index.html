@@ -790,7 +790,12 @@ async function ubicar(user) {
   const nombre = fila?.nombre || perfil.nombre
   // Lo que decide la base manda: un vendedor es vendedor aunque la planilla
   // diga otra cosa. "Jefe" sólo existe en la planilla (en la base es gerencia).
-  const tipo = perfil.rol === 'vendedor' ? 'vendedor' : /jefe/i.test(fila?.rol || '') ? 'jefe' : 'gerencia'
+  // "Gte Admin" / "Gte Administracion" en la planilla: ve solo Patentamiento y Entregas del Tablero
+  // (ver la vista de administracion al final de esta pagina).
+  const tipo = perfil.rol === 'vendedor' ? 'vendedor'
+    : /jefe/i.test(fila?.rol || '') ? 'jefe'
+    : /admin/i.test(fila?.rol || '') ? 'administracion'
+    : 'gerencia'
   window.bydAcceso?.marcar({ uid: user.id, tipo, nombre })
 
   const destino = volver || { vendedor: 'panel_ventas.html', jefe: 'panel_jefe.html' }[tipo]
@@ -2311,6 +2316,40 @@ if (data.session) {
     if (!destino || e.source !== destino.contentWindow) return;
     destino.style.height = Math.max(520, Math.ceil(e.data.alto)) + 'px';
   });
+
+  // Vista de Administracion: quien entra con rol "Gte Admin" ve solo Patentamiento y Entregas.
+  // Es una restriccion de pantalla (igual que el resto del hub); el rol sale de la planilla de usuarios.
+  (function () {
+    var PERMITIDAS = { entregas: 1, patentamiento: 1 };
+    function esAdministracion() {
+      try { var a = window.bydAcceso && window.bydAcceso.leer(); return !!a && a.tipo === 'administracion'; } catch (e) { return false; }
+    }
+    function aplicarVista() {
+      if (!esAdministracion()) return;
+      document.body.classList.add('vista-administracion');
+      document.querySelectorAll('#subTabs .tab-btn').forEach(function (b) {
+        if (!PERMITIDAS[b.dataset.tab]) b.style.display = 'none';
+      });
+      var wrapSel = document.querySelector('.main-select-wrap'); if (wrapSel) wrapSel.style.display = 'none';
+      var sel = document.getElementById('mainViewSelect');
+      if (sel && sel.value !== 'tablero') { sel.value = 'tablero'; sel.dispatchEvent(new Event('change')); }
+      var activa = document.querySelector('#subTabs .tab-btn.active');
+      if (!activa || !PERMITIDAS[activa.dataset.tab]) {
+        var primera = document.querySelector('#subTabs .tab-btn[data-tab="entregas"]'); if (primera) primera.click();
+      }
+    }
+    aplicarVista();
+    // El acceso se marca al entrar (despues de cargar la pagina): se reaplica UNA vez cuando se abre la
+    // puerta (la clase gate-locked desaparece). Se mira solo ese cambio para no entrar en un ciclo con
+    // las demas clases que el body va cambiando.
+    var estabaCerrada = document.body.classList.contains('gate-locked');
+    new MutationObserver(function () {
+      var cerrada = document.body.classList.contains('gate-locked');
+      if (estabaCerrada && !cerrada) { estabaCerrada = false; aplicarVista(); }
+      else estabaCerrada = cerrada;
+    }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    window.__aplicarVistaAdministracion = aplicarVista;
+  })();
 
   // Resumen de patentamientos dentro de la solapa General (misma pantalla, version compacta).
   // Se carga al abrir el Tablero con un parametro por minuto, asi no muestra una copia vieja.

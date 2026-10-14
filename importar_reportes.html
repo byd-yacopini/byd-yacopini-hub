@@ -88,7 +88,8 @@
 <script>
 (function(){
   // Esta pantalla es de gerencia: un vendedor vuelve a su panel (el Apps Script igual valida el mail).
-  try { var ac = window.bydAcceso && window.bydAcceso.leer(); if (ac && ac.tipo === "vendedor"){ location.replace("./panel_ventas.html"); return; } } catch (e) {}
+  try { var ac = window.bydAcceso && window.bydAcceso.leer(); if (ac && ac.tipo === "vendedor"){ location.replace("./panel_ventas.html"); return; }
+    if (ac && ac.tipo === "administracion"){ location.replace("./index.html"); return; } } catch (e) {}
   // ---------- Qué reportes existen y cómo se reconocen ----------
   // firma: encabezados que identifican al reporte. clave: columna(s) que identifican una fila de forma
   // única (null = no tiene, se compara la fila entera). modo 'foto': el reporte es el estado actual
