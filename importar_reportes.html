@@ -153,6 +153,12 @@
       return (t.getHours() || t.getMinutes()) ? f + ' ' + pad(t.getHours()) + ':' + pad(t.getMinutes()) : f;
     }
     var s = String(v).trim().replace(/\s+/g, ' ');
+    // Algunos reportes (Entregas) traen la fecha como "2026-10-01 00:00:00": se pasa al mismo formato que una fecha real.
+    var iso = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::\d{2})?)?$/.exec(s);
+    if (iso){
+      var dia = iso[3] + '-' + iso[2] + '-' + iso[1];
+      return (iso[4] && (iso[4] !== '00' || iso[5] !== '00')) ? dia + ' ' + iso[4] + ':' + iso[5] : dia;
+    }
     if (/^-?\d+(\.\d+)?$/.test(s)) return String(Number(s));   // 1360.00 == 1360
     return s;
   }
