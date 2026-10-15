@@ -105,6 +105,8 @@
 
   var PLANILLA = null;      // { 'Leads': {nombres:[], filas:[{...}]}, ... }
   var PLANILLA_ERROR = '';
+  var PENDIENTES = [];      // archivos soltados mientras la planilla todavía se estaba leyendo
+  function liberarPendientes(){ var p = PENDIENTES; PENDIENTES = []; p.forEach(function(f){ f(); }); }
 
   function $(id){ return document.getElementById(id); }
   function esc(s){ var d = document.createElement('div'); d.textContent = (s == null ? '' : String(s)); return d.innerHTML; }
@@ -380,6 +382,12 @@
     function error(html){ out.innerHTML = '<div class="alerta error">' + html + '</div>'; }
     out.innerHTML = '';
     delete CARGAS[id];
+    if (!PLANILLA && !PLANILLA_ERROR){
+      // La planilla todavía se está leyendo: se guarda el archivo y se procesa apenas termine.
+      PENDIENTES.push(function(){ procesarEnSlot(id, arch); });
+      out.innerHTML = '<div class="alerta info">Recibí <b>' + esc(arch.name) + '</b>. Estoy terminando de leer la planilla actual; en unos segundos se compara solo.</div>';
+      return;
+    }
     if (!PLANILLA) return error('No se pudo leer la planilla actual, así que no se puede comparar. ' + esc(PLANILLA_ERROR));
     var wb;
     try { wb = XLSX.read(arch.buffer, { type: 'array', cellDates: true }); } catch (e) {
@@ -525,7 +533,7 @@
 
   function cargarPlanillaEnVivo(){
     var est = $('estadoPlanilla');
-    function fallo(m){ PLANILLA_ERROR = m; est.className = 'estado-planilla mal'; est.textContent = m; }
+    function fallo(m){ PLANILLA_ERROR = m; est.className = 'estado-planilla mal'; est.textContent = m; liberarPendientes(); }
     if (!window.supabase){ return fallo('No se pudo cargar el acceso del hub.'); }
     var db = obtenerDb();
     db.auth.getSession().then(function(r){
@@ -544,6 +552,7 @@
       PLANILLA = res; dibujarLimpieza();
       est.className = 'estado-planilla ok';
       est.textContent = 'Planilla actual leída (' + esc(j.usuario || '') + '): ' + Object.keys(res).map(function(k){ return k + ' (' + num(res[k].filas.length) + ')'; }).join(' · ');
+      liberarPendientes();
     }).catch(function(e){ if (String(e.message) !== 'sin sesión') fallo('No se pudo leer la planilla: ' + (e.message || e)); });
   }
 
@@ -566,7 +575,8 @@
       dibujarLimpieza();
       est.className = 'estado-planilla ok';
       est.textContent = 'Planilla actual leída: ' + Object.keys(res).map(function(k){ return k + ' (' + num(res[k].filas.length) + ')'; }).join(' · ');
-    }).catch(function(e){ PLANILLA_ERROR = String(e.message || e); est.className = 'estado-planilla mal'; est.textContent = 'No se pudo leer la planilla: ' + PLANILLA_ERROR; });
+      liberarPendientes();
+    }).catch(function(e){ PLANILLA_ERROR = String(e.message || e); est.className = 'estado-planilla mal'; est.textContent = 'No se pudo leer la planilla: ' + PLANILLA_ERROR; liberarPendientes(); });
   }
   cargarPlanilla();
 })();
