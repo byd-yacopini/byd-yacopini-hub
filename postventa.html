@@ -324,8 +324,12 @@
     fallo('No se pudieron leer las entregas: ' + (e.message || e));
   });
 
-  window.__postventa = { calcular: calcular, tipoDe: tipoDe, waLink: waLink, mostrar: mostrar };
+  window.__postventa = { calcular: calcular, tipoDe: tipoDe, waLink: waLink, mostrar: mostrar, unidades: function(){ return UNIDADES; } };
 })();
 </script>
+<!-- Agenda de turnos de postventa (Portal de Calidad, postventa_turnos.js) -->
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.15/locales/es.global.min.js"></script>
+<script src="postventa_turnos.js"></script>
 </body>
 </html>
