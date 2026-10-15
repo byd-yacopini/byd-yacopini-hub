@@ -292,6 +292,43 @@
   // Adentro de un marco no va botón: ya lo tiene la página de afuera.
   if (window.top !== window.self) return
 
+  // Volver adonde estaba (Lucía, 15/10): la flecha ← de cada página llevaba
+  // siempre al inicio. Si se llegó desde otra página de la app, ahora vuelve
+  // a esa. Si se entró directo (link, ícono del celular) sigue yendo al
+  // inicio. Las páginas que no tenían flecha la reciben cuando se llegó desde
+  // otra de la app; el inicio no lleva.
+  var carpeta = location.pathname.replace(/[^/]*$/, '')
+  function vieneDeLaApp() {
+    try {
+      if (!document.referrer) return false
+      var r = new URL(document.referrer)
+      return r.origin === location.origin && r.pathname.indexOf(carpeta) === 0 &&
+        r.pathname + r.search !== location.pathname + location.search
+    } catch (e) { return false }
+  }
+  function flechaVolver() {
+    var desdeApp = vieneDeLaApp()
+    var btn = document.getElementById('hubBackBtn')
+    if (!btn) {
+      var esInicio = location.pathname === carpeta || /\/index\.html$/.test(location.pathname)
+      if (esInicio || !desdeApp) return
+      btn = document.createElement('a')
+      btn.id = 'hubBackBtn'
+      btn.href = './index.html'
+      btn.textContent = '←'
+      btn.style.cssText = 'position:fixed;bottom:18px;left:18px;z-index:999999;width:44px;height:44px;border-radius:50%;' +
+        'display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:20px;'
+      document.body.appendChild(btn)
+    }
+    if (desdeApp) {
+      btn.setAttribute('aria-label', 'Volver adonde estabas')
+      btn.title = 'Volver adonde estabas'
+      btn.addEventListener('click', function (e) { e.preventDefault(); history.back() })
+    }
+  }
+  if (document.body) flechaVolver()
+  else document.addEventListener('DOMContentLoaded', flechaVolver)
+
   function ponerBoton() {
     if (document.getElementById('bydBotonTema')) return
     var b = document.createElement('button')
