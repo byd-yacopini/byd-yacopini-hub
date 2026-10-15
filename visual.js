@@ -333,10 +333,13 @@
   }
 
   // Estilo de la referencia que mandó Lucía: fondo grafito, tarjetas oscuras
-  // muy redondeadas, pastillas blancas con la activa en lima y botones
-  // redondos. La lima es clara: lo que va encima siempre en tinta oscura.
+  // muy redondeadas, pastillas blancas con la activa en celeste y botones
+  // redondos. El celeste es claro: lo que va encima siempre en tinta oscura.
   var FONDO = '#121418', PANEL = '#1e2228', PANEL2 = '#272c33', BORDE = 'rgba(255,255,255,.07)'
   var TINTA = '#f4f5f6', SUAVE = '#a3a9b1', TENUE = '#6f767f', LIMA = '#ccf656', SOBRE = '#1b1c1e'
+  // Celeste BYD para lo principal (Lucía, 15/10); el lima, sólo en detalles
+  // chicos: el "BYD" de cada ficha y el VS.
+  var CELESTE = '#45b6f7'
   var FLECHA = 'url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%23a3a9b1%27 stroke-width=%272.2%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27M6 9l6 6 6-6%27/%3E%3C/svg%3E")'
 
   var css =
@@ -359,13 +362,13 @@
     // Volver: botón redondo blanco
     '#hubBackBtn{background:#fff !important;color:' + SOBRE + ' !important;box-shadow:0 6px 18px rgba(0,0,0,.45) !important}' +
 
-    // Solapas: pastilla blanca, la activa en lima
+    // Solapas: pastilla blanca, la activa en celeste
     '.tabs-switch{display:flex;flex-wrap:nowrap;gap:2px;margin:4px 20px 22px;padding:5px;background:#fff;border-radius:999px;max-width:560px;box-shadow:0 0 0 4px ' + PANEL + '}' +
     '.tab-btn{flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;gap:7px;border:0;background:transparent;border-radius:999px;' +
     'padding:10px 12px;font-family:inherit;font-size:13px;font-weight:600;color:#5c6167;white-space:nowrap;transition:background .15s,color .15s}' +
     '.tab-btn svg{width:16px;height:16px;flex:none}' +
     '.tab-btn:hover{color:' + SOBRE + ';background:#f0f2f5}' +
-    '.tab-btn.active,.tab-btn.active:hover{background:' + LIMA + ';color:' + SOBRE + '}' +
+    '.tab-btn.active,.tab-btn.active:hover{background:' + CELESTE + ';color:' + SOBRE + '}' +
     '.tab-btn .corto{display:none}' +
     '@media (max-width:520px){.tab-btn .largo{display:none}.tab-btn .corto{display:inline}.tab-btn{padding:10px 8px}}' +
 
@@ -374,10 +377,10 @@
     '.fichas-cuenta b{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:#fff;color:' + SOBRE + ';font-size:11px;font-weight:700}' +
     '.ficha-grid{gap:14px;padding:12px 20px 24px}' +
     '.ficha-card{border:1px solid ' + BORDE + ';border-radius:22px;background:' + PANEL + ';box-shadow:0 18px 40px -22px rgba(0,0,0,.9);transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}' +
-    '.ficha-card:hover{transform:translateY(-3px);border-color:rgba(204,246,86,.45);box-shadow:0 22px 44px -20px rgba(0,0,0,.95),0 0 0 4px rgba(204,246,86,.06)}' +
-    '.ficha-btn.ver{box-shadow:0 8px 20px -10px rgba(204,246,86,.7)}' +
-    '.tab-btn.active{box-shadow:0 6px 16px -8px rgba(150,190,30,.8)}' +
-    '.carga-hero{box-shadow:0 16px 36px -18px rgba(204,246,86,.55)}' +
+    '.ficha-card:hover{transform:translateY(-3px);border-color:rgba(69,182,247,.45);box-shadow:0 22px 44px -20px rgba(0,0,0,.95),0 0 0 4px rgba(69,182,247,.06)}' +
+    '.ficha-btn.ver{box-shadow:0 8px 20px -10px rgba(69,182,247,.7)}' +
+    '.tab-btn.active{box-shadow:0 6px 16px -8px rgba(40,150,220,.8)}' +
+    '.carga-hero{box-shadow:0 16px 36px -18px rgba(69,182,247,.55)}' +
     '.escenario,.compare-selectors,.compare-table-wrap{box-shadow:0 18px 40px -24px rgba(0,0,0,.9)}' +
     '.ficha-cover{position:relative;margin:8px 8px 0;border-radius:16px;background:' + PANEL2 + '}' +
     '.ficha-cover img{transition:transform .4s ease}' +
@@ -390,7 +393,7 @@
     '.ficha-actions{gap:6px}' +
     '.ficha-btn{display:flex;align-items:center;justify-content:center;gap:6px;border-radius:999px;padding:9px 8px;font-family:inherit;font-size:12.5px;font-weight:600;transition:filter .15s,background .15s}' +
     '.ficha-btn svg{width:15px;height:15px;flex:none}' +
-    '.ficha-btn.ver{background:' + LIMA + ';color:' + SOBRE + '}' +
+    '.ficha-btn.ver{background:' + CELESTE + ';color:' + SOBRE + '}' +
     '.ficha-btn.ver:hover{filter:brightness(1.05)}' +
     '.ficha-btn.compartir{border:1px solid rgba(255,255,255,.14);background:transparent;color:' + TINTA + '}' +
     '.ficha-btn.compartir:hover{background:' + PANEL2 + '}' +
@@ -401,10 +404,10 @@
     '.compare-select-group label{font-size:10.5px;letter-spacing:.1em;color:' + TENUE + '}' +
     '.compare-select-group select{-webkit-appearance:none;appearance:none;padding:12px 36px 12px 16px;border:1px solid ' + BORDE + ';border-radius:999px;' +
     'background:' + PANEL2 + ' ' + FLECHA + ' no-repeat right 12px center/16px;font-size:14px;font-weight:600;color:' + TINTA + ';cursor:pointer}' +
-    '.compare-select-group select:focus{outline:none;border-color:' + LIMA + '}' +
+    '.compare-select-group select:focus{outline:none;border-color:' + CELESTE + '}' +
     '.compare-select-group select option,.compare-select-group select optgroup{background:' + PANEL + ';color:' + TINTA + '}' +
     '#compareContent .compare-select-group label::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}' +
-    '#compareContent .compare-select-group:first-child label::before{background:' + LIMA + '}' +
+    '#compareContent .compare-select-group:first-child label::before{background:' + CELESTE + '}' +
     '#compareContent .compare-select-group:nth-child(2) label::before{background:#fff}' +
     '.compare-vs{position:absolute;left:50%;top:61px;transform:translate(-50%,-50%);width:30px;height:30px;border-radius:50%;background:' + LIMA + ';color:' + SOBRE + ';' +
     'display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;letter-spacing:.04em;box-shadow:0 0 0 4px ' + PANEL + '}' +
@@ -419,7 +422,7 @@
     '.compare-table thead th:first-child{width:34%}' +
     '.compare-table thead th{background:#fff;color:' + SOBRE + ';font-size:15px;font-weight:600;text-transform:none;letter-spacing:-.01em;border-bottom:0;padding-top:18px}' +
     '.compare-table thead th:nth-child(2) ,.compare-table thead th:nth-child(3){position:relative}' +
-    '.compare-table thead th:nth-child(2){box-shadow:inset 0 -4px 0 ' + LIMA + '}' +
+    '.compare-table thead th:nth-child(2){box-shadow:inset 0 -4px 0 ' + CELESTE + '}' +
     '.compare-table thead th:nth-child(3){box-shadow:inset 0 -4px 0 ' + SOBRE + '}' +
     '.compare-table tbody th{white-space:normal;background:transparent;color:#8b9096;font-size:12.5px;font-weight:500}' +
     '.compare-table tbody td{color:' + SOBRE + ';font-weight:600}' +
@@ -440,20 +443,20 @@
     // Calculadora de carga
     '.carga-chips{gap:6px}' +
     '.carga-chip{border:1px solid ' + BORDE + ';border-radius:999px;padding:6px 12px;background:' + PANEL + ';font-size:12px;font-weight:600;color:' + TINTA + '}' +
-    '.carga-chip.si{background:rgba(204,246,86,.14);border-color:rgba(204,246,86,.35);color:' + LIMA + '}' +
+    '.carga-chip.si{background:rgba(69,182,247,.14);border-color:rgba(69,182,247,.35);color:' + CELESTE + '}' +
     '.carga-chip.no{background:rgba(214,72,58,.15);border-color:rgba(214,72,58,.35);color:#ff8a7d}' +
     '.carga-aviso{border-radius:16px;background:rgba(181,124,23,.16);border-color:rgba(181,124,23,.4);color:#f0c46a}' +
     '.carga-aviso.error{background:rgba(214,72,58,.15);border-color:rgba(214,72,58,.35);color:#ff8a7d}' +
-    '.carga-hero{border-radius:24px;padding:20px 22px;background:' + LIMA + ';color:' + SOBRE + '}' +
+    '.carga-hero{border-radius:24px;padding:20px 22px;background:' + CELESTE + ';color:' + SOBRE + '}' +
     '.carga-hero .c,.carga-hero .kw span{color:rgba(27,28,30,.7)}' +
     '.carga-hero .kw b{font-size:36px;font-weight:700;letter-spacing:-.02em}' +
     '.carga-leyenda{font-weight:500;color:' + SUAVE + '}' +
     '.carga-leyenda i{border-radius:50%}' +
     '.carga-leyenda span:nth-child(1) i{background:#ff6b5b !important}' +
     '.carga-leyenda span:nth-child(2) i{background:#fff !important}' +
-    '.carga-leyenda span:nth-child(3) i{background:' + LIMA + ' !important}' +
+    '.carga-leyenda span:nth-child(3) i{background:' + CELESTE + ' !important}' +
     '.escenario{border:1px solid ' + BORDE + ' !important;border-radius:22px;padding:16px 18px;background:' + PANEL + '}' +
-    '.esc-rojo{--esc:#ff6b5b}.esc-azul{--esc:#ffffff}.esc-verde{--esc:' + LIMA + '}' +
+    '.esc-rojo{--esc:#ff6b5b}.esc-azul{--esc:#ffffff}.esc-verde{--esc:' + CELESTE + '}' +
     '.escenario .tiempo b{color:var(--esc) !important;font-weight:700}' +
     '.escenario .esc-barra>div,.escenario .pista>div{background:var(--esc) !important}' +
     '.esc-top .desde{font-size:10.5px;letter-spacing:.1em;color:' + TENUE + '}' +

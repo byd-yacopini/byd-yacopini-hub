@@ -391,19 +391,22 @@ a.card .icon { border-radius: 14px !important; }
 /* Títulos de sección con el punto en degradé */
 .tcard h2::before { background: linear-gradient(135deg, var(--hub-cielo), var(--hub-azul)) !important; }
 
-/* ── Lima, como el Portal (15/10) ─────────────────────────────────────────
+/* ── Como el Portal, con celeste (15/10) ──────────────────────────────────
    Lo pidió Lucía con una referencia: fondos claros como siempre, pero lo
-   activo en lima con texto oscuro, tarjetas lisas y más redondeadas, contadores y botones redondos. El Portal
+   activo en celeste con texto oscuro, tarjetas lisas y más redondeadas, contadores y botones redondos. El Portal
    cambió igual el mismo día. Va al final para ganarle a las secciones de
    arriba sin tocarlas. */
 :root {
+  /* Celeste BYD como acento (Lucía, 15/10). El lima queda sólo para
+     detalles chicos: la rayita de los títulos y el punto de las secciones. */
+  --hub-acento: #45b6f7;
+  --hub-sobre-acento: #0f1c27;
   --hub-lima: #ccf656;
-  --hub-sobre-lima: #1b1c1e;
 }
 html:not(.embebido) body:not(.embebido) {
   background-image:
-    radial-gradient(60rem 40rem at 105% -10%, color-mix(in srgb, var(--hub-lima) 22%, transparent), transparent 60%),
-    radial-gradient(50rem 35rem at -10% 110%, color-mix(in srgb, var(--hub-violeta) 7%, transparent), transparent 60%) !important;
+    radial-gradient(60rem 40rem at 105% -10%, color-mix(in srgb, var(--hub-acento) 20%, transparent), transparent 60%),
+    radial-gradient(50rem 35rem at -10% 110%, color-mix(in srgb, var(--hub-azul) 10%, transparent), transparent 60%) !important;
 }
 .mainview > h1::after, .title-block h1::after { background: var(--hub-lima); }
 .tcard h2::before { background: var(--hub-lima) !important; }
@@ -417,49 +420,49 @@ html:not(.embebido) body:not(.embebido) {
 }
 .tcard .kpi, .card .kpi { border-radius: 16px !important; box-shadow: none !important; }
 
-/* La primera ficha de cada tablero, en lima */
+/* La primera ficha de cada tablero, en celeste */
 .kpi-grid > .kpi:first-child:not(.tcard .kpi):not(.card .kpi) {
-  background-color: var(--hub-lima) !important;
+  background-color: var(--hub-acento) !important;
   background-image: none !important;
   box-shadow: none !important;
 }
-.kpi-grid > .kpi:first-child:not(.tcard .kpi):not(.card .kpi) .n { color: var(--hub-sobre-lima) !important; }
+.kpi-grid > .kpi:first-child:not(.tcard .kpi):not(.card .kpi) .n { color: var(--hub-sobre-acento) !important; }
 .kpi-grid > .kpi:first-child:not(.tcard .kpi):not(.card .kpi) .l,
 .kpi-grid > .kpi:first-child:not(.tcard .kpi):not(.card .kpi) .kpi-usd { color: rgba(27, 28, 30, 0.7) !important; }
 .kpi-grid > .kpi:first-child:not(.tcard .kpi):not(.card .kpi) .pct-badge,
 .kpi-grid > .kpi:first-child:not(.tcard .kpi):not(.card .kpi) .kpi-ico {
-  background: var(--hub-sobre-lima) !important;
-  color: var(--hub-lima) !important;
+  background: var(--hub-sobre-acento) !important;
+  color: var(--hub-acento) !important;
 }
 
-/* Botones principales y solapas activas en lima, texto oscuro */
+/* Botones principales y solapas activas en celeste, texto oscuro */
 .btn-primary, button.primary, .df-btn-primary, .ficha-btn.ver, .btn-guardar, .login button, #bydGate button, .fab,
 .btn-primary:hover, button.primary:hover, .df-btn-primary:hover, .ficha-btn.ver:hover, .btn-guardar:hover {
-  background: var(--hub-lima) !important;
-  color: var(--hub-sobre-lima) !important;
+  background: var(--hub-acento) !important;
+  color: var(--hub-sobre-acento) !important;
   border-color: transparent !important;
   box-shadow: none !important;
 }
 .btn-primary:hover, button.primary:hover, .df-btn-primary:hover, .btn-guardar:hover { filter: brightness(1.04); }
 .tabs button.active, .tabs button[aria-pressed="true"], .tab-btn.active, .tabs-bar button.active, .tabbar button.active,
 .view-tab.active, .cfgsub-tab.active, .switch button.active, .pill-btn.active, .catalogo-filtro-pill.active {
-  background: var(--hub-lima) !important;
-  color: var(--hub-sobre-lima) !important;
+  background: var(--hub-acento) !important;
+  color: var(--hub-sobre-acento) !important;
   border-color: transparent !important;
   box-shadow: none !important;
 }
-/* Sobre la franja negra del Tablero la activa también va en lima */
-.main-select-wrap ~ .tabs button.active { color: var(--hub-sobre-lima) !important; }
+/* Sobre la franja negra del Tablero la activa también va en celeste */
+.main-select-wrap ~ .tabs button.active { color: var(--hub-sobre-acento) !important; }
 
-/* Campos con foco en lima */
+/* Campos con foco en celeste */
 input:focus, select:focus, textarea:focus {
-  border-color: #a9d13a !important;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--hub-lima) 45%, transparent) !important;
+  border-color: #45b6f7 !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--hub-acento) 35%, transparent) !important;
 }
 
 /* Detalles del Portal en las páginas de Nicolás (15/10) ────────────────── */
 
-/* La segunda ficha de cada tablero en grafito, al lado de la lima: el mismo
+/* La segunda ficha de cada tablero en grafito, al lado de la celeste: el mismo
    par que NPS de fábrica y de postventa en el inicio del Portal. */
 .kpi-grid > .kpi:nth-child(2):not(.tcard .kpi):not(.card .kpi) {
   background-color: #121418 !important;
@@ -471,7 +474,7 @@ input:focus, select:focus, textarea:focus {
 .kpi-grid > .kpi:nth-child(2):not(.tcard .kpi):not(.card .kpi) .kpi-usd { color: rgba(255, 255, 255, 0.6) !important; }
 .kpi-grid > .kpi:nth-child(2):not(.tcard .kpi):not(.card .kpi) .kpi-ico {
   background: rgba(255, 255, 255, 0.08) !important;
-  color: var(--hub-lima) !important;
+  color: var(--hub-acento) !important;
 }
 .kpi-grid > .kpi:nth-child(2):not(.tcard .kpi):not(.card .kpi) .pct-badge {
   background: rgba(255, 255, 255, 0.1) !important;
@@ -494,7 +497,7 @@ a.card .chev {
   transition: transform .15s ease, background-color .15s ease;
 }
 a.card:hover .chev {
-  background-color: var(--hub-lima);
+  background-color: var(--hub-acento);
   transform: translate(2px, -2px);
 }
 a.card { border-radius: 22px !important; }
@@ -516,7 +519,7 @@ a.card:hover, .kpi:hover {
   box-shadow: 0 2px 4px rgba(16, 24, 40, 0.05), 0 22px 40px -18px rgba(16, 24, 40, 0.28) !important;
 }
 .kpi-grid > .kpi:first-child:not(.tcard .kpi):not(.card .kpi) {
-  box-shadow: 0 8px 22px -10px rgba(150, 190, 30, 0.65) !important;
+  box-shadow: 0 8px 22px -10px rgba(40, 150, 220, 0.55) !important;
 }
 .kpi-grid > .kpi:nth-child(2):not(.tcard .kpi):not(.card .kpi) {
   box-shadow: 0 24px 48px -20px rgba(16, 24, 40, 0.45) !important;
@@ -524,7 +527,7 @@ a.card:hover, .kpi:hover {
 .btn-primary, button.primary, .df-btn-primary, .btn-guardar, .login button, #bydGate button, .fab,
 .tabs button.active, .tab-btn.active, .tabs-bar button.active, .tabbar button.active,
 .view-tab.active, .cfgsub-tab.active, .switch button.active, .pill-btn.active, .catalogo-filtro-pill.active {
-  box-shadow: 0 8px 22px -10px rgba(150, 190, 30, 0.65) !important;
+  box-shadow: 0 8px 22px -10px rgba(40, 150, 220, 0.55) !important;
 }
 .kpi { transition: transform .18s ease, box-shadow .18s ease; }
 .kpi:hover { transform: translateY(-2px); }
