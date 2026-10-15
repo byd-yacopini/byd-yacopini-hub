@@ -25,7 +25,7 @@
   .reglas{ background:#EEF4FF; border:1px solid #C9DAFB; color:#1F3F7A; font-size:12.5px; border-radius:10px; padding:10px 12px; margin-bottom:14px; line-height:1.55; }
   .reglas b{ color:#12306B; }
 
-  .kpis{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:14px; }
+  .kpis{ display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:8px; margin-bottom:14px; }
   .kpi{ background:var(--blanco); border:1px solid var(--gris-claro); border-radius:12px; padding:12px 14px; text-align:left; font-family:inherit; cursor:pointer; }
   .kpi .n{ font-size:26px; font-weight:800; font-variant-numeric:tabular-nums; color:var(--negro); line-height:1.1; }
   .kpi .l{ font-size:11.5px; font-weight:600; color:var(--gris-oscuro); margin-top:3px; line-height:1.3; }
@@ -57,7 +57,29 @@
   .wa{ display:inline-block; padding:8px 12px; border-radius:10px; background:#1FA855; color:#fff; font-weight:700; font-size:12.5px; text-decoration:none; }
   .sin-cel{ font-size:11.5px; color:var(--gris-medio); }
   .vacio{ background:var(--blanco); border:1px dashed var(--gris-claro); border-radius:12px; padding:24px; text-align:center; color:var(--gris-medio); font-size:13px; }
+  .btn.principal{ background:var(--azul-ev); border-color:var(--azul-ev); color:#fff; }
+  .btn.chico{ padding:7px 11px; font-size:12.5px; }
+  .u-pie{ border-top:1px solid var(--gris-fondo); padding:10px 14px; background:#FAFAFA; }
+  .reg{ display:grid; grid-template-columns:130px 150px 150px minmax(0,1fr) auto; gap:10px; align-items:end; }
+  .reg label{ display:block; font-size:10.5px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; color:var(--gris-medio); }
+  .reg input, .reg select{ display:block; width:100%; margin-top:4px; font-family:inherit; font-size:14px; padding:8px 10px; border:1px solid var(--gris-claro); border-radius:10px; background:var(--blanco); color:var(--carbon); }
+  .reg-tit{ font-size:12.5px; font-weight:700; color:var(--negro); margin-bottom:8px; }
+  .reg-aviso{ font-size:12px; color:var(--gris-oscuro); margin-top:8px; }
+  .pill.pend{ background:#FFF7E6; color:#7A5A00; border:1px solid #F0D48A; }
+  .reg .botones{ display:flex; gap:8px; }
+  .r-msg{ font-size:12.5px; margin-top:8px; color:var(--rojo); }
+  .r-msg.ok{ color:var(--verde); }
+  .hist{ font-size:12.5px; line-height:1.5; }
+  .hist .t{ font-size:10.5px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; color:var(--gris-medio); margin-bottom:4px; }
+  .hist .h{ display:flex; gap:10px; align-items:baseline; justify-content:space-between; padding:5px 0; border-top:1px solid var(--gris-fondo); }
+  .hist .h:first-of-type{ border-top:0; }
+  .hist .h span.txt{ min-width:0; overflow-wrap:anywhere; }
+  .link-btn{ background:none; border:0; padding:0; color:var(--rojo); font-family:inherit; font-size:12px; font-weight:700; cursor:pointer; text-decoration:underline; white-space:nowrap; }
   @media (max-width:720px){
+    .reg{ grid-template-columns:1fr 1fr; }
+    .reg .fecha{ grid-column:1 / -1; }
+    .reg .botones{ grid-column:1 / -1; }
+    .reg .notas{ grid-column:1 / -1; }
     .kpis{ grid-template-columns:repeat(2,1fr); }
     .u-cuerpo{ grid-template-columns:1fr; }
     .campo{ border-left:0; border-top:1px solid var(--gris-fondo); }
@@ -75,7 +97,8 @@
   <div class="reglas">
     <b>Plan de services:</b> eléctricos cada <b>20.000 km o 1 año</b>; híbridos cada <b>15.000 km o 1 año</b> (lo que ocurra primero).
     <b>Garantía:</b> <b>6 años</b> mecánica, <b>8 años</b> batería, con tope de <b>150.000 km</b>.<br>
-    El CRM no trae kilómetros: las fechas se calculan <b>por tiempo</b>, desde la entrega. Una unidad puede necesitar el service antes si ya hizo los km.
+    El primer service se cuenta desde la <b>entrega</b>. Cuando pedís el ingreso a servicio (service N.º y km con los que entra), <b>la cuenta empieza de nuevo</b>: el siguiente se calcula desde esa fecha y esos km.
+    El CRM no trae kilómetros: hasta el primer ingreso las fechas se calculan solo por tiempo.
   </div>
 
   <p class="estado" id="estado">Leyendo las entregas…</p>
@@ -144,34 +167,40 @@
   }
 
   // ---------- Cálculo de cada unidad ----------
-  var ORDEN = { p30: 0, reciente: 1, p60: 2, p90: 3, ok: 4 };
-  function calcular(f, hoy){
-    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(f.fecha); if (!m) return null;
-    var ent = new Date(+m[1], +m[2] - 1, +m[3]);
-    var tipo = tipoDe(f.modelo);
-    var anios = 0; while (sumarAnios(ent, anios + 1) <= hoy) anios++;
-    var n = anios + 1;                                        // service que viene
-    var prox = sumarAnios(ent, n * REGLAS.servicio.anios);
+  var MAX_SERVICE = 8;   // 8 años de garantía de batería
+  var ORD = ['', '1.º', '2.º', '3.º', '4.º', '5.º', '6.º', '7.º', '8.º', '9.º', '10.º', '11.º', '12.º'];
+  function fechaDeTexto(s){
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s || '')); if (!m) return null;
+    return new Date(+m[1], +m[2] - 1, +m[3]);
+  }
+  // 'servs': services cargados de esta unidad (ordenados por fecha). La cuenta arranca de nuevo con cada uno:
+  // el siguiente es 1 año después de ese service (o a los km de ese service + el intervalo, si se cargaron km).
+  function calcular(f, hoy, servs){
+    var ent = fechaDeTexto(f.fecha); if (!ent) return null;
+    servs = servs || [];
+    var tipo = tipoDe(f.modelo), intervaloKm = REGLAS.servicio.km[tipo];
+    var ultimo = servs.length ? servs[servs.length - 1] : null;
+    var base = ultimo ? (fechaDeTexto(ultimo.fecha) || ent) : ent;
+    var n = servs.reduce(function(m, s){ return Math.max(m, s.numero || 0); }, 0) + 1;   // service que viene
+    var prox = sumarAnios(base, REGLAS.servicio.anios);
     var dias = diasEntre(hoy, prox);
-    var ultimo = anios >= 1 ? sumarAnios(ent, anios) : null;  // aniversario que ya pasó
-    var desdeUltimo = ultimo ? diasEntre(ultimo, hoy) : null;
-    var bucket = 'ok';
-    if (dias <= 30) bucket = 'p30';
-    else if (ultimo && desdeUltimo <= 60) bucket = 'reciente';
-    else if (dias <= 60) bucket = 'p60';
-    else if (dias <= 90) bucket = 'p90';
+    var kmBase = ultimo ? ultimo.km : 0;                        // la entrega es 0 km
+    var kmProx = (kmBase !== null && kmBase !== undefined) ? Number(kmBase) + intervaloKm : null;
+    var bucket = dias < 0 ? 'vencido' : dias <= 30 ? 'p30' : dias <= 60 ? 'p60' : dias <= 90 ? 'p90' : 'ok';
     var mec = sumarAnios(ent, REGLAS.garantia.mecanicaAnios), bat = sumarAnios(ent, REGLAS.garantia.bateriaAnios);
     return {
-      f: f, ent: ent, tipo: tipo, modelo: modeloCorto(f.modelo), n: n, prox: prox, dias: dias,
-      ultimo: ultimo, desdeUltimo: desdeUltimo, bucket: bucket, mec: mec, bat: bat,
+      f: f, ent: ent, tipo: tipo, modelo: modeloCorto(f.modelo), n: n, prox: prox, dias: dias, bucket: bucket,
+      servs: servs, ultimo: ultimo, base: base, kmProx: kmProx, intervaloKm: intervaloKm,
+      pend: servs.filter(function(s){ return s.estado !== 'Creado'; }).length,
+      mec: mec, bat: bat,
       cliente: (titulo(f.apellido) + (f.nombre ? ', ' + titulo(f.nombre) : '')).trim() || 'Sin nombre',
-      km: REGLAS.servicio.km[tipo], edadDias: diasEntre(ent, hoy)
+      edadDias: diasEntre(ent, hoy)
     };
   }
 
   // ---------- Estado ----------
-  var UNIDADES = [], FILTRO_BUCKET = '';
-  var ETIQ = { p30: 'Próximos 30 días', reciente: 'Pasaron hace poco', p60: 'En 31 a 60 días', p90: 'En 61 a 90 días', ok: 'Más adelante' };
+  var UNIDADES = [], FILTRO_BUCKET = '', ENTREGAS = [], SERVICIOS = [], ABIERTO = {}, LOCAL = false;
+  var ETIQ = { pend: 'Ingresos por crear', vencido: 'Service vencido', p30: 'Próximos 30 días', p60: 'En 31 a 60 días', p90: 'En 61 a 90 días', ok: 'Al día' };
 
   function waLink(cel, u){
     var d = String(cel || '').replace(/\D/g, '');
@@ -184,7 +213,8 @@
       else return '';
     }
     var nombre = u.f.nombre ? titulo(u.f.nombre.split(' ')[0]) : '';
-    var texto = 'Hola' + (nombre ? ' ' + nombre : '') + ', te escribimos de BYD Yacopini. Se acerca el service de tu ' + u.modelo + ' y queremos coordinar un turno. ¿Cuándo te viene bien?';
+    var cuando = u.bucket === 'vencido' ? 'Ya pasó la fecha del service de tu ' : 'Se acerca el service de tu ';
+    var texto = 'Hola' + (nombre ? ' ' + nombre : '') + ', te escribimos de BYD Yacopini. ' + cuando + u.modelo + ' y queremos coordinar un turno. ¿Cuándo te viene bien?';
     return 'https://wa.me/' + d + '?text=' + encodeURIComponent(texto);
   }
 
@@ -192,7 +222,8 @@
     var q = $('buscar').value.trim().toLowerCase();
     var suc = $('fSucursal').value, tipo = $('fTipo').value, mod = $('fModelo').value, ven = $('fVendedor').value;
     return UNIDADES.filter(function(u){
-      if (FILTRO_BUCKET && u.bucket !== FILTRO_BUCKET) return false;
+      if (FILTRO_BUCKET === 'pend'){ if (!u.pend) return false; }
+      else if (FILTRO_BUCKET && u.bucket !== FILTRO_BUCKET) return false;
       if (suc && u.f.sucursal !== suc) return false;
       if (tipo && u.tipo !== tipo) return false;
       if (mod && u.modelo !== mod) return false;
@@ -200,25 +231,27 @@
       if (q && (u.cliente + ' ' + u.f.vin + ' ' + u.f.modelo).toLowerCase().indexOf(q) === -1) return false;
       return true;
     }).sort(function(a, b){
-      if (ORDEN[a.bucket] !== ORDEN[b.bucket]) return ORDEN[a.bucket] - ORDEN[b.bucket];
-      return a.bucket === 'reciente' ? a.desdeUltimo - b.desdeUltimo : a.dias - b.dias;
+      if ((a.pend > 0) !== (b.pend > 0)) return a.pend > 0 ? -1 : 1;   // primero los ingresos por crear
+      return a.dias - b.dias;                                          // después vencidos (más atrasados primero) y los que vienen
     });
   }
 
   function pillDe(u){
-    if (u.bucket === 'p30') return '<span class="pill rojo">Service en ' + u.dias + (u.dias === 1 ? ' día' : ' días') + '</span>';
-    if (u.bucket === 'reciente') return '<span class="pill ambar">Cumplió el año hace ' + u.desdeUltimo + (u.desdeUltimo === 1 ? ' día' : ' días') + '</span>';
-    if (u.bucket === 'p60' || u.bucket === 'p90') return '<span class="pill azul">Service en ' + u.dias + ' días</span>';
-    return '<span class="pill verde">Al día por tiempo</span>';
+    var d = Math.abs(u.dias), dias = d + (d === 1 ? ' día' : ' días');
+    if (u.bucket === 'vencido') return '<span class="pill rojo">Service vencido hace ' + dias + '</span>';
+    if (u.bucket === 'p30') return '<span class="pill ambar">Service ' + (u.dias === 0 ? 'hoy' : 'en ' + dias) + '</span>';
+    if (u.bucket === 'p60' || u.bucket === 'p90') return '<span class="pill azul">Service en ' + dias + '</span>';
+    return '<span class="pill verde">Al día</span>';
   }
 
   function dibujarKpis(){
-    var c = { p30: 0, reciente: 0, p60: 0, p90: 0, ok: 0 };
+    var c = { vencido: 0, p30: 0, p60: 0, p90: 0, ok: 0 };
     UNIDADES.forEach(function(u){ c[u.bucket]++; });
     var def = [
       { k: '', n: UNIDADES.length, l: 'Unidades entregadas', c: '' },
-      { k: 'p30', n: c.p30, l: 'Service en los próximos 30 días', c: 'rojo' },
-      { k: 'reciente', n: c.reciente, l: 'Cumplieron el año hace menos de 60 días (confirmar si hicieron el service)', c: 'ambar' },
+      { k: 'pend', n: UNIDADES.filter(function(u){ return u.pend > 0; }).length, l: 'Ingresos a servicio por crear', c: 'ambar' },
+      { k: 'vencido', n: c.vencido, l: 'Service vencido (pasó la fecha y no hay ingreso cargado)', c: 'rojo' },
+      { k: 'p30', n: c.p30, l: 'Service en los próximos 30 días', c: 'ambar' },
       { k: 'p60', n: c.p60 + c.p90, l: 'Service en 31 a 90 días', c: 'azul' }
     ];
     $('kpis').innerHTML = def.map(function(d){
@@ -227,37 +260,86 @@
     }).join('');
   }
 
+  function textoKm(u){
+    return 'o a los ' + numAr(u.kmProx) + ' km, lo que ocurra primero';
+  }
+
+  function tarjeta(u){
+    var vin = u.f.vin, ab = ABIERTO[vin] || {};
+    var wa = waLink(u.f.celular, u);
+    var contacto = wa ? '<a class="wa" href="' + wa + '" target="_blank" rel="noopener">WhatsApp</a>'
+      : (u.f.celular ? '<span class="sin-cel">' + esc(u.f.celular) + '</span>' : '<span class="sin-cel">Sin celular</span>');
+    var hechos = u.servs.length;
+    var ultimoTxt = u.ultimo
+      ? 'Último ingreso: service N.º ' + (u.ultimo.numero || '–') + ' · ' + fmt(fechaDeTexto(u.ultimo.fecha)) + (u.ultimo.km !== null ? ' · ' + numAr(u.ultimo.km) + ' km' : '')
+      : 'Todavía sin ingresos a servicio';
+    var kmGar = '';
+    if (u.ultimo && u.ultimo.km !== null){
+      var quedan = REGLAS.garantia.km - u.ultimo.km;
+      kmGar = quedan >= 0 ? '<br>Con ' + numAr(u.ultimo.km) + ' km: quedan ' + numAr(quedan) + ' km de garantía'
+        : '<br><b style="color:var(--rojo)">Superó los ' + numAr(REGLAS.garantia.km) + ' km de garantía</b>';
+    }
+    var pie = '';
+    if (ab.form){
+      var tomados = {}; u.servs.forEach(function(s){ if (s.numero) tomados[s.numero] = 1; });
+      var opts = ''; for (var k = 1; k <= MAX_SERVICE; k++) opts += '<option value="' + k + '"' + (k === Math.min(u.n, MAX_SERVICE) ? ' selected' : '') + (tomados[k] ? ' disabled' : '') + '>' + ORD[k] + ' service' + (tomados[k] ? ' (ya cargado)' : '') + '</option>';
+      pie += '<div class="u-pie"><div class="reg-tit">Pedir el ingreso a servicio de esta unidad</div><div class="reg">' +
+        '<label>Qué service es<select class="r-numero">' + opts + '</select></label>' +
+        '<label>Km con los que ingresa<input type="number" class="r-km" inputmode="numeric" min="0" max="500000" placeholder="Ej. 20150"></label>' +
+        '<label class="fecha">Fecha de ingreso<input type="date" class="r-fecha" max="' + hoyIso() + '" value="' + hoyIso() + '"></label>' +
+        '<label class="notas">Notas<input type="text" class="r-notas" maxlength="300" placeholder="Opcional"></label>' +
+        '<div class="botones"><button type="button" class="btn principal r-guardar">Pedir ingreso</button><button type="button" class="btn r-cancelar">Cancelar</button></div>' +
+        '</div><div class="reg-aviso">Queda como <b>ingreso por crear</b> hasta que el taller lo marque como creado. Desde esta fecha y estos km se vuelve a contar el próximo service.</div>' +
+        '<div class="r-msg"></div></div>';
+    }
+    if (ab.hist && hechos){
+      pie += '<div class="u-pie"><div class="hist"><div class="t">Ingresos a servicio</div>' +
+        u.servs.map(function(s){
+          var estado = s.estado === 'Creado'
+            ? '<span class="pill verde">Ingreso creado' + (s.creadoEl ? ' el ' + fmt(fechaDeTexto(s.creadoEl)) : '') + '</span>'
+            : '<span class="pill pend">Ingreso por crear</span> <button type="button" class="btn chico r-creado" data-id="' + esc(s.id) + '">Marcar ingreso creado</button>';
+          return '<div class="h"><span class="txt"><b>' + (s.numero ? ORD[s.numero] : 'Service') + '</b> · ' + fmt(fechaDeTexto(s.fecha)) + (s.km !== null ? ' · ' + numAr(s.km) + ' km' : '') +
+            (s.notas ? ' · ' + esc(s.notas) : '') + ' <span class="sin-cel">(pidió ' + esc(s.por || '–') + ')</span><br>' + estado + '</span>' +
+            '<button type="button" class="link-btn r-anular" data-id="' + esc(s.id) + '">Anular</button></div>';
+        }).join('') + '<div class="r-msg"></div></div></div>';
+    }
+    return '<div class="u" data-vin="' + esc(vin) + '">' +
+      '<div class="u-cab">' +
+        '<div><div class="cli">' + esc(u.cliente) + '</div>' +
+          '<div class="sub-cli"><b>' + esc(u.modelo) + '</b> · ' + (u.tipo === 'EV' ? 'Eléctrico' : 'Híbrido') + (u.f.color ? ' · ' + esc(u.f.color) : '') + '</div>' +
+          '<div class="vin">' + esc(vin) + '</div></div>' +
+        '<div class="acc">' + (u.pend ? '<span class="pill pend">' + (u.pend === 1 ? 'Ingreso por crear' : u.pend + ' ingresos por crear') + '</span>' : '') + pillDe(u) + contacto + '</div>' +
+      '</div>' +
+      '<div class="u-cuerpo">' +
+        '<div class="campo"><div class="et">Entrega</div><div class="gr">' + fmt(u.ent) + '</div>' +
+          '<div class="tenue">' + esc(u.f.sucursal || 'Sin sucursal') + '<br>Vendedor: ' + esc(u.f.vendedor || '–') + '</div></div>' +
+        '<div class="campo"><div class="et">Próximo service · N.º ' + u.n + '</div><div class="gr">' + fmt(u.prox) + '</div>' +
+          '<div class="tenue">' + esc(textoKm(u)) + '<br>' + esc(ultimoTxt) + '</div>' +
+          '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">' +
+            '<button type="button" class="btn chico principal r-abrir">Pedir ingreso a servicio</button>' +
+            (hechos ? '<button type="button" class="btn chico r-hist">Historial (' + hechos + ')</button>' : '') +
+          '</div></div>' +
+        '<div class="campo"><div class="et">Garantía</div><div class="gr">Mecánica: ' + fmt(u.mec) + '</div>' +
+          '<div class="tenue">Batería: ' + fmt(u.bat) + '<br>Hasta ' + numAr(REGLAS.garantia.km) + ' km' + kmGar + '</div></div>' +
+      '</div>' + pie +
+    '</div>';
+  }
+
+  function hoyIso(){ var h = hoyLocal(); return h.getFullYear() + '-' + pad(h.getMonth() + 1) + '-' + pad(h.getDate()); }
+
   function dibujarLista(){
     var lista = filtradas();
     $('cuenta').textContent = numAr(lista.length) + ' de ' + numAr(UNIDADES.length) + ' unidades' + (FILTRO_BUCKET ? ' · ' + ETIQ[FILTRO_BUCKET] : '');
     if (!lista.length){ $('lista').innerHTML = '<div class="vacio">No hay unidades con esos filtros.</div>'; return; }
-    $('lista').innerHTML = lista.slice(0, 300).map(function(u){
-      var wa = waLink(u.f.celular, u);
-      var contacto = wa ? '<a class="wa" href="' + wa + '" target="_blank" rel="noopener">WhatsApp</a>'
-        : (u.f.celular ? '<span class="sin-cel">' + esc(u.f.celular) + '</span>' : '<span class="sin-cel">Sin celular</span>');
-      return '<div class="u">' +
-        '<div class="u-cab">' +
-          '<div><div class="cli">' + esc(u.cliente) + '</div>' +
-            '<div class="sub-cli"><b>' + esc(u.modelo) + '</b> · ' + (u.tipo === 'EV' ? 'Eléctrico' : 'Híbrido') + (u.f.color ? ' · ' + esc(u.f.color) : '') + '</div>' +
-            '<div class="vin">' + esc(u.f.vin) + '</div></div>' +
-          '<div class="acc">' + pillDe(u) + contacto + '</div>' +
-        '</div>' +
-        '<div class="u-cuerpo">' +
-          '<div class="campo"><div class="et">Entrega</div><div class="gr">' + fmt(u.ent) + '</div>' +
-            '<div class="tenue">' + esc(u.f.sucursal || 'Sin sucursal') + '<br>Vendedor: ' + esc(u.f.vendedor || '–') + '</div></div>' +
-          '<div class="campo"><div class="et">Próximo service · N.º ' + u.n + '</div><div class="gr">' + fmt(u.prox) + '</div>' +
-            '<div class="tenue">o a los ' + numAr(u.km * u.n) + ' km, lo que ocurra primero</div></div>' +
-          '<div class="campo"><div class="et">Garantía</div><div class="gr">Mecánica: ' + fmt(u.mec) + '</div>' +
-            '<div class="tenue">Batería: ' + fmt(u.bat) + '<br>Hasta ' + numAr(REGLAS.garantia.km) + ' km</div></div>' +
-        '</div>' +
-      '</div>';
-    }).join('') + (lista.length > 300 ? '<div class="vacio">Se muestran las primeras 300. Usá los filtros o bajá la lista completa.</div>' : '');
+    $('lista').innerHTML = lista.slice(0, 300).map(tarjeta).join('') +
+      (lista.length > 300 ? '<div class="vacio">Se muestran las primeras 300. Usá los filtros o bajá la lista completa.</div>' : '');
   }
 
   function llenarFiltros(){
     function opciones(id, valores){
-      var sel = $(id), base = sel.options[0].outerHTML;
+      var sel = $(id), actual = sel.value, base = sel.options[0].outerHTML;
       sel.innerHTML = base + valores.map(function(v){ return '<option>' + esc(v) + '</option>'; }).join('');
+      sel.value = actual;
     }
     function unicos(fn){ var o = {}; UNIDADES.forEach(function(u){ var v = fn(u); if (v) o[v] = 1; }); return Object.keys(o).sort(); }
     opciones('fSucursal', unicos(function(u){ return u.f.sucursal; }));
@@ -279,11 +361,13 @@
   });
 
   $('bajar').addEventListener('click', function(){
-    var cab = ['Cliente', 'VIN', 'Modelo', 'Tipo', 'Sucursal', 'Vendedor', 'Celular', 'Email', 'Fecha de entrega', 'Service N.º', 'Fecha del service', 'Estado', 'Garantía mecánica hasta', 'Garantía batería hasta'];
+    var cab = ['Cliente', 'VIN', 'Modelo', 'Tipo', 'Sucursal', 'Vendedor', 'Celular', 'Email', 'Fecha de entrega', 'Ingresos a servicio', 'Ingresos por crear', 'Último service N.º',
+      'Fecha último ingreso', 'Km último ingreso', 'Próximo service N.º', 'Fecha del próximo service', 'Estado', 'Garantía mecánica hasta', 'Garantía batería hasta'];
     function cel(v){ var s = String(v == null ? '' : v); return /[",;\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
     var filas = filtradas().map(function(u){
       return [u.cliente, u.f.vin, u.f.modelo, u.tipo === 'EV' ? 'Eléctrico' : 'Híbrido', u.f.sucursal, u.f.vendedor, u.f.celular, u.f.email,
-        fmt(u.ent), u.n, fmt(u.prox), ETIQ[u.bucket], fmt(u.mec), fmt(u.bat)].map(cel).join(';');
+        fmt(u.ent), u.servs.length, u.pend, u.ultimo && u.ultimo.numero ? u.ultimo.numero : '', u.ultimo ? fmt(fechaDeTexto(u.ultimo.fecha)) : '',
+        u.ultimo && u.ultimo.km !== null ? u.ultimo.km : '', u.n, fmt(u.prox), ETIQ[u.bucket], fmt(u.mec), fmt(u.bat)].map(cel).join(';');
     });
     var csv = '﻿' + [cab.map(cel).join(';')].concat(filas).join('\r\n');
     var a = document.createElement('a');
@@ -293,29 +377,109 @@
   });
 
   // ---------- Datos ----------
-  function mostrar(j){
-    var hoy = hoyLocal();
-    UNIDADES = (j.filas || []).map(function(f){ return calcular(f, hoy); }).filter(Boolean);
+  function recalcular(){
+    var hoy = hoyLocal(), porVin = {};
+    SERVICIOS.forEach(function(s){ (porVin[s.vin] = porVin[s.vin] || []).push(s); });
+    Object.keys(porVin).forEach(function(v){ porVin[v].sort(function(a, b){ return a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0; }); });
+    UNIDADES = ENTREGAS.map(function(f){ return calcular(f, hoy, porVin[String(f.vin).toUpperCase()] || []); }).filter(Boolean);
+  }
+  function textoEstado(generado){
     $('estado').className = 'estado';
-    $('estado').textContent = 'Entregas leídas: ' + numAr(UNIDADES.length) + ' unidades' + (j.generado ? ' · actualizado ' + String(j.generado).replace('T', ' ') : '') + '.';
-    llenarFiltros(); refrescar();
+    $('estado').textContent = 'Entregas leídas: ' + numAr(UNIDADES.length) + ' unidades · ' + numAr(SERVICIOS.length) + ' ingresos a servicio cargados' +
+      (generado ? ' · actualizado ' + String(generado).replace('T', ' ') : '') + (LOCAL ? ' · MODO PRUEBA (no se guarda)' : '') + '.';
+  }
+  function normServ(s){
+    return { id: String(s.id), vin: String(s.vin).toUpperCase(), numero: s.numero ? Number(s.numero) : null, fecha: s.fecha,
+      km: (s.km === null || s.km === undefined || s.km === '') ? null : Number(s.km), notas: s.notas || '',
+      estado: s.estado === 'Creado' ? 'Creado' : 'Pendiente', por: s.por || '', creadoPor: s.creadoPor || '', creadoEl: s.creadoEl || '' };
+  }
+  function mostrar(j){
+    ENTREGAS = j.filas || [];
+    SERVICIOS = (j.servicios || []).map(normServ);
+    recalcular(); textoEstado(j.generado); llenarFiltros(); refrescar();
   }
   function fallo(m){ $('estado').className = 'estado mal'; $('estado').textContent = m; $('lista').innerHTML = ''; }
 
-  function pedir(){
-    if (window.__servidorFalso) return Promise.resolve(window.__servidorFalso());
+  // Pide una acción al Apps Script con la sesión del hub.
+  function llamar(accion, extra){
+    if (window.__servidorFalso) return Promise.resolve(window.__servidorFalso(accion, extra));
+    if (LOCAL) return Promise.resolve(simular(accion, extra));
     if (!window.supabase) return Promise.reject(new Error('No se pudo cargar el acceso del hub.'));
     var db = window.supabase.createClient(SUPA_URL, SUPA_ANON);
     return db.auth.getSession().then(function(r){
       var ses = r && r.data && r.data.session;
       if (!ses){ location.replace('./index.html?volver=postventa.html'); throw new Error('sin sesión'); }
-      return fetch(APPS_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ key: APPS_KEY, action: 'postVentaLeer', token: ses.access_token }) });
+      var cuerpo = { key: APPS_KEY, action: accion, token: ses.access_token };
+      Object.keys(extra || {}).forEach(function(k){ cuerpo[k] = extra[k]; });
+      return fetch(APPS_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(cuerpo) });
     }).then(function(r){ return r.json ? r.json() : r; });
   }
+  // Solo para pruebas locales (?datos=archivo.json): guarda en memoria, no toca nada.
+  function simular(accion, extra){
+    if (accion === 'postVentaRegistrar'){
+      var vin = String(extra.vin).toUpperCase();
+      if (SERVICIOS.some(function(x){ return x.vin === vin && x.numero === Number(extra.numero); })) return { error: 'Esa unidad ya tiene cargado el service N.º ' + extra.numero + '.' };
+      var s = { id: 'L' + Date.now(), vin: vin, numero: Number(extra.numero), fecha: extra.fecha, km: Number(extra.km), notas: extra.notas || '', estado: 'Pendiente', por: 'Prueba' };
+      return { ok: true, servicio: s };
+    }
+    if (accion === 'postVentaIngresoCreado') return { ok: true, id: extra.id, creadoPor: 'Prueba', creadoEl: hoyIso() };
+    if (accion === 'postVentaAnular') return { ok: true, id: extra.id };
+    return { error: 'accion desconocida' };
+  }
+
+  // ---------- Registrar / anular un service ----------
+  $('lista').addEventListener('click', function(e){
+    var t = e.target, card = t.closest && t.closest('.u'); if (!card) return;
+    var vin = card.dataset.vin; ABIERTO[vin] = ABIERTO[vin] || {};
+    function redibujar(){ dibujarLista(); var el = $('lista').querySelector('.u[data-vin="' + vin + '"]'); if (el && el.scrollIntoView) el.scrollIntoView({ block: 'nearest' }); }
+    function msg(texto, ok){ var m = card.querySelector('.r-msg'); if (m){ m.textContent = texto; m.className = 'r-msg' + (ok ? ' ok' : ''); } }
+
+    if (t.classList.contains('r-abrir')){ ABIERTO[vin].form = !ABIERTO[vin].form; redibujar(); return; }
+    if (t.classList.contains('r-cancelar')){ ABIERTO[vin].form = false; redibujar(); return; }
+    if (t.classList.contains('r-hist')){ ABIERTO[vin].hist = !ABIERTO[vin].hist; redibujar(); return; }
+
+    if (t.classList.contains('r-guardar')){
+      var numero = card.querySelector('.r-numero').value, fecha = card.querySelector('.r-fecha').value;
+      var km = card.querySelector('.r-km').value.trim(), notas = card.querySelector('.r-notas').value.trim();
+      if (!numero) return msg('Elegí qué service es.');
+      if (km === '') return msg('Cargá los kilómetros con los que ingresa.');
+      if (!(Number(km) >= 0 && Number(km) <= 500000)) return msg('Revisá los kilómetros (entre 0 y 500.000).');
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return msg('Poné la fecha de ingreso.');
+      if (fecha > hoyIso()) return msg('La fecha de ingreso no puede ser futura.');
+      t.disabled = true; msg('Guardando…', true);
+      llamar('postVentaRegistrar', { vin: vin, numero: Number(numero), fecha: fecha, km: Number(km), notas: notas }).then(function(j){
+        if (!j || j.error || !j.servicio) throw new Error(j && j.error ? j.error : 'respuesta vacía');
+        SERVICIOS.push(normServ(j.servicio));
+        ABIERTO[vin].form = false; ABIERTO[vin].hist = true;
+        recalcular(); textoEstado(); refrescar();
+      }).catch(function(err){ t.disabled = false; msg('No se pudo guardar: ' + (err.message || err)); });
+      return;
+    }
+
+    if (t.classList.contains('r-creado')){
+      var idc = t.dataset.id; t.disabled = true;
+      llamar('postVentaIngresoCreado', { id: idc }).then(function(j){
+        if (!j || j.error) throw new Error(j && j.error ? j.error : 'respuesta vacía');
+        SERVICIOS.forEach(function(s){ if (s.id === idc){ s.estado = 'Creado'; s.creadoPor = j.creadoPor || ''; s.creadoEl = j.creadoEl || ''; } });
+        recalcular(); textoEstado(); refrescar();
+      }).catch(function(err){ t.disabled = false; msg('No se pudo marcar: ' + (err.message || err)); });
+      return;
+    }
+
+    if (t.classList.contains('r-anular')){
+      if (!window.confirm('¿Anular este ingreso? Se vuelve a contar desde el ingreso anterior (o desde la entrega).')) return;
+      var id = t.dataset.id; t.disabled = true;
+      llamar('postVentaAnular', { id: id }).then(function(j){
+        if (!j || j.error) throw new Error(j && j.error ? j.error : 'respuesta vacía');
+        SERVICIOS = SERVICIOS.filter(function(s){ return s.id !== id; });
+        recalcular(); textoEstado(); refrescar();
+      }).catch(function(err){ t.disabled = false; msg('No se pudo anular: ' + (err.message || err)); });
+    }
+  });
 
   var datos = new URLSearchParams(location.search).get('datos');   // solo para pruebas locales
-  var origen = datos ? fetch(datos).then(function(r){ return r.json(); }) : pedir();
+  LOCAL = !!datos;
+  var origen = datos ? fetch(datos).then(function(r){ return r.json(); }) : llamar('postVentaLeer');
   origen.then(function(j){
     if (!j || j.error || !j.filas) throw new Error(j && j.error ? j.error : 'respuesta vacía');
     mostrar(j);
