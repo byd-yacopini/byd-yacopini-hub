@@ -620,6 +620,28 @@ a.card:hover, .kpi:hover {
 @media (prefers-reduced-motion: no-preference) {
   .pie-chart.torta3d > svg.torta3d-svg { animation: hub-torta 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
 }
+/* Calidad (barrita de entregas por vendedor) y las barras de Fichas
+   Técnicas (visual.js), con el mismo relieve. */
+.barra, .esc-barra, .esc-bateria .pista {
+  height: 12px !important;
+  border-radius: 999px !important;
+  background: var(--hub-panel-2) !important;
+  box-shadow: inset 0 2px 3px rgba(16, 24, 40, 0.14), inset 0 -1px 0 rgba(255, 255, 255, 0.6) !important;
+  overflow: hidden;
+}
+.barra i {
+  background: linear-gradient(180deg, #9ad8ff 0%, #4d9cf5 48%, #4d6cf2 100%) !important;
+  box-shadow: inset 0 2px 1px rgba(255, 255, 255, 0.55), inset 0 -3px 4px rgba(10, 20, 60, 0.28);
+  border-radius: 999px !important;
+  transform-origin: left center;
+}
+html .escenario .esc-barra > div, html .escenario .pista > div {
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.08) 45%, rgba(0, 0, 0, 0.18) 100%) !important;
+  box-shadow: inset 0 -1px 2px rgba(0, 0, 0, 0.2);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .barra i { animation: hub-barra 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+}
 .pie-legend .dot {
   box-shadow: inset 0 -2px 3px rgba(0, 0, 0, 0.25), inset 0 1px 2px rgba(255, 255, 255, 0.6), 0 2px 4px -1px rgba(16, 24, 40, 0.3);
 }

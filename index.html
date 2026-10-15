@@ -2481,7 +2481,7 @@ if (data.session) {
       '.kpi-ico{background:#E8F0FD !important;}' +
       '*,*::before,*::after{animation:none !important;transition:none !important;}' +
       // Las sombras de adentro (relieve de barras y puntitos) html2canvas las pinta como un velo encima.
-      '.bar-track,.bar-fill,.progress-row .ptrack,.progress-row .pfill,.pie-legend .dot{box-shadow:none !important;}';
+      '.bar-track,.bar-fill,.progress-row .ptrack,.progress-row .pfill,.pie-legend .dot,.barra,.barra i,.esc-barra,.esc-barra>div,.pista,.pista>div{box-shadow:none !important;}';
     doc.head.appendChild(st);
     return function () { if (st.parentNode) st.parentNode.removeChild(st); };
   }
@@ -2571,7 +2571,9 @@ if (data.session) {
           // de cero (opacidad 0) y las fichas saldrían transparentes.
           onclone: function (d) {
             var st = d.createElement('style');
-            st.textContent = '*,*::before,*::after{animation:none !important;transition:none !important;}';
+            st.textContent = '*,*::before,*::after{animation:none !important;transition:none !important;}' +
+              // Y sin las sombras de adentro del relieve, que html2canvas pinta como un velo.
+              '.bar-track,.bar-fill,.progress-row .ptrack,.progress-row .pfill,.pie-legend .dot,.barra,.barra i,.esc-barra,.esc-barra>div,.pista,.pista>div{box-shadow:none !important;}';
             d.head.appendChild(st);
           },
         }).then(function (cv) {
