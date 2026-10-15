@@ -52,23 +52,6 @@
   .compare-table tbody tr:last-child th, .compare-table tbody tr:last-child td{ border-bottom:none; }
   .compare-row-moto td{ font-weight:700; }
   .compare-empty{ padding:50px 24px; text-align:center; color:var(--gris-oscuro); font-size:13.5px; line-height:1.6; }
-  /* Calculadora de Carga */
-  .tabs-switch{ flex-wrap:wrap; }
-  .tabs-switch .tab-btn{ flex:1 1 auto; }
-  .carga-wrap{ padding:0 20px 28px; }
-  .carga-chips{ display:flex; flex-wrap:wrap; gap:8px; margin:0 0 14px; }
-  .carga-chip{ background:var(--blanco); border:1px solid var(--gris-claro); border-radius:20px; padding:6px 12px; font-size:12px; font-weight:700; color:var(--carbon); }
-  .carga-chip.si{ border-color:#B5E0C5; background:#E3F5EA; color:#145C37; }
-  .carga-chip.no{ border-color:#E7B8B8; background:#FBEAEA; color:#8A2020; }
-  .carga-aviso{ background:#FFF7E6; border:1px solid #F0D48A; color:#7A5A00; border-radius:12px; padding:12px 14px; font-size:13px; line-height:1.5; }
-  .carga-aviso.error{ background:#FBEAEA; border-color:#E7B8B8; color:#8A2020; }
-  .carga-fila{ display:flex; align-items:center; justify-content:space-between; gap:12px; background:var(--blanco); border:1px solid var(--gris-claro); border-radius:12px; padding:14px 16px; margin-bottom:10px; }
-  .carga-fila .pct{ font-size:13px; font-weight:700; color:var(--gris-oscuro); }
-  .carga-fila .pct b{ display:block; font-size:22px; color:var(--negro); font-variant-numeric:tabular-nums; }
-  .carga-fila .t{ text-align:right; }
-  .carga-fila .t b{ display:block; font-size:24px; font-weight:800; color:var(--negro); font-variant-numeric:tabular-nums; }
-  .carga-fila .t span{ font-size:11.5px; color:var(--gris-medio); }
-  .carga-nota{ font-size:11.5px; color:var(--gris-medio); line-height:1.5; margin:14px 2px 0; }
 </style>
 <style>
 /* DESKTOP-RESPONSIVE-V1 */
@@ -102,7 +85,6 @@
   <div class="tabs-switch">
     <button type="button" class="tab-btn active" data-tab="fichas">Fichas</button>
     <button type="button" class="tab-btn" data-tab="comparar">Comparar modelos</button>
-    <button type="button" class="tab-btn" data-tab="carga">Calculadora de Carga</button>
   </div>
 
   <div class="tab-view" id="view-fichas">
@@ -197,25 +179,6 @@
   </div>
   </div>
 
-  <!-- Calculadora de Carga: cuanto tarda en cargar cada modelo con cada cargador, desde 5%, 50% y 80%. -->
-  <div class="tab-view" id="view-carga" hidden>
-    <div class="carga-wrap">
-      <div class="compare-selectors" style="padding:4px 0 12px;">
-        <div class="compare-select-group">
-          <label for="cargaModelo">Modelo</label>
-          <select id="cargaModelo"></select>
-        </div>
-        <div class="compare-select-group">
-          <label for="cargaCargador">Tipo de cargador</label>
-          <select id="cargaCargador"></select>
-        </div>
-      </div>
-      <div class="carga-chips" id="cargaChips"></div>
-      <div id="cargaResultado"></div>
-      <p class="carga-nota" id="cargaNota"></p>
-    </div>
-  </div>
-
   <div class="tab-view" id="view-comparar" hidden>
     <div class="compare-empty" id="compareEmpty" hidden>Todavía no hay datos de especificaciones cargados para comparar.</div>
     <div id="compareContent">
@@ -288,7 +251,7 @@
 <script>
 (function(){
   var tabBtns = document.querySelectorAll('.tab-btn');
-  var views = { fichas: document.getElementById('view-fichas'), comparar: document.getElementById('view-comparar'), carga: document.getElementById('view-carga') };
+  var views = { fichas: document.getElementById('view-fichas'), comparar: document.getElementById('view-comparar') };
   tabBtns.forEach(function(btn){
     btn.addEventListener('click', function(){
       tabBtns.forEach(function(b){ b.classList.remove('active'); });
@@ -296,142 +259,6 @@
       Object.keys(views).forEach(function(k){ views[k].hidden = (k !== btn.dataset.tab); });
     });
   });
-})();
-</script>
-<script>
-// ---------- Calculadora de Carga ----------
-// Los datos de cada modelo (bateria, si acepta AC / DC y potencia maxima) se cargan en la planilla
-// "CARGA BYD - Datos de vehiculos" (publicada como CSV): se lee en vivo y, si no se puede, se usa esta copia.
-(function(){
-  var URL_CARGA_CSV = '';   // se completa al publicar la planilla
-  var COPIA = [
-    { modelo:'Dolphin Mini GL', bateria:30.08, ac:true,  pAC:11, dc:true,  pDC:45 },
-    { modelo:'Dolphin Mini GS', bateria:43.2,  ac:true,  pAC:11, dc:true,  pDC:45 },
-    { modelo:'Yuan Pro',        bateria:45.12, ac:true,  pAC:7,  dc:true,  pDC:45 },
-    { modelo:'Atto 2 DM-i',     bateria:18.03, ac:true,  pAC:7,  dc:false, pDC:0 },
-    { modelo:'Song Pro GL',     bateria:12.9,  ac:true,  pAC:7,  dc:false, pDC:0 },
-    { modelo:'Song Pro GS',     bateria:18.3,  ac:true,  pAC:7,  dc:false, pDC:0 },
-    { modelo:'Seal 5 DM-i',     bateria:7.68,  ac:true,  pAC:7,  dc:false, pDC:0 },
-    { modelo:'Seal U DM-i GS',  bateria:18.3,  ac:true,  pAC:7,  dc:false, pDC:0 },
-    { modelo:'Shark',           bateria:29.58, ac:true,  pAC:7,  dc:true,  pDC:45 },
-    { modelo:'Ti 7 DM-p',       bateria:null,  ac:true,  pAC:7,  dc:true,  pDC:45 }
-  ];
-  var CARGADORES = [
-    { nombre:'Enchufe domiciliario (2,2 kW)', tipo:'AC', kw:2.2 },
-    { nombre:'Wallbox monofásico (7 kW)',     tipo:'AC', kw:7 },
-    { nombre:'Wallbox trifásico (22 kW)',     tipo:'AC', kw:22 },
-    { nombre:'Cargador DC 30 kW',             tipo:'DC', kw:30 },
-    { nombre:'Cargador DC 40 kW',             tipo:'DC', kw:40 },
-    { nombre:'Cargador DC 60 kW',             tipo:'DC', kw:60 },
-    { nombre:'Cargador DC 120 kW',            tipo:'DC', kw:120 }
-  ];
-  var INICIOS = [5, 50, 80];
-  // Supuestos: perdidas del cargador a bordo (AC) y de conversion (DC); en DC la potencia cae al acercarse al tope.
-  var EFIC = { AC: 0.90, DC: 0.95 };
-  var DC_TRAMO_1 = 0.90;   // 0-80%: potencia promedio como fraccion del pico
-  var DC_TRAMO_2 = 0.35;   // 80-100%: potencia promedio como fraccion del pico
-
-  var VEHICULOS = COPIA, ORIGEN = 'copia';
-  var selM = document.getElementById('cargaModelo'), selC = document.getElementById('cargaCargador');
-  var chips = document.getElementById('cargaChips'), res = document.getElementById('cargaResultado'), nota = document.getElementById('cargaNota');
-  function esc(s){ var d = document.createElement('div'); d.textContent = (s == null ? '' : String(s)); return d.innerHTML; }
-  function num(s){ if (s == null) return null; var n = parseFloat(String(s).trim().replace(',', '.')); return isNaN(n) ? null : n; }
-  function fmtKw(n){ return (n % 1 ? n.toFixed(1).replace('.', ',') : String(n)); }
-
-  function formatoTiempo(horas){
-    var min = Math.round(horas * 60);
-    if (min < 1) return 'menos de 1 min';
-    var h = Math.floor(min / 60), m = min % 60;
-    if (h === 0) return m + ' min';
-    return h + ' h' + (m ? ' ' + (m < 10 ? '0' : '') + m + ' min' : '');
-  }
-  // Horas para cargar desde 'inicio' % hasta 100% con potencia pico 'kw' (ya limitada por auto y cargador).
-  function horas(bateria, inicio, tipo, kw){
-    var ef = EFIC[tipo];
-    function tramo(a, b, frac){ var e = bateria * (b - a) / 100; return e > 0 ? e / (kw * frac * ef) : 0; }
-    if (tipo === 'AC') return tramo(inicio, 100, 1);
-    return tramo(inicio, 80, DC_TRAMO_1) + tramo(Math.max(inicio, 80), 100, DC_TRAMO_2);
-  }
-
-  function dibujar(){
-    var v = VEHICULOS[+selM.value], c = CARGADORES[+selC.value];
-    if (!v || !c){ res.innerHTML = ''; chips.innerHTML = ''; return; }
-    chips.innerHTML =
-      '<span class="carga-chip">' + (v.bateria ? 'Batería ' + fmtKw(v.bateria) + ' kWh' : 'Batería sin dato') + '</span>' +
-      '<span class="carga-chip ' + (v.ac ? 'si' : 'no') + '">AC ' + (v.ac ? 'hasta ' + fmtKw(v.pAC) + ' kW' : 'no admite') + '</span>' +
-      '<span class="carga-chip ' + (v.dc ? 'si' : 'no') + '">DC ' + (v.dc ? 'hasta ' + fmtKw(v.pDC) + ' kW' : 'no admite') + '</span>';
-    var admite = c.tipo === 'AC' ? v.ac : v.dc, pAuto = c.tipo === 'AC' ? v.pAC : v.pDC;
-    if (!v.bateria){
-      res.innerHTML = '<div class="carga-aviso">Todavía no está cargada la capacidad de batería de <b>' + esc(v.modelo) + '</b>. Completala en la planilla de carga y se actualiza sola.</div>';
-      return;
-    }
-    if (!admite || !pAuto){
-      res.innerHTML = '<div class="carga-aviso error"><b>' + esc(v.modelo) + '</b> no admite carga ' + c.tipo + ': no se puede usar con este cargador. ' +
-        (c.tipo === 'DC' ? 'Probá con un cargador AC.' : 'Probá con un cargador DC si el modelo lo admite.') + '</div>';
-      return;
-    }
-    var pico = Math.min(c.kw, pAuto), limita = c.kw > pAuto ? 'el auto' : (c.kw < pAuto ? 'el cargador' : 'ambos');
-    var filas = INICIOS.map(function(ini){
-      var kwh = v.bateria * (100 - ini) / 100;
-      return '<div class="carga-fila"><div class="pct">Batería al<b>' + ini + '%</b></div>' +
-        '<div class="t"><b>' + formatoTiempo(horas(v.bateria, ini, c.tipo, pico)) + '</b><span>hasta 100% · ' + fmtKw(Math.round(kwh * 10) / 10) + ' kWh</span></div></div>';
-    }).join('');
-    res.innerHTML = '<div class="carga-aviso" style="background:#EEF4FF;border-color:#C9DAFB;color:#1F3F7A;margin-bottom:12px;">Potencia de carga: <b>' + fmtKw(pico) + ' kW</b> ' +
-      (limita === 'ambos' ? 'el cargador y el auto coinciden en ' + fmtKw(pico) + ' kW en ' + c.tipo : 'la limita ' + limita + ': cargador ' + fmtKw(c.kw) + ' kW · auto ' + fmtKw(pAuto) + ' kW en ' + c.tipo) + ').</div>' + filas;
-  }
-
-  function llenarSelects(){
-    selM.innerHTML = VEHICULOS.map(function(v, i){ return '<option value="' + i + '">' + esc(v.modelo) + '</option>'; }).join('');
-    selC.innerHTML = CARGADORES.map(function(c, i){ return '<option value="' + i + '">' + esc(c.nombre) + '</option>'; }).join('');
-    selC.selectedIndex = 1;   // wallbox monofasico: lo mas comun
-  }
-  function textoNota(){
-    nota.textContent = 'Tiempos estimados hasta el 100%, con eficiencia de carga del ' + Math.round(EFIC.AC * 100) + '% en AC y ' + Math.round(EFIC.DC * 100) +
-      '% en DC. En DC la potencia baja al acercarse al 100%, por eso el tramo final es el más lento. Dependen de la temperatura y del estado de la batería. ' +
-      (ORIGEN === 'planilla' ? 'Datos tomados de la planilla de carga.' : 'Datos de la última copia guardada.');
-  }
-
-  // Lee la planilla publicada (CSV). Columnas por titulo.
-  function csvAFilas(texto){
-    var filas = [], fila = [], cel = '', q = false;
-    for (var i = 0; i < texto.length; i++){
-      var ch = texto[i];
-      if (q){ if (ch === '"'){ if (texto[i + 1] === '"'){ cel += '"'; i++; } else q = false; } else cel += ch; }
-      else if (ch === '"') q = true;
-      else if (ch === ','){ fila.push(cel); cel = ''; }
-      else if (ch === '\n'){ fila.push(cel); filas.push(fila); fila = []; cel = ''; }
-      else if (ch !== '\r') cel += ch;
-    }
-    if (cel !== '' || fila.length){ fila.push(cel); filas.push(fila); }
-    return filas;
-  }
-  function desdeCsv(texto){
-    var f = csvAFilas(texto); if (f.length < 2) return null;
-    var h = f[0].map(function(x){ return x.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim(); });
-    function col(re){ for (var i = 0; i < h.length; i++) if (re.test(h[i])) return i; return -1; }
-    var cM = col(/^modelo/), cB = col(/^bateria/), cAC = col(/acepta carga ac/), cPAC = col(/potencia maxima ac/), cDC = col(/acepta carga dc/), cPDC = col(/potencia maxima dc/);
-    if (cM < 0 || cB < 0) return null;
-    var out = [];
-    f.slice(1).forEach(function(r){
-      var nombre = (r[cM] || '').trim(); if (!nombre) return;
-      var ac = /^s/i.test((r[cAC] || '').trim()), dc = /^s/i.test((r[cDC] || '').trim());
-      out.push({ modelo: nombre, bateria: num(r[cB]), ac: ac, pAC: ac ? num(r[cPAC]) || 0 : 0, dc: dc, pDC: dc ? num(r[cPDC]) || 0 : 0 });
-    });
-    return out.length ? out : null;
-  }
-
-  llenarSelects(); dibujar(); textoNota();
-  selM.addEventListener('change', dibujar); selC.addEventListener('change', dibujar);
-  if (URL_CARGA_CSV){
-    fetch(URL_CARGA_CSV + (URL_CARGA_CSV.indexOf('?') === -1 ? '?' : '&') + 'nocache=' + Math.floor(Date.now() / 60000), { cache: 'no-store' })
-      .then(function(r){ if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
-      .then(function(t){
-        var datos = desdeCsv(t); if (!datos) throw new Error('planilla vacia');
-        var m = selM.value, c = selC.value;
-        VEHICULOS = datos; ORIGEN = 'planilla';
-        llenarSelects(); selM.value = Math.min(+m, VEHICULOS.length - 1); selC.value = c; dibujar(); textoNota();
-      }).catch(function(){ /* se queda con la copia guardada */ });
-  }
 })();
 </script>
 <script>
