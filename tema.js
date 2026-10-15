@@ -23,7 +23,7 @@
   var CLAVE_CUENTA = 'sb-mgicnwnvtfkrxmkmewnt-auth-token' // la misma que usa el Portal
   var MARCAS = ['bydGateOk', 'bydVendorOk', 'bydVendorNombre', 'bydJefeOk']
   // Páginas que nunca pidieron nada para entrar: siguen abiertas.
-  var ABIERTAS = /\/(fichas_tecnicas|ranking_vendedores|tablero_control)\.html$/
+  var ABIERTAS = /\/(fichas_tecnicas|calculadora_carga|ranking_vendedores|tablero_control)\.html$/
 
   var ruta = location.pathname
   if (ruta.indexOf('/portal/') !== -1) return // el Portal tiene su propio ingreso
