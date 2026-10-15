@@ -43,6 +43,7 @@
   var fmtF = new Intl.DateTimeFormat('es-AR', { timeZone: TZ, day: '2-digit', month: '2-digit', year: 'numeric' })
   var fmtH = new Intl.DateTimeFormat('es-AR', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hour12: false })
   var fmtSem = new Intl.DateTimeFormat('es-AR', { timeZone: TZ, weekday: 'short' })
+  var fmtSemLargo = new Intl.DateTimeFormat('es-AR', { timeZone: TZ, weekday: 'long' })
   var fmtISO = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' })
   function fecha(d) { return fmtF.format(new Date(d)) }
   function hora(d) { return fmtH.format(new Date(d)) }
@@ -80,7 +81,8 @@
   function armarMensaje(plantilla, datos) {
     return String(plantilla || '')
       .replace(/\{(\w+)\}/g, function (_, k) { return datos[k] ? String(datos[k]).trim() : '' })
-      .replace(/\(\s*\)/g, '').replace(/[ \t]{2,}/g, ' ').replace(/ ([,.?!])/g, '$1').trim()
+      .replace(/\(\s*\)/g, '').replace(/[ \t]{2,}/g, ' ').replace(/ ([,.?!])/g, '$1')
+      .replace(/,([!?])/g, '$1').trim() // "¡Hola, {cliente}!" sin nombre queda "¡Hola!"
   }
   function linkWa(tel, texto) {
     var n = telefonoWa(tel)
@@ -1167,16 +1169,25 @@
   function datosMensaje(t) {
     return {
       cliente: titulo(String(t.cliente_nombre || '').split(' ')[0]),
-      fecha: fecha(t.inicio),
+      // "viernes 16/10/2026": con el día de la semana se lee mejor.
+      fecha: fmtSemLargo.format(new Date(t.inicio)) + ' ' + fecha(t.inicio),
       hora: hora(t.inicio),
       patente: t.patente || '',
       modelo: t.modelo || '',
-      servicios: t.servicio || 'el turno',
+      servicios: t.servicio || 'Service',
     }
+  }
+  // Los mismos textos de 0036_mensajes_whatsapp_amigables.sql, por si el
+  // concesionario todavía no tiene su configuración en la base.
+  var MENSAJES_BASE = {
+    confirmacion: '¡Hola, {cliente}! 👋😊 ¿Cómo estás?\n\nTe escribimos de BYD Yacopini Postventa para confirmarte el turno de tu BYD {modelo} ({patente}):\n\n📅 {fecha}\n🕐 {hora} hs\n🔧 {servicios}\n\n¿Nos confirmás que podés venir? Si necesitás cambiar el día, avisanos por acá y lo coordinamos. ¡Estamos para ayudarte! 🙌',
+    recordatorio: '¡Hola, {cliente}! 👋😊 ¿Cómo estás?\n\nTe escribimos de BYD Yacopini Postventa para recordarte el turno de tu BYD {modelo} ({patente}):\n\n📅 {fecha}\n🕐 {hora} hs\n🔧 {servicios}\n\nSi por algún motivo no podés venir, avisanos por acá así te damos otro día. ¡Te esperamos! 🚗⚡',
+    listo: '¡Hola, {cliente}! 👋😊 ¿Cómo estás?\n\nTe contamos que tu BYD {modelo} ({patente}) ya está listo para retirar. 🚗✨\n\nTe esperamos en BYD Yacopini Postventa. ¡Gracias por confiar en nosotros! 🙌',
+    reprogramar: '¡Hola, {cliente}! 👋😊 ¿Cómo estás?\n\nTe escribimos de BYD Yacopini Postventa por el turno de tu BYD {modelo} ({patente}) del {fecha}.\n\n¿Te gustaría que coordinemos otro día? Contanos qué día y horario te quedan cómodos y lo agendamos. ¡Estamos para ayudarte! 🙌',
   }
   function botonWa(t, tipo, texto) {
     var plantillas = (S.config && S.config.mensajes) || {}
-    var link = linkWa(t.cliente_telefono, armarMensaje(plantillas[tipo], datosMensaje(t)))
+    var link = linkWa(t.cliente_telefono, armarMensaje(plantillas[tipo] || MENSAJES_BASE[tipo], datosMensaje(t)))
     return link ? '<a class="pt-btn wa" target="_blank" rel="noopener" href="' + esc(link) + '">' + texto + '</a>' : ''
   }
 

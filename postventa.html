@@ -216,7 +216,11 @@
     }
     var nombre = u.f.nombre ? titulo(u.f.nombre.split(' ')[0]) : '';
     var cuando = u.bucket === 'vencido' ? 'Ya pasó la fecha del service de tu ' : 'Se acerca el service de tu ';
-    var texto = 'Hola' + (nombre ? ' ' + nombre : '') + ', te escribimos de BYD Yacopini. ' + cuando + u.modelo + ' y queremos coordinar un turno. ¿Cuándo te viene bien?';
+    var texto = '¡Hola' + (nombre ? ', ' + nombre : '') + '! 👋😊 ¿Cómo estás?\n\n' +
+      'Te escribimos de BYD Yacopini para saber cómo viene tu BYD ' + u.modelo + ' y recordarte que ' +
+      (u.bucket === 'vencido' ? 'ya estaría en fecha para realizar su service oficial' : 'se acerca la fecha de su service oficial') + '. 🚗⚡\n\n' +
+      '¡Es importante para mantener tu auto en óptimas condiciones y cuidar su garantía!\n\n' +
+      '¿Te gustaría que coordinemos un turno? ¡Estamos para ayudarte! 🙌';
     return 'https://wa.me/' + d + '?text=' + encodeURIComponent(texto);
   }
 
