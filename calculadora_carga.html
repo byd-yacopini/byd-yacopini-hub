@@ -107,7 +107,8 @@
 // Los datos de cada modelo (bateria, si acepta AC / DC y potencia maxima) se cargan en la planilla
 // "CARGA BYD - Datos de vehiculos" (publicada como CSV): se lee en vivo y, si no se puede, se usa esta copia.
 (function(){
-  var URL_CARGA_CSV = '';   // se completa al publicar la planilla
+  var APPS_URL = 'https://script.google.com/macros/s/AKfycbzTYBoM56BBMj2B-8hUG_MIuOh7r5qG4qq2sGlTRM-y6QyFm0XHqgE6XUG5OQB022iy/exec';
+  var APPS_KEY = 'i4uH92SO1sFyNYi8PJ2dsGb9LDM-Xoq3';   // la misma clave que ya usa el Tablero
   var COPIA = [
     { modelo:'Dolphin Mini GL', bateria:30.08, ac:true,  pAC:11, dc:true,  pDC:45 },
     { modelo:'Dolphin Mini GS', bateria:43.2,  ac:true,  pAC:11, dc:true,  pDC:45 },
@@ -225,16 +226,16 @@
     if (cel !== '' || fila.length){ fila.push(cel); filas.push(fila); }
     return filas;
   }
-  function desdeCsv(texto){
-    var f = csvAFilas(texto); if (f.length < 2) return null;
-    var h = f[0].map(function(x){ return x.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim(); });
+  function desdeFilas(f){
+    if (!f || f.length < 2) return null;
+    var h = f[0].map(function(x){ return String(x == null ? '' : x).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim(); });
     function col(re){ for (var i = 0; i < h.length; i++) if (re.test(h[i])) return i; return -1; }
     var cM = col(/^modelo/), cB = col(/^bateria/), cAC = col(/acepta carga ac/), cPAC = col(/potencia maxima ac/), cDC = col(/acepta carga dc/), cPDC = col(/potencia maxima dc/);
     if (cM < 0 || cB < 0) return null;
     var out = [];
     f.slice(1).forEach(function(r){
-      var nombre = (r[cM] || '').trim(); if (!nombre) return;
-      var ac = /^s/i.test((r[cAC] || '').trim()), dc = /^s/i.test((r[cDC] || '').trim());
+      var nombre = String(r[cM] == null ? '' : r[cM]).trim(); if (!nombre) return;
+      var ac = /^s/i.test(String(r[cAC] == null ? '' : r[cAC]).trim()), dc = /^s/i.test(String(r[cDC] == null ? '' : r[cDC]).trim());
       out.push({ modelo: nombre, bateria: num(r[cB]), ac: ac, pAC: ac ? num(r[cPAC]) || 0 : 0, dc: dc, pDC: dc ? num(r[cPDC]) || 0 : 0 });
     });
     return out.length ? out : null;
@@ -242,16 +243,16 @@
 
   llenarSelects(); dibujar(); textoNota();
   selM.addEventListener('change', dibujar); selC.addEventListener('change', dibujar);
-  if (URL_CARGA_CSV){
-    fetch(URL_CARGA_CSV + (URL_CARGA_CSV.indexOf('?') === -1 ? '?' : '&') + 'nocache=' + Math.floor(Date.now() / 60000), { cache: 'no-store' })
-      .then(function(r){ if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
-      .then(function(t){
-        var datos = desdeCsv(t); if (!datos) throw new Error('planilla vacia');
-        var m = selM.value, c = selC.value;
-        VEHICULOS = datos; ORIGEN = 'planilla';
-        llenarSelects(); selM.value = Math.min(+m, VEHICULOS.length - 1); selC.value = c; dibujar(); textoNota();
-      }).catch(function(){ /* se queda con la copia guardada */ });
-  }
+  // Datos en vivo: el Apps Script del hub lee la planilla "CARGA BYD - Datos de vehiculos" y la entrega.
+  // Si no se puede (sin conexion, etc.) se queda con la copia guardada de arriba.
+  fetch(APPS_URL + '?key=' + encodeURIComponent(APPS_KEY) + '&action=cargaVehiculos&t=' + Math.floor(Date.now() / 60000), { cache: 'no-store' })
+    .then(function(r){ if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(j){
+      var datos = desdeFilas(j && j.filas); if (!datos) throw new Error('planilla vacia');
+      var m = selM.value, c = selC.value;
+      VEHICULOS = datos; ORIGEN = 'planilla';
+      llenarSelects(); selM.value = Math.min(+m, VEHICULOS.length - 1); selC.value = c; dibujar(); textoNota();
+    }).catch(function(){ /* se queda con la copia guardada */ });
 })();
 </script>
 <script>
