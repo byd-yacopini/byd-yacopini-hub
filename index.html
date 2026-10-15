@@ -1457,13 +1457,16 @@ if (data.session) {
       var barH = maxAbs ? Math.max((Math.abs(r.monto) / maxAbs) * chartH, r.monto === 0 ? 0 : 2) : 0;
       var pos = r.monto >= 0;
       var y = pos ? midY - barH : midY;
-      var color = pos ? '#388E3C' : '#C0392B';
+      var color = pos ? 'url(#utilPos)' : 'url(#utilNeg)';
       var labelY = pos ? y - 4 : y + barH + 11;
       return '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + barW + '" height="' + barH.toFixed(1) + '" fill="' + color + '" rx="3"></rect>' +
         '<text x="' + (x + barW/2).toFixed(1) + '" y="' + labelY.toFixed(1) + '" font-size="8" fill="#4A4A4A" text-anchor="middle">' + fmtUSD_K(r.monto) + '</text>' +
         '<text x="' + (x + barW/2).toFixed(1) + '" y="' + (h - 5).toFixed(1) + '" font-size="8.5" fill="#8C8C8C" text-anchor="middle">' + r.d + '</text>';
     }).join('');
     el.innerHTML = '<svg viewBox="0 0 ' + w + ' ' + h + '" width="' + w + '" height="' + h + '" style="display:block;">' +
+      // Degradés con brillo (15/10): verde ganancia, rojo pérdida.
+      '<defs><linearGradient id="utilPos" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#7ee0ad"/><stop offset="100%" stop-color="#17985d"/></linearGradient>' +
+      '<linearGradient id="utilNeg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#c62851"/><stop offset="100%" stop-color="#ff8aa6"/></linearGradient></defs>' +
       '<line x1="6" y1="' + midY.toFixed(1) + '" x2="' + (w-6) + '" y2="' + midY.toFixed(1) + '" stroke="#D4D4D4" stroke-width="1"></line>' +
       bars + '</svg>';
   }
@@ -1491,14 +1494,15 @@ if (data.session) {
 
   // ---- Leads: filtro por vendedor + torta + histórico diario por origen ----
   var currentLeadsDetalle = [];
-  var PIE_COLORS = ['#1565D8','#388E3C','#D89614','#6A3FA0','#C0392B','#0E7C86','#B8860B','#5B7F9E','#8C8C8C','#D46A6A','#3E8E7E','#9B59B6'];
+  // Los mismos colores que las donas del Portal (15/10); visual.js las dibuja en 3D.
+  var PIE_COLORS = ['#2f7fe6','#f08a1c','#0b8577','#7b5cf0','#f06f9e','#22a06b','#e0b000','#5aa8ff','#e0457b','#2cc2a0','#b06ae8','#9aa3ad'];
 
   function buildPieSlices(map){
     return Object.keys(map).map(function(k){ return { n:k, c:map[k] }; })
       .sort(function(a,b){ return b.c - a.c; });
   }
 
-  var FIXED_PIE_COLORS = { 'EV':'#8C8C8C', 'DM':'#1A1A1A', 'Mendoza':'#1B3B6F', 'San Juan':'#D4A017', 'San Rafael':'#17A398' };
+  var FIXED_PIE_COLORS = { 'EV':'#22a06b', 'DM':'#4d6cf2', 'Mendoza':'#2f7fe6', 'San Juan':'#f08a1c', 'San Rafael':'#0b8577' };
   function colorForKey(key, i){ return FIXED_PIE_COLORS[key] || PIE_COLORS[i % PIE_COLORS.length]; }
   function setPctBadge(elId, change, isPoints){
     var el = document.getElementById(elId);
@@ -2440,7 +2444,7 @@ if (data.session) {
     var o = document.getElementById('pdfOverlay');
     if (!o) {
       o = document.createElement('div'); o.id = 'pdfOverlay';
-      o.style.cssText = 'position:fixed;inset:0;z-index:2147483000;background:rgba(10,10,10,.6);display:flex;align-items:center;justify-content:center;padding:20px;';
+      o.style.cssText = 'position:fixed;inset:0;z-index:2147483000;background:rgba(10,10,10,.88);display:flex;align-items:center;justify-content:center;padding:20px;';
       document.body.appendChild(o);
     }
     o.innerHTML = '<div style="background:#fff;color:#2A2A2A;border-radius:16px;padding:20px;max-width:360px;width:100%;font:14px/1.5 \'Segoe UI\',Arial,sans-serif;text-align:center;">' + html + '</div>';
@@ -2474,23 +2478,47 @@ if (data.session) {
       '.card,.tcard,.panel,.date-filter-bar,.ficha-card,.promo-card,.model-card,.evento,.kpi{background-image:none !important;background-color:#fff !important;' +
       'border:1px solid #D4D4D4 !important;box-shadow:none !important;}' +
       '.tcard .kpi,.card .kpi{background-color:#F5F7FA !important;border:0 !important;}' +
-      '.kpi-ico{background:#E8F0FD !important;}';
+      '.kpi-ico{background:#E8F0FD !important;}' +
+      '*,*::before,*::after{animation:none !important;transition:none !important;}' +
+      // Las sombras de adentro (relieve de barras y puntitos) html2canvas las pinta como un velo encima.
+      '.bar-track,.bar-fill,.progress-row .ptrack,.progress-row .pfill,.pie-legend .dot{box-shadow:none !important;}';
     doc.head.appendChild(st);
     return function () { if (st.parentNode) st.parentNode.removeChild(st); };
   }
 
   // html2canvas no sabe dibujar conic-gradient (los graficos de torta): se reemplazan por un SVG equivalente.
+  // Chrome devuelve el degradé reescrito: colores en rgb() y cada tramo partido
+  // en dos puntos ("rgb(…) 0deg, rgb(…) 144deg") en vez de "#hex 0deg 144deg",
+  // y con eso las tortas salían vacías en el PDF. Se aceptan las dos formas:
+  // un tramo es un par de puntos seguidos del mismo color.
+  function tramosConico(bg) {
+    var m = /conic-gradient\((.*)\)\s*$/.exec(bg || '');
+    if (!m) return null;
+    var puntos = [];
+    m[1].split(/,(?![^(]*\))/).forEach(function (t) {
+      var p = /^(.*?)((?:\s+-?[\d.]+deg){1,2})$/.exec(t.trim());
+      if (!p) return;
+      var c = p[1].trim(), rgb = /^rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(c);
+      if (rgb) c = '#' + [1, 2, 3].map(function (k) { return ('0' + (+rgb[k]).toString(16)).slice(-2); }).join('');
+      p[2].trim().split(/\s+/).forEach(function (g) { puntos.push({ color: c.toLowerCase(), g: parseFloat(g) }); });
+    });
+    var tramos = [];
+    for (var i = 0; i + 1 < puntos.length; i++) {
+      if (puntos[i].color === puntos[i + 1].color && puntos[i + 1].g > puntos[i].g)
+        tramos.push({ color: puntos[i].color, desde: puntos[i].g, hasta: puntos[i + 1].g });
+    }
+    return tramos.length ? tramos : null;
+  }
+
   function tortasASvg(doc) {
     var deshacer = [];
     Array.prototype.forEach.call(doc.querySelectorAll('.pie-chart'), function (el) {
-      var bg = el.style.background || el.style.backgroundImage || '';
-      var m = /conic-gradient\((.*)\)\s*$/.exec(bg);
-      if (!m) return;
-      var tramos = m[1].split(/,(?![^(]*\))/).map(function (s) { return s.trim(); });
+      var tramos = tramosConico(el.style.background || el.style.backgroundImage || '');
+      if (!tramos) return;
       var NS = 'http://www.w3.org/2000/svg', R = 50, svg = doc.createElementNS(NS, 'svg');
       svg.setAttribute('viewBox', '0 0 100 100'); svg.setAttribute('width', '100%'); svg.setAttribute('height', '100%');
       tramos.forEach(function (t) {
-        var p = /^(.*?)\s+([\d.]+)deg\s+([\d.]+)deg$/.exec(t); if (!p) return;
+        var p = [null, t.color, t.desde, t.hasta];
         var a0 = (parseFloat(p[2]) - 90) * Math.PI / 180, a1 = (parseFloat(p[3]) - 90) * Math.PI / 180;
         var grande = (parseFloat(p[3]) - parseFloat(p[2])) > 180 ? 1 : 0;
         var path = doc.createElementNS(NS, 'path');
@@ -2503,6 +2531,20 @@ if (data.session) {
         path.setAttribute('fill', p[1]);
         svg.appendChild(path);
       });
+      // Si visual.js está cargado, va la dona 3D de la pantalla (15/10) en vez de la torta plana.
+      var w = doc.defaultView || window, svg3d = w.bydTorta3d && w.bydTorta3d(el);
+      if (svg3d) {
+        // Va como imagen, del ancho de su caja: un SVG suelto html2canvas lo
+        // dibuja recortado.
+        var vb = svg3d.viewBox.baseVal, anchoT = el.offsetWidth || 130, altoT = anchoT * vb.height / vb.width;
+        svg3d.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+        svg3d.setAttribute('width', anchoT); svg3d.setAttribute('height', altoT);
+        var img = doc.createElement('img');
+        img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(svg3d));
+        img.width = anchoT; img.height = altoT;
+        img.setAttribute('style', 'display:block;margin-top:' + (((el.offsetHeight || anchoT) - altoT) / 2) + 'px');
+        svg = img;
+      }
       var fondoAntes = el.style.background;
       el.style.background = 'transparent'; el.appendChild(svg);
       deshacer.push(function () { el.style.background = fondoAntes; if (svg.parentNode) svg.parentNode.removeChild(svg); });
@@ -2510,31 +2552,86 @@ if (data.session) {
     return function () { deshacer.forEach(function (f) { f(); }); };
   }
 
+  // Los marcos de adentro de una solapa (el resumen de patentamientos en
+  // General) la foto no los dibuja: salían en blanco. Antes de las fotos se
+  // fotografía lo que hay adentro de cada marco y se pone esa imagen en su
+  // lugar; después se vuelve todo como estaba (15/10).
+  function marcosAImagen(raiz) {
+    var deshacer = [];
+    var marcos = Array.prototype.filter.call(raiz.querySelectorAll('iframe'), function (f) {
+      try { return f.offsetHeight > 0 && f.contentDocument && f.contentDocument.body; } catch (e) { return false; }
+    });
+    return marcos.reduce(function (p, f) {
+      return p.then(function () {
+        return window.html2canvas(f.contentDocument.body, {
+          scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false, imageTimeout: 4000,
+          width: f.clientWidth, windowWidth: f.clientWidth,
+          ignoreElements: function (n) { return n.tagName === 'IFRAME' || n.id === 'hubBackBtn' || n.id === 'bydBotonTema'; },
+          // En la copia que fotografía, las animaciones de entrada arrancarían
+          // de cero (opacidad 0) y las fichas saldrían transparentes.
+          onclone: function (d) {
+            var st = d.createElement('style');
+            st.textContent = '*,*::before,*::after{animation:none !important;transition:none !important;}';
+            d.head.appendChild(st);
+          },
+        }).then(function (cv) {
+          var img = document.createElement('img');
+          img.src = cv.toDataURL('image/png');
+          img.style.cssText = 'display:block;width:' + f.offsetWidth + 'px;height:auto;';
+          var display = f.style.display;
+          f.parentNode.insertBefore(img, f); f.style.display = 'none';
+          deshacer.push(function () { if (img.parentNode) img.parentNode.removeChild(img); f.style.display = display; });
+        }).catch(function () {});
+      });
+    }, Promise.resolve()).then(function () { return function () { deshacer.forEach(function (d) { d(); }); }; });
+  }
+
   function visible(el) { return el.offsetHeight > 0 && el.offsetWidth > 0; }
   function hijosVisibles(el) { return Array.prototype.filter.call(el.children, visible); }
   // Bloques "tarjeta" para no cortar una tarjeta a la mitad al pasar de hoja.
-  function expandirBloques(lista, nivel) {
+  // Un bloque se parte sólo si no entra en una hoja: cada foto copia la página
+  // entera, y sacar una por tarjetita hacía que el PDF tardara minutos y
+  // pareciera colgado (15/10).
+  function expandirBloques(lista, nivel, limite) {
     var out = [];
     lista.forEach(function (el) {
       var hijos = hijosVisibles(el);
-      if (nivel < 4 && el.offsetHeight > 520 && hijos.length >= 2) out = out.concat(expandirBloques(hijos, nivel + 1));
+      if (nivel < 4 && el.offsetHeight > limite && hijos.length >= 2) out = out.concat(expandirBloques(hijos, nivel + 1, limite));
       else out.push(el);
     });
     return out;
   }
-  function bloquesDe(raiz) {
+  function bloquesDe(raiz, limite) {
     var el = raiz, hijos = hijosVisibles(el);
     while (hijos.length === 1) { el = hijos[0]; hijos = hijosVisibles(el); }
     if (!hijos.length) return [el];
-    return expandirBloques(hijos, 0);
+    return expandirBloques(hijos, 0, limite);
   }
 
-  function armarPdfDesdeBloques(bloques, nombre) {
-    var jsPDF = window.jspdf.jsPDF, pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
-    var M = 10, ANCHO = 190, ALTO = 277, y = M, primera = true, paginas = 1;
+  // Hoja A4 en compu y tablet. En el celular, hojas angostas con forma de
+  // pantalla de teléfono (Lucía, 15/10: el A4 armado en el celular "se veía
+  // como de compu"): se lee sin hacer zoom y se comparte igual por WhatsApp.
+  var HOJA_A4 = { ancho: 210, alto: 297, margen: 10, capturaPx: 760 };
+  var HOJA_CELU = { ancho: 120, alto: 250, margen: 6, capturaPx: 420 };
+  function hojaPdf() {
+    var forzada = new URLSearchParams(location.search).get('hoja');
+    if (forzada === 'a4') return HOJA_A4;
+    if (forzada === 'celu') return HOJA_CELU;
+    return Math.min(window.innerWidth, (window.screen && window.screen.width) || 9999) < 700 ? HOJA_CELU : HOJA_A4;
+  }
+
+  function armarPdfDesdeBloques(bloques, hoja) {
+    var jsPDF = window.jspdf.jsPDF, pdf = new jsPDF({ unit: 'mm', format: [hoja.ancho, hoja.alto], orientation: 'portrait' });
+    var M = hoja.margen, ANCHO = hoja.ancho - 2 * M, ALTO = hoja.alto - 2 * M, y = M, primera = true, paginas = 1;
     return bloques.reduce(function (p, el) {
       return p.then(function () {
-        return window.html2canvas(el, { scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false }).then(function (cv) {
+        // Sin los marcos que no son de este bloque (al copiar la página se
+        // volvían a cargar y cada foto tardaba hasta un minuto) y sin esperar
+        // de más a una imagen que no llega.
+        return window.html2canvas(el, {
+          scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false, imageTimeout: 4000,
+          ignoreElements: function (n) { return n.id === 'pdfOverlay' || (n.tagName === 'IFRAME' && !el.contains(n)); },
+        }).then(function (cv) {
           if (!cv.width || !cv.height) return;
           var hMm = cv.height / cv.width * ANCHO;
           if (hMm <= ALTO) {
@@ -2563,7 +2660,7 @@ if (data.session) {
     var esMarco = tab === 'patentamiento' || tab === 'calidad';
     var marcoEl = tab === 'patentamiento' ? marcoPat : (tab === 'calidad' ? marco : null);
     overlayPdf('<b>Armando el PDF de ' + titulo + '…</b><div style="color:#8C8C8C;font-size:12.5px;margin-top:6px;">Puede tardar unos segundos. No cierres la pantalla.</div>');
-    var restaurar = [], anchoOriginal = null, docObj = document;
+    var restaurar = [], anchoOriginal = null, docObj = document, hoja = hojaPdf(), anchoCaptura = hoja.capturaPx + 'px';
 
     function restaurarTodo() { while (restaurar.length) { try { restaurar.pop()(); } catch (e) {} } }
 
@@ -2577,7 +2674,7 @@ if (data.session) {
         var raizM = docObj.documentElement, temaM = raizM.getAttribute('data-tema');
         if (temaM) { raizM.removeAttribute('data-tema'); restaurar.push(function () { raizM.setAttribute('data-tema', temaM); }); }
         var anchoM = docObj.body.style.width;
-        docObj.body.style.width = '760px';
+        docObj.body.style.width = anchoCaptura;
         restaurar.push(function () { docObj.body.style.width = anchoM; });
       } else {
         prepararPdf(tab);
@@ -2586,22 +2683,27 @@ if (data.session) {
         var raiz = document.documentElement, tema = raiz.getAttribute('data-tema');
         if (tema) { raiz.removeAttribute('data-tema'); restaurar.push(function () { raiz.setAttribute('data-tema', tema); }); }
         anchoOriginal = document.body.style.cssText;
-        document.body.style.width = '760px'; document.body.style.maxWidth = '760px'; document.body.style.margin = '0 auto';
+        document.body.style.width = anchoCaptura; document.body.style.maxWidth = anchoCaptura; document.body.style.margin = '0 auto';
         restaurar.push(function () { document.body.style.cssText = anchoOriginal; });
       }
       restaurar.push(neutralizarColores(docObj));
       restaurar.push(tortasASvg(docObj));
       return new Promise(function (ok) { setTimeout(ok, 350); });   // deja acomodar el diseño
     }).then(function () {
+      if (esMarco) return null;
+      return marcosAImagen(document.getElementById('tab-' + tab)).then(function (volver) { restaurar.push(volver); });
+    }).then(function () {
+      // Alto de una hoja, en píxeles de la página: lo que entra sin cortar.
+      var limiteBloque = Math.floor((hoja.alto - 2 * hoja.margen) / (hoja.ancho - 2 * hoja.margen) * hoja.capturaPx) - 20;
       var bloques;
       if (esMarco) {
         var raizDoc = tab === 'calidad' ? docObj.getElementById('panel') : (docObj.querySelector('.app') || docObj.body);
-        bloques = bloquesDe(raizDoc);
+        bloques = bloquesDe(raizDoc, limiteBloque);
       } else {
         var enc = document.getElementById('pdfEncabezado');
-        bloques = [enc].concat(bloquesDe(document.getElementById('tab-' + tab)));
+        bloques = [enc].concat(bloquesDe(document.getElementById('tab-' + tab), limiteBloque));
       }
-      return armarPdfDesdeBloques(bloques);
+      return armarPdfDesdeBloques(bloques, hoja);
     }).then(function (res) {
       restaurarTodo();
       var nombre = 'Tablero BYD ' + titulo + (periodo ? ' ' + periodo : '') + '.pdf';

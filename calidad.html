@@ -1272,6 +1272,29 @@ $('documentos').addEventListener('click', async (e) => {
   else location.href = data.signedUrl
 })
 
+// Barras en relieve (15/10, Lucía: "gráficos más copados, más 3D"), como en
+// el Portal: frente en degradé, tapa clara y costado oscuro. La destacada va
+// en ámbar → naranja y el resto en celeste → índigo.
+const PROF = 4
+const DEGRADES = `<defs>
+  <linearGradient id="barraSerie" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#6cc4ff"/><stop offset="100%" stop-color="#4d6cf2"/></linearGradient>
+  <linearGradient id="barraDestacada" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffc95e"/><stop offset="100%" stop-color="#f2701d"/></linearGradient>
+</defs>`
+const COLOR_SERIE = 'linear-gradient(180deg,#6cc4ff,#4d6cf2)'
+const COLOR_DESTACADO = 'linear-gradient(180deg,#ffc95e,#f2701d)'
+function prisma(x, y, w, h, destacada, titulo) {
+  if (h <= 0) return ''
+  const d = Math.min(PROF, w * 0.3)
+  const f = destacada ? 'url(#barraDestacada)' : 'url(#barraSerie)'
+  const tapa = `${x},${y} ${x + d},${y - d} ${x + w + d},${y - d} ${x + w},${y}`
+  const costado = `${x + w},${y} ${x + w + d},${y - d} ${x + w + d},${y + h - d} ${x + w},${y + h}`
+  return `<g><title>${titulo}</title>
+    <polygon points="${costado}" fill="${f}"/><polygon points="${costado}" fill="#000" fill-opacity=".28"/>
+    <rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${f}"/>
+    <rect x="${x}" y="${y}" width="${w * 0.28}" height="${h}" fill="#fff" fill-opacity=".2"/>
+    <polygon points="${tapa}" fill="${f}"/><polygon points="${tapa}" fill="#fff" fill-opacity=".42"/></g>`
+}
+
 // Evolución: una sola serie por gráfico y el valor escrito sobre la barra más
 // alta, para no repetir un número en cada columna.
 function pintarGrafico() {
@@ -1289,27 +1312,26 @@ function pintarGrafico() {
   // Aire arriba para la etiqueta de la barra más alta: sin esto el número
   // queda cortado contra el borde del gráfico.
   const AIRE = 14, PIE = 16
-  const ancho = (ANCHO - hueco * (semanas.length - 1)) / semanas.length
+  const ancho = (ANCHO - PROF - hueco * (semanas.length - 1)) / semanas.length
 
   const barras = semanas.map((s, i) => {
-    const h = Math.max(s.ventas === 0 ? 0 : 3, Math.round((s.ventas / tope) * (ALTO - PIE - AIRE)))
+    const h = Math.max(s.ventas === 0 ? 0 : 3, Math.round((s.ventas / tope) * (ALTO - PIE - AIRE - PROF)))
     const x = i * (ancho + hueco)
     const y = ALTO - PIE - h
     const ultima = i === semanas.length - 1
     const etiqueta = (s.ventas === tope || ultima) && s.ventas > 0
-      ? `<text x="${x + ancho / 2}" y="${y - 4}" text-anchor="middle" font-size="10" font-weight="700" fill="#0A0A0A">${s.ventas}</text>`
+      ? `<text x="${x + ancho / 2 + PROF / 2}" y="${y - PROF - 3}" text-anchor="middle" font-size="10" font-weight="700" fill="#0A0A0A">${s.ventas}</text>`
       : ''
     return `
-      <rect x="${x}" y="${y}" width="${ancho}" height="${h}" rx="3"
-            fill="${ultima ? '#1565D8' : '#B9CDEB'}"><title>Semana del ${iso(s.lunes)}: ${s.ventas} entregas${s.nps === null ? '' : ', NPS ' + s.nps + '%'}</title></rect>
+      ${prisma(x, y, ancho, h, ultima, `Semana del ${iso(s.lunes)}: ${s.ventas} entregas${s.nps === null ? '' : ', NPS ' + s.nps + '%'}`)}
       ${etiqueta}
       <text x="${x + ancho / 2}" y="${ALTO - 3}" text-anchor="middle" font-size="9" fill="#8C8C8C">${s.lunes.getDate()}/${s.lunes.getMonth() + 1}</text>`
   }).join('')
 
   $('grafico').innerHTML = `
     <svg viewBox="0 0 ${ANCHO} ${ALTO}" role="img"
-         aria-label="Vehículos entregados por semana en las últimas ocho semanas">${barras}</svg>
-    <div class="leyenda"><span><i style="background:#1565D8"></i>Semana mostrada</span><span><i style="background:#B9CDEB"></i>Semanas previas</span></div>`
+         aria-label="Vehículos entregados por semana en las últimas ocho semanas">${DEGRADES}${barras}</svg>
+    <div class="leyenda"><span><i style="background:${COLOR_DESTACADO}"></i>Semana mostrada</span><span><i style="background:${COLOR_SERIE}"></i>Semanas previas</span></div>`
 }
 
 // En la vista por año, una barra por mes del año elegido. El mes en curso va
@@ -1327,20 +1349,19 @@ function pintarGraficoAnio() {
   }
   const tope = Math.max(...meses.map((x) => x.ventas), 1)
   const ANCHO = 320, ALTO = 104, hueco = 5, AIRE = 14, PIE = 16
-  const ancho = (ANCHO - hueco * 11) / 12
+  const ancho = (ANCHO - PROF - hueco * 11) / 12
   const INICIAL = ['E', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D']
 
   const barras = meses.map((x, i) => {
-    const h = x.futuro ? 0 : Math.max(x.ventas === 0 ? 0 : 3, Math.round((x.ventas / tope) * (ALTO - PIE - AIRE)))
+    const h = x.futuro ? 0 : Math.max(x.ventas === 0 ? 0 : 3, Math.round((x.ventas / tope) * (ALTO - PIE - AIRE - PROF)))
     const px = i * (ancho + hueco)
     const y = ALTO - PIE - h
     const etiqueta = !x.futuro && x.ventas > 0 && (x.ventas === tope || x.actual)
-      ? `<text x="${px + ancho / 2}" y="${y - 4}" text-anchor="middle" font-size="10" font-weight="700" fill="#0A0A0A">${x.ventas}</text>`
+      ? `<text x="${px + ancho / 2 + PROF / 2}" y="${y - PROF - 3}" text-anchor="middle" font-size="10" font-weight="700" fill="#0A0A0A">${x.ventas}</text>`
       : ''
     const nombre = MESES[x.m][0].toUpperCase() + MESES[x.m].slice(1)
     return `
-      <rect x="${px}" y="${y}" width="${ancho}" height="${h}" rx="3"
-            fill="${x.actual ? '#1565D8' : '#B9CDEB'}"><title>${nombre} ${cursorAnio}: ${x.ventas} entregas${x.nps === null ? '' : ', NPS ' + x.nps + '%'}</title></rect>
+      ${prisma(px, y, ancho, h, x.actual, `${nombre} ${cursorAnio}: ${x.ventas} entregas${x.nps === null ? '' : ', NPS ' + x.nps + '%'}`)}
       ${etiqueta}
       <text x="${px + ancho / 2}" y="${ALTO - 3}" text-anchor="middle" font-size="9" fill="${x.futuro ? '#D4D4D4' : '#8C8C8C'}">${INICIAL[x.m]}</text>`
   }).join('')
@@ -1348,10 +1369,10 @@ function pintarGraficoAnio() {
   const esteAnio = cursorAnio === hoy.getFullYear()
   $('grafico').innerHTML = `
     <svg viewBox="0 0 ${ANCHO} ${ALTO}" role="img"
-         aria-label="Vehículos entregados por mes en ${cursorAnio}">${barras}</svg>
+         aria-label="Vehículos entregados por mes en ${cursorAnio}">${DEGRADES}${barras}</svg>
     <div class="leyenda">${esteAnio
-      ? '<span><i style="background:#1565D8"></i>Mes en curso</span><span><i style="background:#B9CDEB"></i>Meses anteriores</span>'
-      : '<span><i style="background:#B9CDEB"></i>Entregas de cada mes</span>'}</div>`
+      ? `<span><i style="background:${COLOR_DESTACADO}"></i>Mes en curso</span><span><i style="background:${COLOR_SERIE}"></i>Meses anteriores</span>`
+      : `<span><i style="background:${COLOR_SERIE}"></i>Entregas de cada mes</span>`}</div>`
 }
 
 // ---------------------------------------------------------------- controles

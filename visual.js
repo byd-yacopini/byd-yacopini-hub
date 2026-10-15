@@ -566,3 +566,153 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', adornar)
   else adornar()
 })()
+
+// ── Tortas en 3D (15/10, Lucía: "gráficos más copados, más 3D") ──────────
+// Las páginas pintan cada torta como un degradé cónico en el estilo del
+// .pie-chart. Acá se lee ese degradé y se dibuja encima una dona inclinada en
+// SVG, con tapa en degradé, costado con espesor y sombra en el piso. El
+// degradé queda en el estilo (estilo.css lo apaga con la clase torta3d): el
+// PDF del Tablero lo sigue usando, y cuando lo cambia por transparente la
+// dona 3D se saca sola y vuelve al terminar.
+// Los colores viejos de las tortas se cambian por los del Portal, en la
+// torta y en los puntitos de su leyenda, así coinciden.
+;(function () {
+  var NUEVO = {
+    '#1565d8': '#2f7fe6', '#388e3c': '#22a06b', '#d89614': '#f08a1c', '#6a3fa0': '#7b5cf0',
+    '#c0392b': '#e0457b', '#0e7c86': '#0b8577', '#b8860b': '#e0b000', '#5b7f9e': '#5aa8ff',
+    '#8c8c8c': '#9aa3ad', '#d46a6a': '#f06f9e', '#3e8e7e': '#2cc2a0', '#9b59b6': '#b06ae8',
+    '#1a1a1a': '#4d6cf2', '#1b3b6f': '#2f7fe6', '#d4a017': '#f08a1c', '#17a398': '#0b8577'
+  }
+  function color(c) { return NUEVO[String(c).trim().toLowerCase()] || String(c).trim() }
+  // Aclara (cuanto > 0) u oscurece un color. Se calcula acá y no con
+  // color-mix() porque el PDF (html2canvas) no lo entiende.
+  function tono(c, cuanto) {
+    var m = /^#([0-9a-f]{6})$/i.exec(c)
+    if (!m) return c
+    var n = parseInt(m[1], 16), destino = cuanto > 0 ? 255 : 0, k = Math.abs(cuanto) / 100
+    return '#' + [16, 8, 0].map(function (sh) {
+      var v = (n >> sh) & 255
+      return ('0' + Math.round(v + (destino - v) * k).toString(16)).slice(-2)
+    }).join('')
+  }
+
+  var ANCHO = 240, CX = 120, RX = 108, RY = 62, HUECO = 0.58, ESPESOR = 20, AIRE = 6
+  var CY = RY + AIRE, ALTO = CY + RY + ESPESOR + AIRE
+  var NS = 'http://www.w3.org/2000/svg'
+  var cuenta = 0
+
+  function punto(rx, ry, a, bajar) {
+    return (CX + rx * Math.cos(a)).toFixed(2) + ' ' + (CY + ry * Math.sin(a) + (bajar || 0)).toFixed(2)
+  }
+  // Partido al medio: ningún arco pasa de media vuelta, y una sola porción
+  // (la vuelta entera) también se dibuja.
+  function arco(rx, ry, desde, hasta, sentido, bajar) {
+    var m = (desde + hasta) / 2, fin = sentido ? hasta : desde
+    return 'A ' + rx + ' ' + ry + ' 0 0 ' + sentido + ' ' + punto(rx, ry, m, bajar) +
+      ' A ' + rx + ' ' + ry + ' 0 0 ' + sentido + ' ' + punto(rx, ry, fin, bajar)
+  }
+  function tapa(d, h) {
+    var irx = RX * HUECO, iry = RY * HUECO
+    return 'M ' + punto(RX, RY, d) + ' ' + arco(RX, RY, d, h, 1) + ' L ' + punto(irx, iry, h) + ' ' + arco(irx, iry, d, h, 0) + ' Z'
+  }
+  function pared(rx, ry, d, h) {
+    return 'M ' + punto(rx, ry, d) + ' ' + arco(rx, ry, d, h, 1) + ' L ' + punto(rx, ry, h, ESPESOR) + ' ' + arco(rx, ry, d, h, 0, ESPESOR) + ' Z'
+  }
+  function recortar(d, h, min, max) {
+    var a = Math.max(d, min), b = Math.min(h, max)
+    return b - a > 0.001 ? [a, b] : null
+  }
+
+  // Chrome devuelve el degradé reescrito: colores en rgb() y cada tramo
+  // partido en dos puntos ("rgb(…) 0deg, rgb(…) 144deg"). Safari lo deja como
+  // se escribió ("#hex 0deg 144deg"). Un tramo es un par de puntos seguidos
+  // del mismo color, y así valen las dos formas.
+  function leer(el) {
+    var bg = el.style.background || el.style.backgroundImage || ''
+    var m = /conic-gradient\((.*)\)\s*$/.exec(bg)
+    if (!m) return null
+    var puntos = []
+    m[1].split(/,(?![^(]*\))/).forEach(function (t) {
+      var p = /^(.*?)((?:\s+-?[\d.]+deg){1,2})$/.exec(t.trim())
+      if (!p) return
+      var c = p[1].trim(), rgb = /^rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(c)
+      if (rgb) c = '#' + [1, 2, 3].map(function (k) { return ('0' + (+rgb[k]).toString(16)).slice(-2) }).join('')
+      p[2].trim().split(/\s+/).forEach(function (g) { puntos.push({ c: c.toLowerCase(), g: parseFloat(g) }) })
+    })
+    var tramos = []
+    for (var i = 0; i + 1 < puntos.length; i++) {
+      if (puntos[i].c === puntos[i + 1].c && puntos[i + 1].g > puntos[i].g)
+        tramos.push({ color: color(puntos[i].c), desde: puntos[i].g, hasta: puntos[i + 1].g })
+    }
+    return tramos.length ? tramos : null
+  }
+
+  function dibujar(el, tramos) {
+    var id = 'torta3d' + (++cuenta)
+    var INI = -Math.PI / 2, RAD = Math.PI / 180
+    var ps = tramos.map(function (t) { return { c: t.color, d: INI + t.desde * RAD, h: INI + t.hasta * RAD } })
+      .filter(function (p) { return p.h - p.d > 0.0001 })
+    var defs = ps.map(function (p, i) {
+      return '<linearGradient id="' + id + 'p' + i + '" x1="0" y1="0" x2="0.35" y2="1">' +
+        '<stop offset="0%" style="stop-color:' + tono(p.c, 38) + '"/><stop offset="100%" style="stop-color:' + p.c + '"/></linearGradient>'
+    }).join('') +
+      '<radialGradient id="' + id + 'piso"><stop offset="0%" stop-color="#000" stop-opacity=".16"/><stop offset="100%" stop-color="#000" stop-opacity="0"/></radialGradient>'
+    var adentro = '', afuera = '', tapas = ''
+    ps.forEach(function (p, i) {
+      [recortar(p.d, p.h, -Math.PI / 2, 0), recortar(p.d, p.h, Math.PI, 1.5 * Math.PI)].forEach(function (r) {
+        if (r) adentro += '<path d="' + pared(RX * HUECO, RY * HUECO, r[0], r[1]) + '" style="fill:' + tono(p.c, -45) + '"/>'
+      })
+      var f = recortar(p.d, p.h, 0, Math.PI)
+      if (f) afuera += '<path d="' + pared(RX, RY, f[0], f[1]) + '" style="fill:' + tono(p.c, -30) + ';stroke:' + tono(p.c, -38) + '" stroke-width=".6"/>'
+      tapas += '<path class="tapa" d="' + tapa(p.d, p.h) + '" fill="url(#' + id + 'p' + i + ')" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/>'
+    })
+    var svg = document.createElementNS(NS, 'svg')
+    svg.setAttribute('class', 'torta3d-svg')
+    svg.setAttribute('viewBox', '0 0 ' + ANCHO + ' ' + ALTO)
+    svg.setAttribute('aria-hidden', 'true')
+    svg.innerHTML = '<defs>' + defs + '</defs>' +
+      '<ellipse cx="' + CX + '" cy="' + (CY + ESPESOR + 10) + '" rx="' + (RX * 1.02) + '" ry="' + (RY * 0.85) + '" fill="url(#' + id + 'piso)"/>' +
+      adentro + afuera + tapas
+    return svg
+  }
+
+  function repintar(el) {
+    // La leyenda se repasa siempre: la página puede rearmarla sin cambiar la torta.
+    var leyenda = el.parentNode && el.parentNode.querySelector('.pie-legend')
+    if (leyenda) Array.prototype.forEach.call(leyenda.querySelectorAll('.dot'), function (dot) {
+      var c = dot.style.backgroundColor
+      var hex = /^rgb\((\d+), (\d+), (\d+)\)$/.exec(c)
+      if (hex) c = '#' + [1, 2, 3].map(function (k) { return ('0' + (+hex[k]).toString(16)).slice(-2) }).join('')
+      var n = NUEVO[c.toLowerCase()]
+      if (n) dot.style.background = n
+    })
+
+    var bg = el.style.background || el.style.backgroundImage || ''
+    if (el._torta3d === bg) return
+    el._torta3d = bg
+    var viejo = el.querySelector(':scope > svg.torta3d-svg')
+    if (viejo) el.removeChild(viejo)
+    var tramos = leer(el)
+    if (!tramos) { el.classList.remove('torta3d'); return }
+    el.classList.add('torta3d')
+    el.appendChild(dibujar(el, tramos))
+  }
+
+  // El PDF del Tablero (index.html) pide la dona para ponerla en lugar del
+  // degradé cónico, que html2canvas no sabe dibujar.
+  window.bydTorta3d = function (el) {
+    var tramos = leer(el)
+    return tramos ? dibujar(el, tramos) : null
+  }
+
+  // Se mira cada cambio: las páginas vuelven a pintar las tortas al cambiar
+  // de mes, de vendedor o de solapa. El observador corre antes de que el PDF
+  // empiece a capturar, así nunca salen la torta plana y la 3D juntas.
+  function revisar() { Array.prototype.forEach.call(document.querySelectorAll('.pie-chart'), repintar) }
+  function arrancar() {
+    revisar()
+    new MutationObserver(revisar).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['style'] })
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancar)
+  else arrancar()
+})()
