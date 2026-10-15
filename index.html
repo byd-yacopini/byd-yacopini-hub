@@ -955,6 +955,7 @@ if (data.session) {
            desplegable a propósito, para que sea una sola app y no haya que
            acordarse de dos direcciones. -->
       <option value="portal">Portal de Calidad</option>
+      <option value="postventa">Post venta</option>
     </select>
   </div>
   <div class="tabs sub-tabs" id="subTabs">
@@ -2784,12 +2785,14 @@ if (data.session) {
   var ultima = sel.value;
 
   sel.addEventListener('change', function (e) {
-    if (sel.value !== 'portal') { ultima = sel.value; return; }
+    var destinos = { portal: './portal/', postventa: './postventa.html' };
+    if (!destinos[sel.value]) { ultima = sel.value; return; }
     e.stopImmediatePropagation();
+    var destino = destinos[sel.value];
     // Se deja como estaba: si el navegador vuelve atras, la pagina no aparece
-    // con "Portal de Calidad" elegido y nada mostrandose.
+    // con "Portal de Calidad" (o "Post venta") elegido y nada mostrandose.
     sel.value = ultima;
-    window.location.href = './portal/';
+    window.location.href = destino;
   }, true);
 })();
 </script>
