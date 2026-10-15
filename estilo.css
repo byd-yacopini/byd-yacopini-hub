@@ -391,4 +391,176 @@ a.card .icon { border-radius: 14px !important; }
 /* Títulos de sección con el punto en degradé */
 .tcard h2::before { background: linear-gradient(135deg, var(--hub-cielo), var(--hub-azul)) !important; }
 
+/* ── Lima, como el Portal (15/10) ─────────────────────────────────────────
+   Lo pidió Lucía con una referencia: fondos claros como siempre, pero lo
+   activo en lima con texto oscuro, tarjetas lisas y más redondeadas, contadores y botones redondos. El Portal
+   cambió igual el mismo día. Va al final para ganarle a las secciones de
+   arriba sin tocarlas. */
+:root {
+  --hub-lima: #ccf656;
+  --hub-sobre-lima: #1b1c1e;
+}
+html:not(.embebido) body:not(.embebido) {
+  background-image:
+    radial-gradient(60rem 40rem at 105% -10%, color-mix(in srgb, var(--hub-lima) 22%, transparent), transparent 60%),
+    radial-gradient(50rem 35rem at -10% 110%, color-mix(in srgb, var(--hub-violeta) 7%, transparent), transparent 60%) !important;
+}
+.mainview > h1::after, .title-block h1::after { background: var(--hub-lima); }
+.tcard h2::before { background: var(--hub-lima) !important; }
+
+/* Tarjetas lisas, sin tinte celeste, con más radio */
+.card, .tcard, .panel, .date-filter-bar, .ficha-card, .promo-card, .model-card, .evento, .kpi {
+  background-image: none !important;
+  border: 0 !important;
+  border-radius: 22px !important;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 0 0 1px rgba(16, 24, 40, 0.05) !important;
+}
+.tcard .kpi, .card .kpi { border-radius: 16px !important; box-shadow: none !important; }
+
+/* La primera ficha de cada tablero, en lima */
+.kpi-grid > .kpi:first-child:not(.tcard .kpi):not(.card .kpi) {
+  background-color: var(--hub-lima) !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+.kpi-grid > .kpi:first-child:not(.tcard .kpi):not(.card .kpi) .n { color: var(--hub-sobre-lima) !important; }
+.kpi-grid > .kpi:first-child:not(.tcard .kpi):not(.card .kpi) .l,
+.kpi-grid > .kpi:first-child:not(.tcard .kpi):not(.card .kpi) .kpi-usd { color: rgba(27, 28, 30, 0.7) !important; }
+.kpi-grid > .kpi:first-child:not(.tcard .kpi):not(.card .kpi) .pct-badge,
+.kpi-grid > .kpi:first-child:not(.tcard .kpi):not(.card .kpi) .kpi-ico {
+  background: var(--hub-sobre-lima) !important;
+  color: var(--hub-lima) !important;
+}
+
+/* Botones principales y solapas activas en lima, texto oscuro */
+.btn-primary, button.primary, .df-btn-primary, .ficha-btn.ver, .btn-guardar, .login button, #bydGate button, .fab,
+.btn-primary:hover, button.primary:hover, .df-btn-primary:hover, .ficha-btn.ver:hover, .btn-guardar:hover {
+  background: var(--hub-lima) !important;
+  color: var(--hub-sobre-lima) !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+.btn-primary:hover, button.primary:hover, .df-btn-primary:hover, .btn-guardar:hover { filter: brightness(1.04); }
+.tabs button.active, .tabs button[aria-pressed="true"], .tab-btn.active, .tabs-bar button.active, .tabbar button.active,
+.view-tab.active, .cfgsub-tab.active, .switch button.active, .pill-btn.active, .catalogo-filtro-pill.active {
+  background: var(--hub-lima) !important;
+  color: var(--hub-sobre-lima) !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+/* Sobre la franja negra del Tablero la activa también va en lima */
+.main-select-wrap ~ .tabs button.active { color: var(--hub-sobre-lima) !important; }
+
+/* Campos con foco en lima */
+input:focus, select:focus, textarea:focus {
+  border-color: #a9d13a !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--hub-lima) 45%, transparent) !important;
+}
+
+/* Detalles del Portal en las páginas de Nicolás (15/10) ────────────────── */
+
+/* La segunda ficha de cada tablero en grafito, al lado de la lima: el mismo
+   par que NPS de fábrica y de postventa en el inicio del Portal. */
+.kpi-grid > .kpi:nth-child(2):not(.tcard .kpi):not(.card .kpi) {
+  background-color: #121418 !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+.kpi-grid > .kpi:nth-child(2):not(.tcard .kpi):not(.card .kpi) .n { color: #fff !important; }
+.kpi-grid > .kpi:nth-child(2):not(.tcard .kpi):not(.card .kpi) .l,
+.kpi-grid > .kpi:nth-child(2):not(.tcard .kpi):not(.card .kpi) .kpi-usd { color: rgba(255, 255, 255, 0.6) !important; }
+.kpi-grid > .kpi:nth-child(2):not(.tcard .kpi):not(.card .kpi) .kpi-ico {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: var(--hub-lima) !important;
+}
+.kpi-grid > .kpi:nth-child(2):not(.tcard .kpi):not(.card .kpi) .pct-badge {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #fff !important;
+}
+
+/* Íconos de las fichas en círculo, como en el Portal */
+.kpi-ico { border-radius: 50% !important; }
+
+/* Tarjetas del menú: la flechita pasa a ser el botón redondo con ↗ */
+a.card .chev {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  margin-left: auto;
+  border-radius: 50%;
+  background: var(--hub-panel-2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231b1c1e' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 17L17 7M8 7h9v9'/%3E%3C/svg%3E") no-repeat center / 14px;
+  font-size: 0 !important;
+  color: transparent !important;
+  transition: transform .15s ease, background-color .15s ease;
+}
+a.card:hover .chev {
+  background-color: var(--hub-lima);
+  transform: translate(2px, -2px);
+}
+a.card { border-radius: 22px !important; }
+a.card .icon { border-radius: 50% !important; }
+
+/* Títulos de pantalla grandes y livianos */
+.mainview > h1, .title-block h1 {
+  font-size: clamp(26px, 3.4vw, 36px) !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.035em !important;
+}
+
+/* Sombritas (15/10), las mismas del Portal */
+.card, .tcard, .panel, .date-filter-bar, .promo-card, .model-card, .evento, .kpi {
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 10px 28px -14px rgba(16, 24, 40, 0.16) !important;
+}
+.tcard .kpi, .card .kpi { box-shadow: none !important; }
+a.card:hover, .kpi:hover {
+  box-shadow: 0 2px 4px rgba(16, 24, 40, 0.05), 0 22px 40px -18px rgba(16, 24, 40, 0.28) !important;
+}
+.kpi-grid > .kpi:first-child:not(.tcard .kpi):not(.card .kpi) {
+  box-shadow: 0 8px 22px -10px rgba(150, 190, 30, 0.65) !important;
+}
+.kpi-grid > .kpi:nth-child(2):not(.tcard .kpi):not(.card .kpi) {
+  box-shadow: 0 24px 48px -20px rgba(16, 24, 40, 0.45) !important;
+}
+.btn-primary, button.primary, .df-btn-primary, .btn-guardar, .login button, #bydGate button, .fab,
+.tabs button.active, .tab-btn.active, .tabs-bar button.active, .tabbar button.active,
+.view-tab.active, .cfgsub-tab.active, .switch button.active, .pill-btn.active, .catalogo-filtro-pill.active {
+  box-shadow: 0 8px 22px -10px rgba(150, 190, 30, 0.65) !important;
+}
+.kpi { transition: transform .18s ease, box-shadow .18s ease; }
+.kpi:hover { transform: translateY(-2px); }
+
+/* Entrada al abrir (15/10): las fichas y tarjetas suben una detrás de la
+   otra, como en el Portal. Relleno "backwards": al terminar no queda ningún
+   transform puesto. index.html ya animaba sus tarjetas del menú; esas
+   quedan con su animación. */
+@keyframes hub-entrar {
+  from { opacity: 0; transform: translateY(14px); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .kpi-grid > .kpi, .tcard, .date-filter-bar, .mainview > h1, .mainview > .lead {
+    animation: hub-entrar 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  }
+  .kpi-grid > .kpi:nth-child(2) { animation-delay: 0.06s; }
+  .kpi-grid > .kpi:nth-child(3) { animation-delay: 0.12s; }
+  .kpi-grid > .kpi:nth-child(4) { animation-delay: 0.18s; }
+  .kpi-grid > .kpi:nth-child(n + 5) { animation-delay: 0.24s; }
+  .tcard { animation-delay: 0.2s; }
+  .mainview > .lead { animation-delay: 0.05s; }
+}
+
+/* Variaciones en pastilla con un poco más de aire */
+.pct-badge { padding: 2px 8px !important; }
+
+/* Volver: botón redondo blanco con borde fino */
+#hubBackBtn { border-radius: 50% !important; box-shadow: 0 6px 18px rgba(27, 28, 30, 0.14) !important; }
+
+/* Avisos de instalar: neutros en vez de celestes */
+.install-hint {
+  background: var(--hub-panel) !important;
+  border: 0 !important;
+  box-shadow: 0 0 0 1px rgba(16, 24, 40, 0.06) !important;
+  color: var(--hub-tinta) !important;
+}
+.install-hint strong { color: var(--hub-tinta) !important; }
+
 }

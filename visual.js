@@ -312,3 +312,230 @@
     }).catch(function () {})
   }
 })()
+
+// Fichas Técnicas más prolijas (pedido de Lucía, 15/10).
+//
+// fichas_tecnicas.html y calculadora_carga.html las regenera la sincronización
+// de Nicolás: no se reescriben, se les suma esta hoja de estilos encima. Va
+// todo dentro de @media screen, así que imprimir sale igual que siempre. Si
+// este archivo no carga, las páginas se ven como antes.
+;(function () {
+  var ruta = location.pathname
+  var esFichas = /fichas_tecnicas\.html$/.test(ruta)
+  var esCarga = /calculadora_carga\.html$/.test(ruta)
+  if (!esFichas && !esCarga) return
+
+  if (!document.querySelector('link[href*="family=Inter"]')) {
+    var fuente = document.createElement('link')
+    fuente.rel = 'stylesheet'
+    fuente.href = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap'
+    document.head.appendChild(fuente)
+  }
+
+  // Estilo de la referencia que mandó Lucía: fondo grafito, tarjetas oscuras
+  // muy redondeadas, pastillas blancas con la activa en lima y botones
+  // redondos. La lima es clara: lo que va encima siempre en tinta oscura.
+  var FONDO = '#121418', PANEL = '#1e2228', PANEL2 = '#272c33', BORDE = 'rgba(255,255,255,.07)'
+  var TINTA = '#f4f5f6', SUAVE = '#a3a9b1', TENUE = '#6f767f', LIMA = '#ccf656', SOBRE = '#1b1c1e'
+  var FLECHA = 'url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%23a3a9b1%27 stroke-width=%272.2%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27M6 9l6 6 6-6%27/%3E%3C/svg%3E")'
+
+  var css =
+    '@media screen{' +
+    // La página ya es oscura: el modo oscuro del hub (tema.js, que invierte
+    // todo) acá no hace nada, si no la daría vuelta a clara.
+    'html[data-tema][data-tema],html[data-tema][data-tema] *{filter:none !important}' +
+    'html[data-tema][data-tema],html[data-tema][data-tema] body{background:' + FONDO + ' !important}' +
+    'html.embebido[data-tema][data-tema],html.embebido[data-tema][data-tema] body{background:transparent !important}' +
+    'html{background:' + FONDO + '}' +
+    'body{background:' + FONDO + ';color:' + TINTA + ';font-family:Inter,"Segoe UI",Arial,sans-serif;-webkit-font-smoothing:antialiased}' +
+    'body.embebido{background:transparent}' +
+    '.app-topbar{background:' + FONDO + ';border-bottom:1px solid ' + BORDE + '}' +
+
+    // Título
+    '.title-block{padding:28px 20px 16px}' +
+    '.title-block h1{font-size:30px;font-weight:500;letter-spacing:-.03em;color:' + TINTA + ';margin:0 0 6px}' +
+    '.title-block p{font-size:13.5px;color:' + SUAVE + '}' +
+
+    // Volver: botón redondo blanco
+    '#hubBackBtn{background:#fff !important;color:' + SOBRE + ' !important;box-shadow:0 6px 18px rgba(0,0,0,.45) !important}' +
+
+    // Solapas: pastilla blanca, la activa en lima
+    '.tabs-switch{display:flex;flex-wrap:nowrap;gap:2px;margin:4px 20px 22px;padding:5px;background:#fff;border-radius:999px;max-width:560px;box-shadow:0 0 0 4px ' + PANEL + '}' +
+    '.tab-btn{flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;gap:7px;border:0;background:transparent;border-radius:999px;' +
+    'padding:10px 12px;font-family:inherit;font-size:13px;font-weight:600;color:#5c6167;white-space:nowrap;transition:background .15s,color .15s}' +
+    '.tab-btn svg{width:16px;height:16px;flex:none}' +
+    '.tab-btn:hover{color:' + SOBRE + ';background:#f0f2f5}' +
+    '.tab-btn.active,.tab-btn.active:hover{background:' + LIMA + ';color:' + SOBRE + '}' +
+    '.tab-btn .corto{display:none}' +
+    '@media (max-width:520px){.tab-btn .largo{display:none}.tab-btn .corto{display:inline}.tab-btn{padding:10px 8px}}' +
+
+    // Fichas
+    '.fichas-cuenta{display:flex;align-items:center;gap:8px;margin:0 20px 4px;font-size:14px;font-weight:500;color:' + TINTA + '}' +
+    '.fichas-cuenta b{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:#fff;color:' + SOBRE + ';font-size:11px;font-weight:700}' +
+    '.ficha-grid{gap:14px;padding:12px 20px 24px}' +
+    '.ficha-card{border:1px solid ' + BORDE + ';border-radius:22px;background:' + PANEL + ';box-shadow:0 18px 40px -22px rgba(0,0,0,.9);transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}' +
+    '.ficha-card:hover{transform:translateY(-3px);border-color:rgba(204,246,86,.45);box-shadow:0 22px 44px -20px rgba(0,0,0,.95),0 0 0 4px rgba(204,246,86,.06)}' +
+    '.ficha-btn.ver{box-shadow:0 8px 20px -10px rgba(204,246,86,.7)}' +
+    '.tab-btn.active{box-shadow:0 6px 16px -8px rgba(150,190,30,.8)}' +
+    '.carga-hero{box-shadow:0 16px 36px -18px rgba(204,246,86,.55)}' +
+    '.escenario,.compare-selectors,.compare-table{box-shadow:0 18px 40px -24px rgba(0,0,0,.9)}' +
+    '.ficha-cover{position:relative;margin:8px 8px 0;border-radius:16px;background:' + PANEL2 + '}' +
+    '.ficha-cover img{transition:transform .4s ease}' +
+    '.ficha-card:hover .ficha-cover img{transform:scale(1.04)}' +
+    '.ficha-cover::after{content:"PDF";position:absolute;top:8px;right:8px;padding:3px 9px;border-radius:999px;background:rgba(18,20,24,.78);' +
+    'color:' + TINTA + ';font:700 10px/1.4 Inter,sans-serif;letter-spacing:.08em}' +
+    '.ficha-info{padding:12px 12px 14px}' +
+    '.ficha-nombre{min-height:0;margin-bottom:12px;font-size:15px;font-weight:600;letter-spacing:-.01em;line-height:1.25;color:' + TINTA + '}' +
+    '.ficha-nombre .marca{display:block;margin-bottom:3px;font-size:10.5px;font-weight:700;letter-spacing:.12em;color:' + LIMA + '}' +
+    '.ficha-actions{gap:6px}' +
+    '.ficha-btn{display:flex;align-items:center;justify-content:center;gap:6px;border-radius:999px;padding:9px 8px;font-family:inherit;font-size:12.5px;font-weight:600;transition:filter .15s,background .15s}' +
+    '.ficha-btn svg{width:15px;height:15px;flex:none}' +
+    '.ficha-btn.ver{background:' + LIMA + ';color:' + SOBRE + '}' +
+    '.ficha-btn.ver:hover{filter:brightness(1.05)}' +
+    '.ficha-btn.compartir{border:1px solid rgba(255,255,255,.14);background:transparent;color:' + TINTA + '}' +
+    '.ficha-btn.compartir:hover{background:' + PANEL2 + '}' +
+
+    // Selectores (Comparar y Calculadora)
+    '.compare-selectors{position:relative;gap:40px;margin:0 20px 16px;padding:16px !important;background:' + PANEL + ';border:1px solid ' + BORDE + ';border-radius:22px}' +
+    '.carga-wrap .compare-selectors{margin:0 0 14px;gap:12px}' +
+    '.compare-select-group label{font-size:10.5px;letter-spacing:.1em;color:' + TENUE + '}' +
+    '.compare-select-group select{-webkit-appearance:none;appearance:none;padding:12px 36px 12px 16px;border:1px solid ' + BORDE + ';border-radius:999px;' +
+    'background:' + PANEL2 + ' ' + FLECHA + ' no-repeat right 12px center/16px;font-size:14px;font-weight:600;color:' + TINTA + ';cursor:pointer}' +
+    '.compare-select-group select:focus{outline:none;border-color:' + LIMA + '}' +
+    '.compare-select-group select option,.compare-select-group select optgroup{background:' + PANEL + ';color:' + TINTA + '}' +
+    '#compareContent .compare-select-group label::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}' +
+    '#compareContent .compare-select-group:first-child label::before{background:' + LIMA + '}' +
+    '#compareContent .compare-select-group:nth-child(2) label::before{background:#fff}' +
+    '.compare-vs{position:absolute;left:50%;top:61px;transform:translate(-50%,-50%);width:30px;height:30px;border-radius:50%;background:' + LIMA + ';color:' + SOBRE + ';' +
+    'display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;letter-spacing:.04em;box-shadow:0 0 0 4px ' + PANEL + '}' +
+
+    // Tabla comparativa: panel blanco que contrasta, como en la referencia
+    '.compare-table-wrap{padding:0 20px 28px}' +
+    '.compare-table{border:0;border-collapse:separate;border-spacing:0;border-radius:24px;overflow:hidden;background:#fff;color:' + SOBRE + '}' +
+    '.compare-table th,.compare-table td{padding:13px 16px;border-bottom:1px solid #eef0f3}' +
+    '.compare-table thead th{background:#fff;color:' + SOBRE + ';font-size:15px;font-weight:600;text-transform:none;letter-spacing:-.01em;border-bottom:0;padding-top:18px}' +
+    '.compare-table thead th:nth-child(2) ,.compare-table thead th:nth-child(3){position:relative}' +
+    '.compare-table thead th:nth-child(2){box-shadow:inset 0 -4px 0 ' + LIMA + '}' +
+    '.compare-table thead th:nth-child(3){box-shadow:inset 0 -4px 0 ' + SOBRE + '}' +
+    '.compare-table tbody th{width:36%;white-space:normal;background:transparent;color:#8b9096;font-size:12.5px;font-weight:500}' +
+    '.compare-table tbody td{color:' + SOBRE + ';font-weight:600}' +
+    '.compare-table tbody tr:hover{background:#f6f8f0}' +
+    '.compare-row-moto td{font-weight:700}' +
+    '.compare-empty{margin:0 20px;border-radius:22px;background:' + PANEL + ';color:' + SUAVE + '}' +
+
+    // Calculadora de carga
+    '.carga-chips{gap:6px}' +
+    '.carga-chip{border:1px solid ' + BORDE + ';border-radius:999px;padding:6px 12px;background:' + PANEL + ';font-size:12px;font-weight:600;color:' + TINTA + '}' +
+    '.carga-chip.si{background:rgba(204,246,86,.14);border-color:rgba(204,246,86,.35);color:' + LIMA + '}' +
+    '.carga-chip.no{background:rgba(214,72,58,.15);border-color:rgba(214,72,58,.35);color:#ff8a7d}' +
+    '.carga-aviso{border-radius:16px;background:rgba(181,124,23,.16);border-color:rgba(181,124,23,.4);color:#f0c46a}' +
+    '.carga-aviso.error{background:rgba(214,72,58,.15);border-color:rgba(214,72,58,.35);color:#ff8a7d}' +
+    '.carga-hero{border-radius:24px;padding:20px 22px;background:' + LIMA + ';color:' + SOBRE + '}' +
+    '.carga-hero .c,.carga-hero .kw span{color:rgba(27,28,30,.7)}' +
+    '.carga-hero .kw b{font-size:36px;font-weight:700;letter-spacing:-.02em}' +
+    '.carga-leyenda{font-weight:500;color:' + SUAVE + '}' +
+    '.carga-leyenda i{border-radius:50%}' +
+    '.carga-leyenda span:nth-child(1) i{background:#ff6b5b !important}' +
+    '.carga-leyenda span:nth-child(2) i{background:#fff !important}' +
+    '.carga-leyenda span:nth-child(3) i{background:' + LIMA + ' !important}' +
+    '.escenario{border:1px solid ' + BORDE + ' !important;border-radius:22px;padding:16px 18px;background:' + PANEL + '}' +
+    '.esc-rojo{--esc:#ff6b5b}.esc-azul{--esc:#ffffff}.esc-verde{--esc:' + LIMA + '}' +
+    '.escenario .tiempo b{color:var(--esc) !important;font-weight:700}' +
+    '.escenario .esc-barra>div,.escenario .pista>div{background:var(--esc) !important}' +
+    '.esc-top .desde{font-size:10.5px;letter-spacing:.1em;color:' + TENUE + '}' +
+    '.esc-top .desde b{font-size:28px;font-weight:600;letter-spacing:-.02em;color:' + TINTA + '}' +
+    '.esc-top .tiempo span,.esc-bateria{color:' + TENUE + '}' +
+    '.esc-barra{height:10px;border-radius:999px;background:' + PANEL2 + '}' +
+    '.esc-barra>div{border-radius:999px}' +
+    '.esc-bateria .pista{height:6px;border-radius:999px;background:' + PANEL2 + '}' +
+    '.carga-nota{color:' + TENUE + '}' +
+
+    // Entrada al abrir: título, solapas y fichas suben una detrás de la otra.
+    // Relleno "backwards": al terminar no queda ningún transform puesto.
+    '@keyframes fichas-entrar{from{opacity:0;transform:translateY(16px)}}' +
+    '@media (prefers-reduced-motion:no-preference){' +
+    '.title-block,.tabs-switch,.fichas-cuenta,.ficha-card,.compare-selectors,.compare-table-wrap,.carga-hero,.escenario{animation:fichas-entrar .55s cubic-bezier(.2,.8,.2,1) backwards}' +
+    '.tabs-switch{animation-delay:.06s}.fichas-cuenta{animation-delay:.1s}' +
+    '.ficha-card:nth-child(1){animation-delay:.14s}.ficha-card:nth-child(2){animation-delay:.19s}' +
+    '.ficha-card:nth-child(3){animation-delay:.24s}.ficha-card:nth-child(4){animation-delay:.29s}' +
+    '.ficha-card:nth-child(5){animation-delay:.34s}.ficha-card:nth-child(6){animation-delay:.39s}' +
+    '.ficha-card:nth-child(n+7){animation-delay:.44s}' +
+    '.compare-table-wrap{animation-delay:.08s}' +
+    '.escenario:nth-of-type(2){animation-delay:.06s}.escenario:nth-of-type(3){animation-delay:.12s}' +
+    '}' +
+    '}'
+
+  var hoja = document.createElement('style')
+  hoja.id = 'fichasLindas'
+  hoja.textContent = css
+  document.head.appendChild(hoja)
+
+  if (!esFichas) return
+
+  var S = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+  var ICONOS = {
+    fichas: S + '<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h4"/></svg>',
+    comparar: S + '<path d="M8 4v16M16 4v16M4 8h4M16 16h4"/></svg>',
+    carga: S + '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg>',
+    ver: S + '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+    compartir: S + '<path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 002 2h10a2 2 0 002-2v-6"/></svg>',
+  }
+  var CORTO = { fichas: 'Fichas', comparar: 'Comparar', carga: 'Carga' }
+
+  function adornar() {
+    document.querySelectorAll('.tab-btn[data-tab]').forEach(function (b) {
+      if (b.getAttribute('data-lindo')) return
+      var clave = b.getAttribute('data-tab')
+      var largo = document.createElement('span')
+      largo.className = 'largo'
+      largo.textContent = b.textContent.trim()
+      var corto = document.createElement('span')
+      corto.className = 'corto'
+      corto.textContent = CORTO[clave] || largo.textContent
+      b.innerHTML = ICONOS[clave] || ''
+      b.appendChild(largo)
+      b.appendChild(corto)
+      b.setAttribute('data-lindo', '1')
+    })
+
+    var grilla = document.querySelector('#view-fichas .ficha-grid')
+    if (grilla && !document.querySelector('.fichas-cuenta')) {
+      var n = grilla.querySelectorAll('.ficha-card').length
+      if (n) {
+        var cuenta = document.createElement('p')
+        cuenta.className = 'fichas-cuenta'
+        cuenta.innerHTML = 'Modelos <b>' + n + '</b>'
+        grilla.parentNode.insertBefore(cuenta, grilla)
+      }
+    }
+
+    // "BYD - ATTO 2" → la marca chiquita arriba y el modelo grande.
+    document.querySelectorAll('.ficha-nombre').forEach(function (el) {
+      if (el.getAttribute('data-lindo')) return
+      var m = /^\s*BYD[\s\-–·]*(.+)$/i.exec(el.textContent)
+      if (m) {
+        el.innerHTML = '<span class="marca">BYD</span>'
+        el.appendChild(document.createTextNode(m[1].replace(/-/g, ' ').trim()))
+      }
+      el.setAttribute('data-lindo', '1')
+    })
+
+    document.querySelectorAll('.ficha-btn').forEach(function (b) {
+      if (b.getAttribute('data-lindo')) return
+      var tipo = b.classList.contains('ver') ? 'ver' : b.classList.contains('compartir') ? 'compartir' : ''
+      if (tipo) b.insertAdjacentHTML('afterbegin', ICONOS[tipo])
+      b.setAttribute('data-lindo', '1')
+    })
+
+    var sel = document.querySelector('#compareContent .compare-selectors')
+    if (sel && !sel.querySelector('.compare-vs')) {
+      var vs = document.createElement('span')
+      vs.className = 'compare-vs'
+      vs.setAttribute('aria-hidden', 'true')
+      vs.textContent = 'VS'
+      sel.appendChild(vs)
+    }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', adornar)
+  else adornar()
+})()
