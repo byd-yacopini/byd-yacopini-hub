@@ -1,0 +1,50 @@
+# Publica el sitio en GitHub Pages.
+#
+# POR QUE EXISTE ESTE ARCHIVO
+# El sync automatico empuja un commit vacio cada ~35 segundos (1669 el
+# 24/09/2026, 49 de cada 50 sin cambiar un solo archivo; el 15/10/2026 fallaban
+# 71 de cada 100 publicaciones). Cada commit encola
+# una publicacion, GitHub Pages admite unas 10 por hora y desde entonces
+# fallan casi todas: el sitio se queda con una version vieja durante horas.
+#
+# Este flujo solo corre cuando realmente cambio un archivo: un commit vacio
+# no toca ningun `path`, asi que ni se dispara. El sync puede seguir como
+# esta; deja de romper la publicacion.
+#
+# PARA QUE EMPIECE A USARSE, UNA SOLA VEZ:
+#   Settings -> Pages -> Build and deployment -> Source: "GitHub Actions"
+# (lo tiene que hacer alguien con permiso de admin del repositorio).
+
+name: Publicar el sitio
+
+on:
+  push:
+    branches: [main]
+    paths: ['**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Si entran varios cambios seguidos, publica el ultimo y descarta los del
+# medio en vez de encolarlos.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - id: deploy
+        uses: actions/deploy-pages@v4
