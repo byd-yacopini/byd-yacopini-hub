@@ -381,7 +381,7 @@
     '.ficha-btn.ver{box-shadow:0 8px 20px -10px rgba(69,182,247,.7)}' +
     '.tab-btn.active{box-shadow:0 6px 16px -8px rgba(40,150,220,.8)}' +
     '.carga-hero{box-shadow:0 16px 36px -18px rgba(69,182,247,.55)}' +
-    '.escenario,.compare-selectors,.compare-table-wrap{box-shadow:0 18px 40px -24px rgba(0,0,0,.9)}' +
+    '.escenario,.compare-selectors,.compare-table tbody tr{box-shadow:0 18px 40px -24px rgba(0,0,0,.9)}' +
     '.ficha-cover{position:relative;margin:8px 8px 0;border-radius:16px;background:' + PANEL2 + '}' +
     '.ficha-cover img{transition:transform .4s ease}' +
     '.ficha-card:hover .ficha-cover img{transform:scale(1.04)}' +
@@ -412,30 +412,40 @@
     '.compare-vs{position:absolute;left:50%;top:61px;transform:translate(-50%,-50%);width:30px;height:30px;border-radius:50%;background:' + LIMA + ';color:' + SOBRE + ';' +
     'display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;letter-spacing:.04em;box-shadow:0 0 0 4px ' + PANEL + '}' +
 
-    // Tabla comparativa: panel blanco que contrasta, como en la referencia
-    // La caja de afuera es la que se redondea y recorta: Safari no recorta
-    // bien una tabla redondeada y dejaba una sombra rara en la esquina. Con
-    // anchos fijos la tabla nunca se sale de la pantalla.
-    '.compare-table-wrap{margin:0 20px 28px;padding:0 !important;overflow:hidden !important;border-radius:24px;background:#fff}' +
-    '.compare-table{width:100%;table-layout:fixed;border:0;border-collapse:separate;border-spacing:0;border-radius:0;overflow:visible;background:transparent;box-shadow:none;color:' + SOBRE + '}' +
-    '.compare-table th,.compare-table td{padding:13px 16px;border-bottom:1px solid #eef0f3;overflow-wrap:anywhere;vertical-align:middle}' +
-    '.compare-table thead th:first-child{width:34%}' +
-    '.compare-table thead th{background:#fff;color:' + SOBRE + ';font-size:15px;font-weight:600;text-transform:none;letter-spacing:-.01em;border-bottom:0;padding-top:18px}' +
-    '.compare-table thead th:nth-child(2) ,.compare-table thead th:nth-child(3){position:relative}' +
-    '.compare-table thead th:nth-child(2){box-shadow:inset 0 -4px 0 ' + CELESTE + '}' +
-    '.compare-table thead th:nth-child(3){box-shadow:inset 0 -4px 0 ' + SOBRE + '}' +
-    '.compare-table tbody th{white-space:normal;background:transparent;color:#8b9096;font-size:12.5px;font-weight:500}' +
-    '.compare-table tbody td{color:' + SOBRE + ';font-weight:600}' +
-    '.compare-table tbody tr:hover{background:#f6f8f0}' +
-    '.compare-table tbody tr:last-child th,.compare-table tbody tr:last-child td{border-bottom:0}' +
-    // Celular: letra y márgenes más chicos para que entren las tres columnas,
-    // y los selectores más pegados al VS para que no se corte el modelo.
+    // Comparativa (rehecha el 15/10 porque la tabla de tres columnas quedaba
+    // apretada en el celular). La tabla la arma la página de Nicolás; acá
+    // sólo se cambia cómo se ve: arriba los dos modelos como pastillas que
+    // quedan fijas al bajar, y cada característica en su propia tarjeta con
+    // el nombre chiquito arriba y los dos valores lado a lado.
+    '.compare-table-wrap{margin:0 20px 28px;padding:0 !important;overflow:visible !important;background:transparent;max-width:760px}' +
+    '.compare-table,.compare-table thead,.compare-table tbody{display:block;width:100%}' +
+    '.compare-table{border:0;background:transparent;box-shadow:none;border-radius:0;color:' + TINTA + '}' +
+    // Encabezado: las dos pastillas, pegadas arriba al bajar
+    '.compare-table thead{position:sticky;top:0;z-index:3;padding:10px 0;background:' + FONDO + '}' +
+    '.compare-table thead tr{display:grid;grid-template-columns:1fr 1fr;gap:8px}' +
+    '.compare-table thead th{display:flex;align-items:center;gap:8px;min-width:0;padding:12px 14px;border:0;border-radius:16px;box-shadow:none;' +
+    'font-size:14px;font-weight:700;line-height:1.2;letter-spacing:-.01em;text-transform:none;overflow-wrap:anywhere}' +
+    '.compare-table thead th:first-child{display:none}' +
+    '.compare-table thead th:nth-child(2){background:' + CELESTE + ';color:' + SOBRE + '}' +
+    '.compare-table thead th:nth-child(3){background:#fff;color:' + SOBRE + '}' +
+    '.compare-table thead th::before{content:"A";flex:none;display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;' +
+    'background:' + SOBRE + ';color:#fff;font-size:10px;font-weight:800}' +
+    '.compare-table thead th:nth-child(3)::before{content:"B"}' +
+    // Cada característica, una tarjeta
+    '.compare-table tbody{display:grid;gap:8px;margin-top:4px}' +
+    '.compare-table tbody tr{display:grid;grid-template-columns:1fr 1fr;column-gap:8px;row-gap:6px;padding:12px 14px 14px;border:1px solid ' + BORDE + ';' +
+    'border-radius:18px;background:' + PANEL + ';transition:border-color .15s}' +
+    '.compare-table tbody tr:hover{background:' + PANEL + ';border-color:rgba(69,182,247,.4)}' +
+    '.compare-table tbody th,.compare-table tbody td{display:block;padding:0;border:0;background:transparent;text-align:left;overflow-wrap:anywhere}' +
+    '.compare-table tbody th{grid-column:1/-1;color:' + TENUE + ';font-size:10.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;white-space:normal}' +
+    '.compare-table tbody td{position:relative;padding-left:12px;color:' + TINTA + ';font-size:15px;font-weight:600;line-height:1.3;font-variant-numeric:tabular-nums}' +
+    '.compare-table tbody td::before{content:"";position:absolute;left:0;top:3px;bottom:3px;width:3px;border-radius:3px;background:' + CELESTE + '}' +
+    '.compare-table tbody td:last-child::before{background:#fff}' +
+    // Selectores apilados en el celular, con el VS al costado
     '@media (max-width:520px){' +
-    '.compare-table th,.compare-table td{padding:11px 10px;font-size:13px}' +
-    '.compare-table thead th{font-size:14px;padding-top:16px}' +
-    '.compare-table tbody th{font-size:12px}' +
     '#compareContent .compare-selectors{flex-direction:column;gap:26px;padding:14px !important}' +
     '.compare-vs{top:50%;left:auto;right:28px;transform:translateY(-50%)}' +
+    '.compare-table tbody td{font-size:14px}' +
     '}' +
     '.compare-row-moto td{font-weight:700}' +
     '.compare-empty{margin:0 20px;border-radius:22px;background:' + PANEL + ';color:' + SUAVE + '}' +
