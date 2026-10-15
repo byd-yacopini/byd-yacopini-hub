@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BYD Yacopini &middot; Post venta</title>
+<script src="tema.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.min.js"></script>
+<style>
+  :root{
+    --negro:#0A0A0A; --carbon:#2A2A2A; --gris-oscuro:#4A4A4A; --gris-medio:#8C8C8C; --gris-claro:#D4D4D4; --gris-fondo:#F2F2F2;
+    --blanco:#FFFFFF; --azul-ev:#1565D8; --verde:#1B7F4C; --ambar:#D89614; --rojo:#C0392B;
+  }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--gris-fondo); color:var(--carbon); font-family:'Segoe UI', Arial, Helvetica, sans-serif; }
+  .app{ max-width:1000px; margin:0 auto; padding:0 0 90px; }
+  .app-topbar{ background:var(--negro); padding:20px; }
+  .app-topbar b{ color:#fff; font-size:15px; letter-spacing:.3px; }
+  .wrap{ padding:16px; }
+  h1{ font-size:21px; font-weight:800; margin:4px 0 4px; color:var(--negro); }
+  .sub{ font-size:12.5px; color:var(--gris-oscuro); margin:0 0 14px; line-height:1.5; }
+  .estado{ font-size:12px; color:var(--gris-medio); margin:0 0 12px; }
+  .estado.mal{ color:var(--rojo); }
+
+  .reglas{ background:#EEF4FF; border:1px solid #C9DAFB; color:#1F3F7A; font-size:12.5px; border-radius:10px; padding:10px 12px; margin-bottom:14px; line-height:1.55; }
+  .reglas b{ color:#12306B; }
+
+  .kpis{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:14px; }
+  .kpi{ background:var(--blanco); border:1px solid var(--gris-claro); border-radius:12px; padding:12px 14px; text-align:left; font-family:inherit; cursor:pointer; }
+  .kpi .n{ font-size:26px; font-weight:800; font-variant-numeric:tabular-nums; color:var(--negro); line-height:1.1; }
+  .kpi .l{ font-size:11.5px; font-weight:600; color:var(--gris-oscuro); margin-top:3px; line-height:1.3; }
+  .kpi.rojo .n{ color:var(--rojo); } .kpi.ambar .n{ color:var(--ambar); } .kpi.azul .n{ color:var(--azul-ev); }
+  .kpi.on{ border-color:var(--azul-ev); box-shadow:0 0 0 2px #C9DAFB; }
+
+  .filtros{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px; }
+  .filtros input, .filtros select{ font-family:inherit; font-size:14px; padding:9px 10px; border:1px solid var(--gris-claro); border-radius:10px; background:var(--blanco); color:var(--carbon); min-width:0; }
+  .filtros input{ flex:1 1 220px; }
+  .filtros select{ flex:0 1 170px; }
+  .barra{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin:6px 0 10px; font-size:12.5px; color:var(--gris-oscuro); }
+  .btn{ padding:9px 14px; border-radius:10px; border:1px solid var(--gris-claro); background:var(--blanco); color:var(--carbon); font-weight:700; font-size:13px; font-family:inherit; cursor:pointer; }
+
+  .u{ background:var(--blanco); border:1px solid var(--gris-claro); border-radius:12px; padding:12px 14px; margin-bottom:8px; display:grid; grid-template-columns:minmax(0,1.5fr) minmax(0,1.2fr) minmax(0,1.3fr) auto; gap:6px 16px; align-items:start; }
+  .u .cli{ font-weight:800; color:var(--negro); font-size:14.5px; overflow-wrap:anywhere; }
+  .u .det{ font-size:12px; color:var(--gris-oscuro); line-height:1.5; overflow-wrap:anywhere; }
+  .u .vin{ font-family:Consolas, 'Courier New', monospace; font-size:11.5px; color:var(--gris-medio); }
+  .u .acc{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; justify-content:flex-end; }
+  .pill{ display:inline-block; font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px; background:var(--gris-fondo); color:var(--gris-oscuro); white-space:nowrap; }
+  .pill.rojo{ background:#FBEAEA; color:#8A2020; } .pill.ambar{ background:#FFF7E6; color:#7A5A00; }
+  .pill.azul{ background:#EEF4FF; color:#1F3F7A; } .pill.verde{ background:#E3F5EA; color:#145C37; }
+  .wa{ display:inline-block; padding:8px 12px; border-radius:10px; background:#1FA855; color:#fff; font-weight:700; font-size:12.5px; text-decoration:none; }
+  .sin-cel{ font-size:11.5px; color:var(--gris-medio); }
+  .vacio{ background:var(--blanco); border:1px dashed var(--gris-claro); border-radius:12px; padding:24px; text-align:center; color:var(--gris-medio); font-size:13px; }
+  @media (max-width:720px){
+    .kpis{ grid-template-columns:repeat(2,1fr); }
+    .u{ grid-template-columns:1fr; }
+    .u .acc{ justify-content:flex-start; }
+  }
+</style>
+</head>
+<body>
+<div class="app-topbar"><b>BYD Yacopini &middot; Post venta</b></div>
+<a id="hubBackBtn" href="./index.html" style="position:fixed;bottom:18px;left:18px;z-index:999999;width:44px;height:44px;border-radius:50%;background:#0A0A0A;color:#fff;display:flex;align-items:center;justify-content:center;text-decoration:none;font-family:Arial,sans-serif;font-size:20px;box-shadow:0 4px 14px rgba(0,0,0,0.3);" aria-label="Volver al inicio">&larr;</a>
+<div class="app"><div class="wrap">
+  <h1>Servicios y garantía</h1>
+  <p class="sub">Unidades entregadas (datos de la hoja Entregas del CRM) y cuándo le toca el próximo service a cada una.</p>
+
+  <div class="reglas">
+    <b>Plan de services:</b> eléctricos cada <b>20.000 km o 1 año</b>; híbridos cada <b>15.000 km o 1 año</b> (lo que ocurra primero).
+    <b>Garantía:</b> <b>6 años</b> mecánica, <b>8 años</b> batería, con tope de <b>150.000 km</b>.<br>
+    El CRM no trae kilómetros: las fechas se calculan <b>por tiempo</b>, desde la entrega. Una unidad puede necesitar el service antes si ya hizo los km.
+  </div>
+
+  <p class="estado" id="estado">Leyendo las entregas…</p>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="filtros">
+    <input id="buscar" type="search" placeholder="Buscar por cliente, VIN o modelo" autocomplete="off">
+    <select id="fSucursal"><option value="">Todas las sucursales</option></select>
+    <select id="fTipo"><option value="">Eléctricos e híbridos</option><option value="EV">Eléctricos</option><option value="HEV">Híbridos</option></select>
+    <select id="fModelo"><option value="">Todos los modelos</option></select>
+    <select id="fVendedor"><option value="">Todos los vendedores</option></select>
+  </div>
+  <div class="barra"><span id="cuenta"></span><button class="btn" id="bajar" type="button">Bajar lista (CSV)</button></div>
+  <div id="lista"></div>
+</div></div>
+
+<script>
+(function(){
+  // Esta pantalla es de gerencia y de Servicios Post Venta (el Apps Script igual valida la cuenta).
+  try { var ac = window.bydAcceso && window.bydAcceso.leer();
+    if (ac && ac.tipo === 'vendedor'){ location.replace('./panel_ventas.html'); return; }
+    if (ac && ac.tipo === 'jefe'){ location.replace('./panel_jefe.html'); return; }
+    if (ac && ac.tipo === 'administracion'){ location.replace('./index.html'); return; } } catch (e) {}
+
+  var APPS_URL = 'https://script.google.com/macros/s/AKfycbzTYBoM56BBMj2B-8hUG_MIuOh7r5qG4qq2sGlTRM-y6QyFm0XHqgE6XUG5OQB022iy/exec';
+  var APPS_KEY = 'i4uH92SO1sFyNYi8PJ2dsGb9LDM-Xoq3';
+  var SUPA_URL = 'https://mgicnwnvtfkrxmkmewnt.supabase.co';
+  var SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1naWNud252dGZrcnhta21ld250Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1Nzk5MDIsImV4cCI6MjEwNTE1NTkwMn0.GLWN_wI6Q_6Qu1EGi02oPNrL9wgTj-zbGsJCoIE-HQE';
+
+  // ---------- Reglas (un solo lugar) ----------
+  var REGLAS = {
+    servicio: { anios: 1, km: { EV: 20000, HEV: 15000 } },
+    garantia: { mecanicaAnios: 6, bateriaAnios: 8, km: 150000 }
+  };
+
+  function $(id){ return document.getElementById(id); }
+  function esc(s){ var d = document.createElement('div'); d.textContent = (s == null ? '' : String(s)); return d.innerHTML; }
+  function pad(n){ return (n < 10 ? '0' : '') + n; }
+  function fmt(d){ return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear(); }
+  function numAr(n){ return Math.round(n).toLocaleString('es-AR'); }
+  function sumarAnios(d, n){ return new Date(d.getFullYear() + n, d.getMonth(), d.getDate()); }
+  function diasEntre(a, b){ return Math.round((b - a) / 86400000); }
+  function hoyLocal(){ var n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()); }
+  function titulo(s){ return String(s || '').toLowerCase().replace(/(^|\s)(\S)/g, function(m, a, b){ return a + b.toUpperCase(); }); }
+
+  // Eléctrico (EV) o híbrido enchufable (DM-i, DM-p, DMO). Lo que no se reconoce cuenta como eléctrico.
+  function tipoDe(modelo){
+    var m = String(modelo || '');
+    if (/\bEV\b/i.test(m) && !/DM/i.test(m)) return 'EV';
+    if (/DM[-\s]?[ip]\b|\bDMO\b|HEV|h[ií]brid/i.test(m)) return 'HEV';
+    return 'EV';
+  }
+  // Modelo corto para agrupar en el filtro.
+  function modeloCorto(m){
+    var s = String(m || '').trim(), u = s.toUpperCase();
+    if (/DOLPHIN MINI/.test(u)) return 'Dolphin Mini';
+    if (/YUAN PRO/.test(u)) return 'Yuan Pro';
+    if (/SONG PRO/.test(u)) return 'Song Pro DM-i';
+    if (/ATTO 2/.test(u)) return 'Atto 2 DM-i';
+    if (/SEAL U/.test(u)) return 'Seal U DM-i';
+    if (/SEAL 5/.test(u)) return 'Seal 5 DM-i';
+    if (/SHARK/.test(u)) return 'Shark';
+    if (/TI ?7/.test(u)) return 'Ti 7 DM-p';
+    return s || 'Sin modelo';
+  }
+
+  // ---------- Cálculo de cada unidad ----------
+  var ORDEN = { p30: 0, reciente: 1, p60: 2, p90: 3, ok: 4 };
+  function calcular(f, hoy){
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(f.fecha); if (!m) return null;
+    var ent = new Date(+m[1], +m[2] - 1, +m[3]);
+    var tipo = tipoDe(f.modelo);
+    var anios = 0; while (sumarAnios(ent, anios + 1) <= hoy) anios++;
+    var n = anios + 1;                                        // service que viene
+    var prox = sumarAnios(ent, n * REGLAS.servicio.anios);
+    var dias = diasEntre(hoy, prox);
+    var ultimo = anios >= 1 ? sumarAnios(ent, anios) : null;  // aniversario que ya pasó
+    var desdeUltimo = ultimo ? diasEntre(ultimo, hoy) : null;
+    var bucket = 'ok';
+    if (dias <= 30) bucket = 'p30';
+    else if (ultimo && desdeUltimo <= 60) bucket = 'reciente';
+    else if (dias <= 60) bucket = 'p60';
+    else if (dias <= 90) bucket = 'p90';
+    var mec = sumarAnios(ent, REGLAS.garantia.mecanicaAnios), bat = sumarAnios(ent, REGLAS.garantia.bateriaAnios);
+    return {
+      f: f, ent: ent, tipo: tipo, modelo: modeloCorto(f.modelo), n: n, prox: prox, dias: dias,
+      ultimo: ultimo, desdeUltimo: desdeUltimo, bucket: bucket, mec: mec, bat: bat,
+      cliente: (titulo(f.apellido) + (f.nombre ? ', ' + titulo(f.nombre) : '')).trim() || 'Sin nombre',
+      km: REGLAS.servicio.km[tipo], edadDias: diasEntre(ent, hoy)
+    };
+  }
+
+  // ---------- Estado ----------
+  var UNIDADES = [], FILTRO_BUCKET = '';
+  var ETIQ = { p30: 'Próximos 30 días', reciente: 'Pasaron hace poco', p60: 'En 31 a 60 días', p90: 'En 61 a 90 días', ok: 'Más adelante' };
+
+  function waLink(cel, u){
+    var d = String(cel || '').replace(/\D/g, '');
+    if (!d) return '';
+    if (d.indexOf('549') !== 0){
+      if (d.charAt(0) === '0') d = d.slice(1);
+      // Con "15" de celular ("264 15 4453893"): 12 dígitos; sin él son 10 (código de área + número).
+      if (d.length === 12){ [3, 4, 2].some(function(a){ if (d.substr(a, 2) === '15'){ d = d.slice(0, a) + d.slice(a + 2); return true; } return false; }); }
+      if (d.length === 10) d = '549' + d;
+      else return '';
+    }
+    var nombre = u.f.nombre ? titulo(u.f.nombre.split(' ')[0]) : '';
+    var texto = 'Hola' + (nombre ? ' ' + nombre : '') + ', te escribimos de BYD Yacopini. Se acerca el service de tu ' + u.modelo + ' y queremos coordinar un turno. ¿Cuándo te viene bien?';
+    return 'https://wa.me/' + d + '?text=' + encodeURIComponent(texto);
+  }
+
+  function filtradas(){
+    var q = $('buscar').value.trim().toLowerCase();
+    var suc = $('fSucursal').value, tipo = $('fTipo').value, mod = $('fModelo').value, ven = $('fVendedor').value;
+    return UNIDADES.filter(function(u){
+      if (FILTRO_BUCKET && u.bucket !== FILTRO_BUCKET) return false;
+      if (suc && u.f.sucursal !== suc) return false;
+      if (tipo && u.tipo !== tipo) return false;
+      if (mod && u.modelo !== mod) return false;
+      if (ven && u.f.vendedor !== ven) return false;
+      if (q && (u.cliente + ' ' + u.f.vin + ' ' + u.f.modelo).toLowerCase().indexOf(q) === -1) return false;
+      return true;
+    }).sort(function(a, b){
+      if (ORDEN[a.bucket] !== ORDEN[b.bucket]) return ORDEN[a.bucket] - ORDEN[b.bucket];
+      return a.bucket === 'reciente' ? a.desdeUltimo - b.desdeUltimo : a.dias - b.dias;
+    });
+  }
+
+  function pillDe(u){
+    if (u.bucket === 'p30') return '<span class="pill rojo">Service en ' + u.dias + (u.dias === 1 ? ' día' : ' días') + '</span>';
+    if (u.bucket === 'reciente') return '<span class="pill ambar">Cumplió el año hace ' + u.desdeUltimo + (u.desdeUltimo === 1 ? ' día' : ' días') + '</span>';
+    if (u.bucket === 'p60' || u.bucket === 'p90') return '<span class="pill azul">Service en ' + u.dias + ' días</span>';
+    return '<span class="pill verde">Al día por tiempo</span>';
+  }
+
+  function dibujarKpis(){
+    var c = { p30: 0, reciente: 0, p60: 0, p90: 0, ok: 0 };
+    UNIDADES.forEach(function(u){ c[u.bucket]++; });
+    var def = [
+      { k: '', n: UNIDADES.length, l: 'Unidades entregadas', c: '' },
+      { k: 'p30', n: c.p30, l: 'Service en los próximos 30 días', c: 'rojo' },
+      { k: 'reciente', n: c.reciente, l: 'Cumplieron el año hace menos de 60 días (confirmar si hicieron el service)', c: 'ambar' },
+      { k: 'p60', n: c.p60 + c.p90, l: 'Service en 31 a 90 días', c: 'azul' }
+    ];
+    $('kpis').innerHTML = def.map(function(d){
+      var on = (d.k === 'p60' ? (FILTRO_BUCKET === 'p60' || FILTRO_BUCKET === 'p90') : FILTRO_BUCKET === d.k);
+      return '<button type="button" class="kpi ' + d.c + (on ? ' on' : '') + '" data-k="' + d.k + '"><div class="n">' + numAr(d.n) + '</div><div class="l">' + esc(d.l) + '</div></button>';
+    }).join('');
+  }
+
+  function dibujarLista(){
+    var lista = filtradas();
+    $('cuenta').textContent = numAr(lista.length) + ' de ' + numAr(UNIDADES.length) + ' unidades' + (FILTRO_BUCKET ? ' · ' + ETIQ[FILTRO_BUCKET] : '');
+    if (!lista.length){ $('lista').innerHTML = '<div class="vacio">No hay unidades con esos filtros.</div>'; return; }
+    $('lista').innerHTML = lista.slice(0, 300).map(function(u){
+      var wa = waLink(u.f.celular, u);
+      var contacto = wa ? '<a class="wa" href="' + wa + '" target="_blank" rel="noopener">WhatsApp</a>'
+        : (u.f.celular ? '<span class="sin-cel">' + esc(u.f.celular) + '</span>' : '<span class="sin-cel">Sin celular</span>');
+      return '<div class="u">' +
+        '<div><div class="cli">' + esc(u.cliente) + '</div><div class="vin">' + esc(u.f.vin) + '</div></div>' +
+        '<div class="det"><b>' + esc(u.modelo) + '</b> · ' + (u.tipo === 'EV' ? 'Eléctrico' : 'Híbrido') + (u.f.color ? ' · ' + esc(u.f.color) : '') + '<br>' +
+          'Entregado el ' + fmt(u.ent) + (u.f.sucursal ? ' · ' + esc(u.f.sucursal) : '') + '<br>Vendedor: ' + esc(u.f.vendedor || '–') + '</div>' +
+        '<div class="det">' + pillDe(u) + '<br><b>Service N.º ' + u.n + '</b>: ' + fmt(u.prox) + '<br>o a los ' + numAr(u.km * u.n) + ' km, lo que ocurra primero' +
+          '<br>Garantía: mecánica hasta ' + fmt(u.mec) + ' · batería hasta ' + fmt(u.bat) + '</div>' +
+        '<div class="acc">' + contacto + '</div>' +
+      '</div>';
+    }).join('') + (lista.length > 300 ? '<div class="vacio">Se muestran las primeras 300. Usá los filtros o bajá la lista completa.</div>' : '');
+  }
+
+  function llenarFiltros(){
+    function opciones(id, valores){
+      var sel = $(id), base = sel.options[0].outerHTML;
+      sel.innerHTML = base + valores.map(function(v){ return '<option>' + esc(v) + '</option>'; }).join('');
+    }
+    function unicos(fn){ var o = {}; UNIDADES.forEach(function(u){ var v = fn(u); if (v) o[v] = 1; }); return Object.keys(o).sort(); }
+    opciones('fSucursal', unicos(function(u){ return u.f.sucursal; }));
+    opciones('fModelo', unicos(function(u){ return u.modelo; }));
+    opciones('fVendedor', unicos(function(u){ return u.f.vendedor; }));
+  }
+
+  function refrescar(){ dibujarKpis(); dibujarLista(); }
+
+  $('kpis').addEventListener('click', function(e){
+    var b = e.target.closest('.kpi'); if (!b) return;
+    var k = b.dataset.k;
+    if (k === 'p60') k = (FILTRO_BUCKET === 'p60') ? 'p90' : 'p60';   // el 3.º cuadro alterna 31–60 y 61–90
+    FILTRO_BUCKET = (FILTRO_BUCKET === k && k) ? '' : k;
+    refrescar();
+  });
+  ['buscar', 'fSucursal', 'fTipo', 'fModelo', 'fVendedor'].forEach(function(id){
+    $(id).addEventListener(id === 'buscar' ? 'input' : 'change', dibujarLista);
+  });
+
+  $('bajar').addEventListener('click', function(){
+    var cab = ['Cliente', 'VIN', 'Modelo', 'Tipo', 'Sucursal', 'Vendedor', 'Celular', 'Email', 'Fecha de entrega', 'Service N.º', 'Fecha del service', 'Estado', 'Garantía mecánica hasta', 'Garantía batería hasta'];
+    function cel(v){ var s = String(v == null ? '' : v); return /[",;\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+    var filas = filtradas().map(function(u){
+      return [u.cliente, u.f.vin, u.f.modelo, u.tipo === 'EV' ? 'Eléctrico' : 'Híbrido', u.f.sucursal, u.f.vendedor, u.f.celular, u.f.email,
+        fmt(u.ent), u.n, fmt(u.prox), ETIQ[u.bucket], fmt(u.mec), fmt(u.bat)].map(cel).join(';');
+    });
+    var csv = '﻿' + [cab.map(cel).join(';')].concat(filas).join('\r\n');
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    a.download = 'post_venta_' + new Date().toISOString().slice(0, 10) + '.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+  });
+
+  // ---------- Datos ----------
+  function mostrar(j){
+    var hoy = hoyLocal();
+    UNIDADES = (j.filas || []).map(function(f){ return calcular(f, hoy); }).filter(Boolean);
+    $('estado').className = 'estado';
+    $('estado').textContent = 'Entregas leídas: ' + numAr(UNIDADES.length) + ' unidades' + (j.generado ? ' · actualizado ' + String(j.generado).replace('T', ' ') : '') + '.';
+    llenarFiltros(); refrescar();
+  }
+  function fallo(m){ $('estado').className = 'estado mal'; $('estado').textContent = m; $('lista').innerHTML = ''; }
+
+  function pedir(){
+    if (window.__servidorFalso) return Promise.resolve(window.__servidorFalso());
+    if (!window.supabase) return Promise.reject(new Error('No se pudo cargar el acceso del hub.'));
+    var db = window.supabase.createClient(SUPA_URL, SUPA_ANON);
+    return db.auth.getSession().then(function(r){
+      var ses = r && r.data && r.data.session;
+      if (!ses){ location.replace('./index.html?volver=postventa.html'); throw new Error('sin sesión'); }
+      return fetch(APPS_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ key: APPS_KEY, action: 'postVentaLeer', token: ses.access_token }) });
+    }).then(function(r){ return r.json ? r.json() : r; });
+  }
+
+  var datos = new URLSearchParams(location.search).get('datos');   // solo para pruebas locales
+  var origen = datos ? fetch(datos).then(function(r){ return r.json(); }) : pedir();
+  origen.then(function(j){
+    if (!j || j.error || !j.filas) throw new Error(j && j.error ? j.error : 'respuesta vacía');
+    mostrar(j);
+  }).catch(function(e){
+    if (String(e.message) === 'sin sesión') return;
+    fallo('No se pudieron leer las entregas: ' + (e.message || e));
+  });
+
+  window.__postventa = { calcular: calcular, tipoDe: tipoDe, waLink: waLink, mostrar: mostrar };
+})();
+</script>
+</body>
+</html>

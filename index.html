@@ -792,13 +792,15 @@ async function ubicar(user) {
   // diga otra cosa. "Jefe" sólo existe en la planilla (en la base es gerencia).
   // "Gte Admin" / "Gte Administracion" en la planilla: ve solo Patentamiento y Entregas del Tablero
   // (ver la vista de administracion al final de esta pagina).
+  // "Post Venta" / "Servicios Post Venta" en la planilla: entra directo a la pantalla de Post venta.
   const tipo = perfil.rol === 'vendedor' ? 'vendedor'
     : /jefe/i.test(fila?.rol || '') ? 'jefe'
+    : /post.?venta|servicio/i.test(fila?.rol || '') ? 'postventa'
     : /admin/i.test(fila?.rol || '') ? 'administracion'
     : 'gerencia'
   window.bydAcceso?.marcar({ uid: user.id, tipo, nombre })
 
-  const destino = volver || { vendedor: 'panel_ventas.html', jefe: 'panel_jefe.html' }[tipo]
+  const destino = volver || { vendedor: 'panel_ventas.html', jefe: 'panel_jefe.html', postventa: 'postventa.html' }[tipo]
   if (destino) { location.replace('./' + destino); return { yendo: true } }
   saludar(perfil.nombre)
   return { ok: true }
@@ -1330,6 +1332,15 @@ if (data.session) {
         <div class="card-body">
           <p class="t">Objetivos de Vendedores</p>
           <p class="d">Asigná la meta mensual de cada vendedor</p>
+        </div>
+        <div class="chev">›</div>
+      </a>
+
+      <a class="card" href="./postventa.html">
+        <div class="icon" style="background:linear-gradient(135deg,#00897B,#004D40);"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14.7 6.3a4 4 0 00-5.4 5.2L4 16.8 7.2 20l5.3-5.3a4 4 0 005.2-5.4l-2.6 2.6-2.4-.6-.6-2.4 2.6-2.6z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg></div>
+        <div class="card-body">
+          <p class="t">Post venta</p>
+          <p class="d">Cuándo le toca el service a cada unidad entregada y hasta cuándo tiene garantía</p>
         </div>
         <div class="chev">›</div>
       </a>
