@@ -234,7 +234,15 @@
     if (cambiadasPct > 0.6){
       var frec = {}; res.actualizadas.forEach(function(a){ a.difs.forEach(function(c){ frec[c] = (frec[c] || 0) + 1; }); });
       var masCambiadas = Object.keys(frec).filter(function(c){ return frec[c] >= res.actualizadas.length * 0.9; });
-      res.alertas.unshift({ t:'error', m:'Casi todas las filas figuran como actualizadas: las columnas <b>' + esc(masCambiadas.join(', ')) + '</b> no coinciden. Suele pasar cuando la solapa tiene <b>columnas extra o desplazadas</b> respecto del reporte. Hay que revisar la estructura de la solapa antes de cargar.' });
+      if (masCambiadas.length){
+        // Una misma columna cambia en casi todas las filas: señal de columnas desplazadas → se bloquea.
+        res.alertas.unshift({ t:'error', m:'Casi todas las filas figuran como actualizadas: las columnas <b>' + esc(masCambiadas.join(', ')) + '</b> no coinciden. Suele pasar cuando la solapa tiene <b>columnas extra o desplazadas</b> respecto del reporte. Hay que revisar la estructura de la solapa antes de cargar.' });
+      } else {
+        // Cada fila cambia en campos distintos: son avances reales del CRM (seguimiento, primer movimiento, etc.).
+        var top = Object.keys(frec).sort(function(a, b){ return frec[b] - frec[a]; }).slice(0, 4)
+          .map(function(c){ return esc(c) + ' (' + num(frec[c]) + ')'; }).join(', ');
+        res.alertas.unshift({ t:'info', m:'La mayoría de las filas ya estaban y avanzaron en el CRM desde la última carga. Lo que más cambió: ' + top + '. La estructura de la solapa coincide con la del reporte.' });
+      }
     }
 
     // Filas de la planilla que no vienen en el reporte
