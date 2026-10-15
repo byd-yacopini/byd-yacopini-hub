@@ -39,11 +39,18 @@
   .barra{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin:6px 0 10px; font-size:12.5px; color:var(--gris-oscuro); }
   .btn{ padding:9px 14px; border-radius:10px; border:1px solid var(--gris-claro); background:var(--blanco); color:var(--carbon); font-weight:700; font-size:13px; font-family:inherit; cursor:pointer; }
 
-  .u{ background:var(--blanco); border:1px solid var(--gris-claro); border-radius:12px; padding:12px 14px; margin-bottom:8px; display:grid; grid-template-columns:minmax(0,1.5fr) minmax(0,1.2fr) minmax(0,1.3fr) auto; gap:6px 16px; align-items:start; }
-  .u .cli{ font-weight:800; color:var(--negro); font-size:14.5px; overflow-wrap:anywhere; }
-  .u .det{ font-size:12px; color:var(--gris-oscuro); line-height:1.5; overflow-wrap:anywhere; }
+  .u{ background:var(--blanco); border:1px solid var(--gris-claro); border-radius:12px; margin-bottom:10px; overflow:hidden; }
+  .u-cab{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px 14px; flex-wrap:wrap; padding:12px 14px; border-bottom:1px solid var(--gris-fondo); }
+  .u .cli{ font-weight:800; color:var(--negro); font-size:15px; overflow-wrap:anywhere; }
+  .u .sub-cli{ font-size:12px; color:var(--gris-oscuro); margin-top:2px; overflow-wrap:anywhere; }
   .u .vin{ font-family:Consolas, 'Courier New', monospace; font-size:11.5px; color:var(--gris-medio); }
-  .u .acc{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; justify-content:flex-end; }
+  .u .acc{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .u-cuerpo{ display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); }
+  .campo{ padding:10px 14px; font-size:12.5px; line-height:1.55; color:var(--carbon); border-left:1px solid var(--gris-fondo); overflow-wrap:anywhere; }
+  .campo:first-child{ border-left:0; }
+  .campo .et{ font-size:10.5px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; color:var(--gris-medio); margin-bottom:3px; }
+  .campo .gr{ font-size:14px; font-weight:800; color:var(--negro); font-variant-numeric:tabular-nums; }
+  .campo .tenue{ color:var(--gris-oscuro); font-size:12px; }
   .pill{ display:inline-block; font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px; background:var(--gris-fondo); color:var(--gris-oscuro); white-space:nowrap; }
   .pill.rojo{ background:#FBEAEA; color:#8A2020; } .pill.ambar{ background:#FFF7E6; color:#7A5A00; }
   .pill.azul{ background:#EEF4FF; color:#1F3F7A; } .pill.verde{ background:#E3F5EA; color:#145C37; }
@@ -52,8 +59,9 @@
   .vacio{ background:var(--blanco); border:1px dashed var(--gris-claro); border-radius:12px; padding:24px; text-align:center; color:var(--gris-medio); font-size:13px; }
   @media (max-width:720px){
     .kpis{ grid-template-columns:repeat(2,1fr); }
-    .u{ grid-template-columns:1fr; }
-    .u .acc{ justify-content:flex-start; }
+    .u-cuerpo{ grid-template-columns:1fr; }
+    .campo{ border-left:0; border-top:1px solid var(--gris-fondo); }
+    .campo:first-child{ border-top:0; }
   }
 </style>
 </head>
@@ -228,12 +236,20 @@
       var contacto = wa ? '<a class="wa" href="' + wa + '" target="_blank" rel="noopener">WhatsApp</a>'
         : (u.f.celular ? '<span class="sin-cel">' + esc(u.f.celular) + '</span>' : '<span class="sin-cel">Sin celular</span>');
       return '<div class="u">' +
-        '<div><div class="cli">' + esc(u.cliente) + '</div><div class="vin">' + esc(u.f.vin) + '</div></div>' +
-        '<div class="det"><b>' + esc(u.modelo) + '</b> · ' + (u.tipo === 'EV' ? 'Eléctrico' : 'Híbrido') + (u.f.color ? ' · ' + esc(u.f.color) : '') + '<br>' +
-          'Entregado el ' + fmt(u.ent) + (u.f.sucursal ? ' · ' + esc(u.f.sucursal) : '') + '<br>Vendedor: ' + esc(u.f.vendedor || '–') + '</div>' +
-        '<div class="det">' + pillDe(u) + '<br><b>Service N.º ' + u.n + '</b>: ' + fmt(u.prox) + '<br>o a los ' + numAr(u.km * u.n) + ' km, lo que ocurra primero' +
-          '<br>Garantía: mecánica hasta ' + fmt(u.mec) + ' · batería hasta ' + fmt(u.bat) + '</div>' +
-        '<div class="acc">' + contacto + '</div>' +
+        '<div class="u-cab">' +
+          '<div><div class="cli">' + esc(u.cliente) + '</div>' +
+            '<div class="sub-cli"><b>' + esc(u.modelo) + '</b> · ' + (u.tipo === 'EV' ? 'Eléctrico' : 'Híbrido') + (u.f.color ? ' · ' + esc(u.f.color) : '') + '</div>' +
+            '<div class="vin">' + esc(u.f.vin) + '</div></div>' +
+          '<div class="acc">' + pillDe(u) + contacto + '</div>' +
+        '</div>' +
+        '<div class="u-cuerpo">' +
+          '<div class="campo"><div class="et">Entrega</div><div class="gr">' + fmt(u.ent) + '</div>' +
+            '<div class="tenue">' + esc(u.f.sucursal || 'Sin sucursal') + '<br>Vendedor: ' + esc(u.f.vendedor || '–') + '</div></div>' +
+          '<div class="campo"><div class="et">Próximo service · N.º ' + u.n + '</div><div class="gr">' + fmt(u.prox) + '</div>' +
+            '<div class="tenue">o a los ' + numAr(u.km * u.n) + ' km, lo que ocurra primero</div></div>' +
+          '<div class="campo"><div class="et">Garantía</div><div class="gr">Mecánica: ' + fmt(u.mec) + '</div>' +
+            '<div class="tenue">Batería: ' + fmt(u.bat) + '<br>Hasta ' + numAr(REGLAS.garantia.km) + ' km</div></div>' +
+        '</div>' +
       '</div>';
     }).join('') + (lista.length > 300 ? '<div class="vacio">Se muestran las primeras 300. Usá los filtros o bajá la lista completa.</div>' : '');
   }
