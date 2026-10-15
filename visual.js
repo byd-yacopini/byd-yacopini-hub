@@ -378,7 +378,7 @@
     '.ficha-btn.ver{box-shadow:0 8px 20px -10px rgba(204,246,86,.7)}' +
     '.tab-btn.active{box-shadow:0 6px 16px -8px rgba(150,190,30,.8)}' +
     '.carga-hero{box-shadow:0 16px 36px -18px rgba(204,246,86,.55)}' +
-    '.escenario,.compare-selectors,.compare-table{box-shadow:0 18px 40px -24px rgba(0,0,0,.9)}' +
+    '.escenario,.compare-selectors,.compare-table-wrap{box-shadow:0 18px 40px -24px rgba(0,0,0,.9)}' +
     '.ficha-cover{position:relative;margin:8px 8px 0;border-radius:16px;background:' + PANEL2 + '}' +
     '.ficha-cover img{transition:transform .4s ease}' +
     '.ficha-card:hover .ficha-cover img{transform:scale(1.04)}' +
@@ -410,16 +410,30 @@
     'display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;letter-spacing:.04em;box-shadow:0 0 0 4px ' + PANEL + '}' +
 
     // Tabla comparativa: panel blanco que contrasta, como en la referencia
-    '.compare-table-wrap{padding:0 20px 28px}' +
-    '.compare-table{border:0;border-collapse:separate;border-spacing:0;border-radius:24px;overflow:hidden;background:#fff;color:' + SOBRE + '}' +
-    '.compare-table th,.compare-table td{padding:13px 16px;border-bottom:1px solid #eef0f3}' +
+    // La caja de afuera es la que se redondea y recorta: Safari no recorta
+    // bien una tabla redondeada y dejaba una sombra rara en la esquina. Con
+    // anchos fijos la tabla nunca se sale de la pantalla.
+    '.compare-table-wrap{margin:0 20px 28px;padding:0 !important;overflow:hidden !important;border-radius:24px;background:#fff}' +
+    '.compare-table{width:100%;table-layout:fixed;border:0;border-collapse:separate;border-spacing:0;border-radius:0;overflow:visible;background:transparent;box-shadow:none;color:' + SOBRE + '}' +
+    '.compare-table th,.compare-table td{padding:13px 16px;border-bottom:1px solid #eef0f3;overflow-wrap:anywhere;vertical-align:middle}' +
+    '.compare-table thead th:first-child{width:34%}' +
     '.compare-table thead th{background:#fff;color:' + SOBRE + ';font-size:15px;font-weight:600;text-transform:none;letter-spacing:-.01em;border-bottom:0;padding-top:18px}' +
     '.compare-table thead th:nth-child(2) ,.compare-table thead th:nth-child(3){position:relative}' +
     '.compare-table thead th:nth-child(2){box-shadow:inset 0 -4px 0 ' + LIMA + '}' +
     '.compare-table thead th:nth-child(3){box-shadow:inset 0 -4px 0 ' + SOBRE + '}' +
-    '.compare-table tbody th{width:36%;white-space:normal;background:transparent;color:#8b9096;font-size:12.5px;font-weight:500}' +
+    '.compare-table tbody th{white-space:normal;background:transparent;color:#8b9096;font-size:12.5px;font-weight:500}' +
     '.compare-table tbody td{color:' + SOBRE + ';font-weight:600}' +
     '.compare-table tbody tr:hover{background:#f6f8f0}' +
+    '.compare-table tbody tr:last-child th,.compare-table tbody tr:last-child td{border-bottom:0}' +
+    // Celular: letra y márgenes más chicos para que entren las tres columnas,
+    // y los selectores más pegados al VS para que no se corte el modelo.
+    '@media (max-width:520px){' +
+    '.compare-table th,.compare-table td{padding:11px 10px;font-size:13px}' +
+    '.compare-table thead th{font-size:14px;padding-top:16px}' +
+    '.compare-table tbody th{font-size:12px}' +
+    '#compareContent .compare-selectors{flex-direction:column;gap:26px;padding:14px !important}' +
+    '.compare-vs{top:50%;left:auto;right:28px;transform:translateY(-50%)}' +
+    '}' +
     '.compare-row-moto td{font-weight:700}' +
     '.compare-empty{margin:0 20px;border-radius:22px;background:' + PANEL + ';color:' + SUAVE + '}' +
 
