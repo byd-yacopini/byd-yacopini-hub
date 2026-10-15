@@ -309,8 +309,11 @@
     if (r.ausentes.length) html += '<details><summary>Ver las que no vienen (primeras ' + Math.min(10, r.ausentes.length) + ' de ' + num(r.ausentes.length) + ')</summary>' +
       tablaHtml(vista, r.ausentes.slice(0, 10).map(function(o){ return filaResumen(o, vista); })) + '</details>';
     var hayBloqueo = r.alertas.some(function(a){ return a.t === 'error'; });
+    var puedeQuitar = r.ausentes.length && d.modo !== 'foto' && d.fecha && r.desde;
     html += '<div class="carga">' +
       '<label class="chk"><input type="checkbox" class="chkDup" checked> Dejar una sola fila por cada duplicado de la solapa</label>' +
+      (puedeQuitar ? '<label class="chk"><input type="checkbox" class="chkAus"> Quitar de la planilla las <b>' + num(r.ausentes.length) + '</b> que ya no figuran en el reporte ' +
+        '(solo dentro del período del reporte, del ' + fmtF(r.desde) + ' al ' + fmtF(r.hasta) + ')</label>' : '') +
       '<button type="button" class="btn principal btn-cargar"' + (hayBloqueo ? ' disabled title="Hay un problema de estructura en la solapa: corregilo antes de cargar"' : '') + '>Cargar en la planilla</button>' +
       '<div class="carga-res"></div></div>';
     return html;
@@ -485,6 +488,8 @@
       li.push('Se actualizan <b>' + num(r.actualizadas) + '</b> filas que ya estaban y cambiaron.');
       if (r.completadas) li.push('Se completan las columnas nuevas en <b>' + num(r.completadas) + '</b> filas.');
       li.push('Se quitan <b>' + num(r.duplicadosEliminados) + '</b> filas duplicadas.');
+      if (r.ausentesQuitados) li.push('Se <b>quitan ' + num(r.ausentesQuitados) + '</b> filas que ya no figuran en el reporte' +
+        (r.periodo ? ' (período del ' + esc(r.periodo.desde) + ' al ' + esc(r.periodo.hasta) + ')' : '') + '.');
       li.push('La solapa pasa de <b>' + num(r.filasAntes) + '</b> a <b>' + num(r.filasFinal) + '</b> filas.');
       if (r.columnasNuevas && r.columnasNuevas.length) li.push('Se agregan al final las columnas: <b>' + esc(r.columnasNuevas.join(', ')) + '</b>.');
     }
@@ -502,13 +507,17 @@
     var c = CARGAS[card.dataset.carga]; if (!c) return;
     var res = card.querySelector('.carga-res');
     var limpiar = card.querySelector('.chkDup').checked;
+    var chkAus = card.querySelector('.chkAus'), quitarAus = !!(chkAus && chkAus.checked);
 
     if (b.classList.contains('btn-cargar') || b.classList.contains('btn-recalcular')){
       b.disabled = true; res.innerHTML = '<div class="resumen">Calculando qué cambiaría…</div>';
-      pedirServidor('importadorAplicar', Object.assign(cuerpoReporte(c), { simular: true, limpiarDuplicados: limpiar })).then(function(j){
+      pedirServidor('importadorAplicar', Object.assign(cuerpoReporte(c), { simular: true, limpiarDuplicados: limpiar, quitarAusentes: quitarAus })).then(function(j){
         b.disabled = false;
         var r = j.resumen;
         var aviso = j.requiereConfirmacion ? '<div class="alerta aviso"><b>Ojo:</b> ' + esc(j.error) + ' Si es correcto, confirmá igual.</div>' : '';
+        if (quitarAus && r.ausentesQuitados === undefined) aviso += '<div class="alerta error">El servidor todavía no soporta quitar filas ausentes: se cargaría sin quitarlas.</div>';
+        else if (quitarAus && !r.ausentesQuitados) aviso += '<div class="alerta info">Marcaste quitar las que ya no figuran, pero no hay ninguna dentro del período del reporte.</div>';
+        else if (r.ausentesQuitados) aviso += '<div class="alerta aviso"><b>Vas a quitar ' + num(r.ausentesQuitados) + ' filas de la planilla</b> porque ya no figuran en el reporte. Se guarda un respaldo y podés deshacer.</div>';
         res.innerHTML = '<div class="resumen"><b>Esto es lo que va a pasar en la solapa “' + esc(c.def.hoja) + '”:</b>' + listaResumen(r) +
           '<div style="margin-top:6px;color:#4A4A4A;font-size:12px;">Antes de escribir se guarda un respaldo de la solapa.</div></div>' + aviso +
           '<button type="button" class="btn principal btn-confirmar" data-reduccion="' + (j.requiereConfirmacion ? '1' : '') + '">Confirmar y cargar</button>' +
@@ -519,7 +528,7 @@
     } else if (b.classList.contains('btn-confirmar')){
       var reduccion = b.dataset.reduccion === '1';
       b.disabled = true; res.innerHTML = '<div class="resumen">Cargando en la planilla… puede tardar un momento, no cierres la pantalla.</div>';
-      pedirServidor('importadorAplicar', Object.assign(cuerpoReporte(c), { simular: false, limpiarDuplicados: limpiar, confirmarReduccion: reduccion })).then(function(j){
+      pedirServidor('importadorAplicar', Object.assign(cuerpoReporte(c), { simular: false, limpiarDuplicados: limpiar, quitarAusentes: quitarAus, confirmarReduccion: reduccion })).then(function(j){
         if (!j.ok) throw new Error(j.error || 'No se pudo cargar.');
         res.innerHTML = '<div class="ok"><b>Listo, la solapa “' + esc(c.def.hoja) + '” quedó actualizada.</b>' + listaResumen(j.resumen) +
           '<div style="font-size:12px;">Respaldo guardado como <i>' + esc(j.respaldo) + '</i>.</div></div>' +
