@@ -29,6 +29,9 @@
   .drop b{ display:block; font-size:15px; color:var(--negro); margin-bottom:4px; }
   .drop span{ font-size:12.5px; color:var(--gris-medio); }
   .drop input{ display:none; }
+  .slot .drop{ padding:18px 14px; margin-bottom:10px; }
+  .slot .drop b{ font-size:14px; }
+  .slot-out:empty{ display:none; }
 
   .estado-planilla{ font-size:12px; color:var(--gris-medio); margin:0 0 14px; }
   .estado-planilla.ok{ color:var(--verde); }
@@ -71,18 +74,12 @@
 <a id="hubBackBtn" href="./index.html" style="position:fixed;bottom:18px;left:18px;z-index:999999;width:44px;height:44px;border-radius:50%;background:#0A0A0A;color:#fff;display:flex;align-items:center;justify-content:center;text-decoration:none;font-family:Arial,sans-serif;font-size:20px;box-shadow:0 4px 14px rgba(0,0,0,0.3);" aria-label="Volver al inicio">&larr;</a>
 <div class="app"><div class="wrap">
   <h1>Importar reportes del CRM</h1>
-  <p class="sub">Subí los reportes tal cual los bajás del CRM. La app reconoce cada uno, lo compara con lo que ya está en la planilla y te muestra qué entraría. Podés subir varios a la vez.</p>
+  <p class="sub">Cada hoja tiene su propio cuadro: arrastrá ahí el reporte del CRM <b>de esa hoja</b> y solo se modifica esa. Se compara primero y vos confirmás.</p>
 
-  <div class="modo"><b>Cómo funciona:</b> primero se compara y ves qué cambiaría. La planilla <b>no se toca</b> hasta que confirmás. Antes de cada carga se guarda un respaldo y podés volver atrás.</div>
+  <div class="modo"><b>Cómo funciona:</b> la planilla <b>no se toca</b> hasta que confirmás. Antes de cada carga se guarda un respaldo y podés volver atrás.</div>
 
-  <label class="drop" id="drop">
-    <b>Arrastrá los archivos acá o tocá para elegirlos</b>
-    <span>Archivos .xlsx tal como salen del CRM (se descarta la fila "Yacopini | Sistema" y la columna Acciones)</span>
-    <input type="file" id="archivos" accept=".xlsx,.xls,.csv" multiple>
-  </label>
   <p class="estado-planilla" id="estadoPlanilla">Leyendo la planilla actual…</p>
-  <div id="limpieza"></div>
-  <div id="resultados"></div>
+  <div id="slots"></div>
 </div></div>
 
 <script>
@@ -271,11 +268,11 @@
     return '<div class="tabla-wrap"><table class="t"><thead><tr>' + cols.map(function(c){ return '<th>' + esc(c) + '</th>'; }).join('') + '</tr></thead><tbody>' +
       filas.map(function(r){ return '<tr>' + r.map(function(c){ return '<td>' + c + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>';
   }
-  var CARGAS = [];   // por tarjeta: { def, rep } para poder enviarlo al servidor al confirmar
+  var CARGAS = {};   // por hoja (id del reporte): { def, rep } para poder enviarlo al servidor al confirmar
   function dibujar(nombreArchivo, r, rep){
     var d = r.def, cols = d.mostrar || [];
-    var idxCarga = CARGAS.push({ def: d, rep: rep, nombre: nombreArchivo }) - 1;
-    var html = '<div class="rep" data-carga="' + idxCarga + '"><h2>' + esc(d.titulo) + '</h2><p class="meta">Archivo: ' + esc(nombreArchivo) + ' · solapa de la planilla: <b>' + esc(d.hoja) + '</b> · ' + num(r.filas) + ' filas' +
+    CARGAS[d.id] = { def: d, rep: rep, nombre: nombreArchivo };
+    var html = '<p class="meta">Archivo: ' + esc(nombreArchivo) + ' · ' + num(r.filas) + ' filas' +
       (r.desde ? ' · del ' + fmtF(r.desde) + ' al ' + fmtF(r.hasta) : '') + '</p>';
     html += '<div class="stats">' +
       '<div class="st nuevas"><div class="n">' + num(r.nuevas.length) + '</div><div class="l">Nuevas<br>(se agregarían)</div></div>' +
@@ -298,7 +295,7 @@
     html += '<div class="carga">' +
       '<label class="chk"><input type="checkbox" class="chkDup" checked> Dejar una sola fila por cada duplicado de la solapa</label>' +
       '<button type="button" class="btn principal btn-cargar"' + (hayBloqueo ? ' disabled title="Hay un problema de estructura en la solapa: corregilo antes de cargar"' : '') + '>Cargar en la planilla</button>' +
-      '<div class="carga-res"></div></div></div>';
+      '<div class="carga-res"></div></div>';
     return html;
   }
   // Columnas que se muestran para identificar filas
@@ -312,8 +309,7 @@
   // ---------- Duplicados que ya hay en la planilla ----------
   // Con clave (Leads, Solicitudes, Entregas, Stock, Presupuestos): filas con la misma clave. Si son
   // idénticas se deja una sola; si el contenido difiere NO se borra nada automáticamente (se muestra).
-  // Sin clave (Pruebas, Consulta de precios, Tasaciones): solo filas totalmente idénticas, y se
-  // listan aparte porque dos filas iguales podrían ser dos hechos reales.
+  // Sin clave (Pruebas, Consulta de precios, Tasaciones): solo filas totalmente idénticas.
   function duplicadosDe(def, hoja){
     var cols = hoja.nombres.filter(function(n){ return !esDescartada(n); });
     var grupos = {};
@@ -322,79 +318,102 @@
       if (!k.replace(/[|¦]/g, '')) return;
       (grupos[k] = grupos[k] || []).push(o);
     });
-    var r = { claves: 0, sobrantes: 0, identicas: 0, conflicto: 0, ejemplosConflicto: [] };
+    var r = { claves: 0, sobrantes: 0, identicas: 0, conflicto: 0 };
     Object.keys(grupos).forEach(function(k){
       var g = grupos[k]; if (g.length < 2) return;
       r.claves++; r.sobrantes += g.length - 1;
       var distinto = g.some(function(o){ return cols.some(function(c){ return nv(o[c]) !== nv(g[0][c]); }); });
-      if (distinto){
-        r.conflicto += g.length - 1;
-        if (r.ejemplosConflicto.length < 5){
-          var campos = cols.filter(function(c){ return g.some(function(o){ return nv(o[c]) !== nv(g[0][c]); }); });
-          r.ejemplosConflicto.push({ clave: k, campos: campos.slice(0, 4), vals: g.slice(0, 3).map(function(o){ return campos.slice(0, 2).map(function(c){ return nv(o[c]); }).join(' / '); }) });
-        }
-      } else r.identicas += g.length - 1;
+      if (distinto) r.conflicto += g.length - 1; else r.identicas += g.length - 1;
     });
     return r;
   }
+  // Estado de cada hoja en la planilla (filas y duplicados), en la cabecera de su cuadro.
   function dibujarLimpieza(){
-    var filas = '', hay = false;
     REPORTES.forEach(function(d){
-      var h = PLANILLA[d.hoja]; if (!h) return;
+      var el = $('estado-' + d.id); if (!el) return;
+      var h = PLANILLA && PLANILLA[d.hoja];
+      if (!h){ el.textContent = 'Solapa "' + d.hoja + '" no encontrada en la planilla.'; return; }
       var r = duplicadosDe(d, h);
-      if (!r.sobrantes) return;
-      hay = true;
-      filas += '<tr><td><b>' + esc(d.titulo) + '</b>' + (d.clave ? '' : ' <span style="color:#8C8C8C">(sin ID: solo filas idénticas)</span>') + '</td><td>' + num(h.filas.length) + '</td><td>' + num(r.sobrantes) + '</td><td>' + num(r.identicas) + '</td><td>' +
-        (r.conflicto ? '<b style="color:#C0392B">' + num(r.conflicto) + '</b>' : '0') + '</td></tr>';
+      el.innerHTML = 'Solapa <b>' + esc(d.hoja) + '</b>: ' + num(h.filas.length) + ' filas' +
+        (r.sobrantes ? ' · <span style="color:#7A5A00">' + num(r.sobrantes) + ' duplicadas (se limpian al cargar)</span>' : '');
     });
-    if (!hay){ $('limpieza').innerHTML = ''; return; }
-    var det = '';
-    REPORTES.forEach(function(d){
-      var h = PLANILLA[d.hoja]; if (!h || !d.clave) return;
-      var r = duplicadosDe(d, h);
-      if (r.ejemplosConflicto.length) det += '<details><summary>' + esc(d.titulo) + ': ejemplos con contenido distinto</summary>' + tablaHtml(['Clave', 'Campos que difieren', 'Valores'],
-        r.ejemplosConflicto.map(function(e){ return [esc(e.clave), esc(e.campos.join(', ')), esc(e.vals.join('  ↔  '))]; })) + '</details>';
-    });
-    $('limpieza').innerHTML = '<div class="rep"><h2>Duplicados que ya hay en la planilla</h2><p class="meta">Al cargar, se deja <b>una sola fila</b> por cada una. Si las copias difieren entre sí, queda la que viene en el reporte; si no está en el reporte, la última cargada, y te lo muestro antes.</p>' +
-      '<div class="tabla-wrap"><table class="t"><thead><tr><th>Solapa</th><th>Filas</th><th>Sobrantes</th><th>Idénticas</th><th>Con contenido distinto</th></tr></thead><tbody>' + filas + '</tbody></table></div>' + det + '</div>';
   }
 
-  // ---------- Entrada de archivos ----------
-  function procesarArchivos(lista){
-    var salida = $('resultados'); salida.innerHTML = ''; CARGAS = [];
-    if (!PLANILLA){ salida.innerHTML = '<div class="alerta error">No se pudo leer la planilla actual, así que no se puede comparar. ' + esc(PLANILLA_ERROR) + '</div>'; return; }
-    lista.forEach(function(arch){
-      var wb;
-      try { wb = XLSX.read(arch.buffer, { type: 'array', cellDates: true }); } catch (e) {
-        salida.insertAdjacentHTML('beforeend', '<div class="alerta error"><b>' + esc(arch.name) + ':</b> no se pudo abrir como planilla.</div>'); return;
+  // ---------- Un cuadro por hoja ----------
+  var slotsEl = $('slots');
+  REPORTES.forEach(function(d){
+    slotsEl.insertAdjacentHTML('beforeend',
+      '<div class="rep slot" data-carga="' + d.id + '" id="slot-' + d.id + '">' +
+        '<h2>' + esc(d.titulo) + '</h2>' +
+        '<p class="meta" id="estado-' + d.id + '">Leyendo la planilla…</p>' +
+        '<label class="drop" data-slot="' + d.id + '">' +
+          '<b>Arrastrá acá el reporte de ' + esc(d.titulo) + '</b>' +
+          '<span>o tocá para elegir el archivo (.xlsx del CRM)</span>' +
+          '<input type="file" accept=".xlsx,.xls,.csv">' +
+        '</label>' +
+        '<div class="slot-out"></div>' +
+      '</div>');
+  });
+
+  // Qué columnas de la firma de 'def' faltan en el mejor candidato a encabezado de la matriz.
+  function faltantesDe(matriz, def){
+    var firmaN = def.firma.map(sinAcentos), mejor = null;
+    for (var i = 0; i < Math.min(6, matriz.length); i++){
+      var celdas = (matriz[i] || []).map(sinAcentos);
+      var faltan = firmaN.filter(function(f){ return celdas.indexOf(f) === -1; });
+      if (!mejor || faltan.length < mejor.length) mejor = faltan;
+    }
+    return (mejor || firmaN).map(function(f){ return def.firma[firmaN.indexOf(f)]; });
+  }
+
+  function procesarEnSlot(id, arch){
+    var d = REPORTES.filter(function(x){ return x.id === id; })[0];
+    var out = $('slot-' + id).querySelector('.slot-out');
+    function error(html){ out.innerHTML = '<div class="alerta error">' + html + '</div>'; }
+    out.innerHTML = '';
+    delete CARGAS[id];
+    if (!PLANILLA) return error('No se pudo leer la planilla actual, así que no se puede comparar. ' + esc(PLANILLA_ERROR));
+    var wb;
+    try { wb = XLSX.read(arch.buffer, { type: 'array', cellDates: true }); } catch (e) {
+      return error('<b>' + esc(arch.name) + ':</b> no se pudo abrir como planilla. Probá bajarlo de nuevo del CRM.');
+    }
+    var matrices = wb.SheetNames.map(function(n){ return XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: '' }); });
+    for (var s = 0; s < matrices.length; s++){
+      var rep = leerTabla(matrices[s], d.firma);
+      if (rep){
+        var h = PLANILLA[d.hoja];
+        if (!h) return error('La solapa "' + esc(d.hoja) + '" no está en la planilla.');
+        out.innerHTML = dibujar(arch.name, comparar(d, rep), rep);
+        return;
       }
-      var hecho = false;
-      for (var s = 0; s < wb.SheetNames.length && !hecho; s++){
-        var matriz = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[s]], { header: 1, raw: true, defval: '' });
-        for (var d = 0; d < REPORTES.length; d++){
-          var rep = leerTabla(matriz, REPORTES[d].firma);
-          if (rep){ salida.insertAdjacentHTML('beforeend', dibujar(arch.name, comparar(REPORTES[d], rep), rep)); hecho = true; break; }
+    }
+    // No es el reporte de este cuadro: se avisa que es, o que falta.
+    for (var s2 = 0; s2 < matrices.length; s2++){
+      for (var k = 0; k < REPORTES.length; k++){
+        if (REPORTES[k].id !== id && leerTabla(matrices[s2], REPORTES[k].firma)){
+          return error('<b>' + esc(arch.name) + '</b> es el reporte de <b>' + esc(REPORTES[k].titulo) + '</b>, no el de ' + esc(d.titulo) + '. Subilo en el cuadro de ' + esc(REPORTES[k].titulo) + '.');
         }
       }
-      if (!hecho) salida.insertAdjacentHTML('beforeend', '<div class="alerta error"><b>' + esc(arch.name) + ':</b> no reconozco este reporte. Revisá que sea uno de: ' + REPORTES.map(function(r){ return esc(r.titulo); }).join(', ') + '.</div>');
-    });
+    }
+    var falt = faltantesDe(matrices[0] || [], d);
+    error('<b>' + esc(arch.name) + '</b> no es el reporte de ' + esc(d.titulo) + ' (le falta' + (falt.length > 1 ? 'n las columnas' : ' la columna') + ': <b>' + esc(falt.join(', ')) + '</b>). ' +
+      'Revisá que sea el archivo que baja el CRM para esa hoja, sin modificar.');
   }
-  window.__procesarArchivos = procesarArchivos;
+  window.__procesarEnSlot = procesarEnSlot;
 
-  function leerArchivos(files){
-    var pend = Array.prototype.slice.call(files), out = [];
-    (function sig(){
-      var f = pend.shift(); if (!f) return procesarArchivos(out);
-      var fr = new FileReader();
-      fr.onload = function(){ out.push({ name: f.name, buffer: new Uint8Array(fr.result) }); sig(); };
-      fr.readAsArrayBuffer(f);
-    })();
+  function leerArchivo(id, file){
+    var fr = new FileReader();
+    fr.onload = function(){ procesarEnSlot(id, { name: file.name, buffer: new Uint8Array(fr.result) }); };
+    fr.onerror = function(){ $('slot-' + id).querySelector('.slot-out').innerHTML = '<div class="alerta error">No se pudo leer el archivo.</div>'; };
+    fr.readAsArrayBuffer(file);
   }
-  var drop = $('drop');
-  $('archivos').addEventListener('change', function(e){ leerArchivos(e.target.files); });
-  ['dragenter', 'dragover'].forEach(function(ev){ drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.add('over'); }); });
-  ['dragleave', 'drop'].forEach(function(ev){ drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.remove('over'); }); });
-  drop.addEventListener('drop', function(e){ if (e.dataTransfer && e.dataTransfer.files.length) leerArchivos(e.dataTransfer.files); });
+  Array.prototype.forEach.call(document.querySelectorAll('.drop'), function(drop){
+    var id = drop.dataset.slot, input = drop.querySelector('input');
+    input.addEventListener('change', function(e){ if (e.target.files.length) leerArchivo(id, e.target.files[0]); e.target.value = ''; });
+    ['dragenter', 'dragover'].forEach(function(ev){ drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.add('over'); }); });
+    ['dragleave', 'drop'].forEach(function(ev){ drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.remove('over'); }); });
+    drop.addEventListener('drop', function(e){ if (e.dataTransfer && e.dataTransfer.files.length) leerArchivo(id, e.dataTransfer.files[0]); });
+  });
 
   // ---------- Planilla actual, en vivo (Apps Script + sesión del hub) ----------
   // Misma dirección y clave que usa el Tablero; además el Apps Script exige la sesión de Supabase y
@@ -457,7 +476,7 @@
     var b = e.target.closest ? e.target.closest('button') : null;
     if (!b) return;
     var card = tarjetaDe(b); if (!card) return;
-    var c = CARGAS[+card.dataset.carga]; if (!c) return;
+    var c = CARGAS[card.dataset.carga]; if (!c) return;
     var res = card.querySelector('.carga-res');
     var limpiar = card.querySelector('.chkDup').checked;
 
