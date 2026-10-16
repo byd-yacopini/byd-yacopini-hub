@@ -312,8 +312,8 @@
     var puedeQuitar = r.ausentes.length && d.modo !== 'foto' && d.fecha && r.desde;
     html += '<div class="carga">' +
       '<label class="chk"><input type="checkbox" class="chkDup" checked> Dejar una sola fila por cada duplicado de la solapa</label>' +
-      (puedeQuitar ? '<label class="chk"><input type="checkbox" class="chkAus"> Quitar de la planilla las <b>' + num(r.ausentes.length) + '</b> que ya no figuran en el reporte ' +
-        '(solo dentro del período del reporte, del ' + fmtF(r.desde) + ' al ' + fmtF(r.hasta) + ')</label>' : '') +
+      (puedeQuitar ? '<label class="chk"><input type="checkbox" class="chkAus"><span>Quitar de la planilla las <b>' + num(r.ausentes.length) + '</b> que ya no figuran en el reporte ' +
+        '(solo dentro del período del reporte, del ' + fmtF(r.desde) + ' al ' + fmtF(r.hasta) + ')</span></label>' : '') +
       '<button type="button" class="btn principal btn-cargar"' + (hayBloqueo ? ' disabled title="Hay un problema de estructura en la solapa: corregilo antes de cargar"' : '') + '>Cargar en la planilla</button>' +
       '<div class="carga-res"></div></div>';
     return html;
