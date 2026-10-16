@@ -795,7 +795,8 @@ async function ubicar(user) {
   // "Post Venta" / "Servicios Post Venta" en la planilla: entra directo a la pantalla de Post venta.
   const tipo = perfil.rol === 'vendedor' ? 'vendedor'
     : /jefe/i.test(fila?.rol || '') ? 'jefe'
-    : /post.?venta|servicio/i.test(fila?.rol || '') ? 'postventa'
+    : (/post.?venta|servicio|taller|t[eé]cnico/i.test(fila?.rol || '') ||
+       ['asesor_servicio', 'tecnico', 'taller'].includes(perfil.rol)) ? 'postventa'
     : /admin/i.test(fila?.rol || '') ? 'administracion'
     : 'gerencia'
   window.bydAcceso?.marcar({ uid: user.id, tipo, nombre })

@@ -911,7 +911,7 @@
       $('#pt-resumen').innerHTML = fichas([
         ['dest', 'hoy', 'Turnos de hoy', deHoy.length, siguiente ? 'Sigue ' + nombreCorto(siguiente) + ' a las ' + hora(siguiente.inicio) : (deHoy.length ? 'Ya no quedan por hoy' : 'Agenda libre')],
         ['graf', 'proximos', 'Próximos 7 días', proximos.length, manana ? manana + ' para mañana' : 'Mañana sin turnos'],
-        ['alerta', 'alerta', 'Sin confirmar', sinConfirmar.length, sinConfirmar.length ? 'Pedí confirmación por WhatsApp' : 'Todo confirmado'],
+        ['alerta', 'alerta', 'Sin confirmar', sinConfirmar.length, sinConfirmar.length ? (S.puedeEditar ? 'Pedí confirmación por WhatsApp' : 'Todavía no confirmaron') : 'Todo confirmado'],
         ['ok', 'ok', 'Cumplidos', cumplidos.length, 'En ' + mes],
       ])
 
@@ -1246,7 +1246,8 @@
     if (est === 'cancelado' || est === 'no_show' || est === 'a_reprogramar') wa.push(botonWa(t, 'reprogramar', 'WhatsApp: ofrecer otro día'))
     var tel = telefonoWa(t.cliente_telefono)
     if (tel) wa.push('<a class="pt-btn wa" target="_blank" rel="noopener" href="https://wa.me/' + tel + '">Abrir chat</a>')
-    if (wa.join('')) html += '<div class="pt-acciones">' + wa.join('') + '</div>'
+    // El que sólo mira (taller, gerencia) no le escribe a los clientes.
+    if (S.puedeEditar && wa.join('')) html += '<div class="pt-acciones">' + wa.join('') + '</div>'
     html += '<div id="pt-extra"></div>'
 
     var m = modal(html)
@@ -1488,6 +1489,20 @@
     })
   }
 
+  // Para la gente del taller: la agenda sola, sin las unidades (con datos del
+  // CRM) ni el registro. Ven hoy, los próximos y el calendario, sin tocar.
+  function modoTaller() {
+    var tabs = $('.pt-tabs')
+    if (tabs) tabs.classList.add('pt-oculto')
+    mostrarSeccion('agenda')
+    var h1 = $('#pt-agenda .pt-h1')
+    if (h1) h1.textContent = 'Turnos del taller'
+    var bajada = $('#pt-agenda .pt-bajada')
+    if (bajada) bajada.textContent = 'Los turnos de hoy y de los próximos días. Tocá un turno para ver sus datos.'
+    var titulo = $('.app-topbar b')
+    if (titulo) titulo.textContent = 'BYD Yacopini · Taller'
+  }
+
   // ------------------------------------------------------------ arranque
   function prepararUnidades() {
     var reglas = $('#pt-unidades .reglas')
@@ -1530,12 +1545,15 @@
     api.sesion().then(function (perfil) {
       S.perfil = perfil
       S.puedeEditar = !!(perfil && perfil.activo && (perfil.rol === 'admin' || perfil.rol === 'asesor_servicio'))
+      // Taller · visualización (0039) y técnicos: sólo la agenda, para mirar.
+      S.soloAgenda = !!(perfil && perfil.activo && (perfil.rol === 'taller' || perfil.rol === 'tecnico'))
       if (!perfil) return null
       return Promise.all([api.config(), api.servicios()]).then(function (r) {
         S.config = r[0]
         S.servicios = r[1] || []
       })
     }).catch(function () { S.config = null }).then(function () {
+      if (S.soloAgenda) { modoTaller(); return }
       marcarUnidades()
       cargarProximos()
       var guardada = null
