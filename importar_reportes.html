@@ -106,6 +106,8 @@
 
   var PLANILLA = null;      // { 'Leads': {nombres:[], filas:[{...}]}, ... }
   var PLANILLA_ERROR = '';
+  var CARGANDO = {};        // hoja -> true mientras se está leyendo esa solapa de la planilla
+  var HOJA_ERROR = {};      // hoja -> mensaje si no se pudo leer esa solapa
   var PENDIENTES = [];      // archivos soltados mientras la planilla todavía se estaba leyendo
   function liberarPendientes(){ var p = PENDIENTES; PENDIENTES = []; p.forEach(function(f){ f(); }); }
 
@@ -352,6 +354,12 @@
     REPORTES.forEach(function(d){
       var el = $('estado-' + d.id); if (!el) return;
       var h = PLANILLA && PLANILLA[d.hoja];
+      if (CARGANDO[d.hoja]){ el.textContent = 'Leyendo la planilla…'; return; }
+      if (HOJA_ERROR[d.hoja]){
+        el.innerHTML = '<span style="color:#C0392B">No se pudo leer esta solapa: ' + esc(HOJA_ERROR[d.hoja]) + '</span> ' +
+          '<button type="button" class="btn-reintentar" data-hoja="' + esc(d.hoja) + '" style="margin-left:6px;padding:3px 10px;border:1px solid #D4D4D4;border-radius:8px;background:#fff;font-size:12px;font-weight:700;cursor:pointer;">Reintentar</button>';
+        return;
+      }
       if (!h){ el.textContent = 'Solapa "' + d.hoja + '" no encontrada en la planilla.'; return; }
       var r = duplicadosDe(d, h);
       el.innerHTML = 'Solapa <b>' + esc(d.hoja) + '</b>: ' + num(h.filas.length) + ' filas' +
@@ -392,12 +400,13 @@
     function error(html){ out.innerHTML = '<div class="alerta error">' + html + '</div>'; }
     out.innerHTML = '';
     delete CARGAS[id];
-    if (!PLANILLA && !PLANILLA_ERROR){
-      // La planilla todavía se está leyendo: se guarda el archivo y se procesa apenas termine.
+    if (CARGANDO[d.hoja] || (!PLANILLA && !PLANILLA_ERROR)){
+      // La solapa todavía se está leyendo: se guarda el archivo y se procesa apenas termine.
       PENDIENTES.push(function(){ procesarEnSlot(id, arch); });
-      out.innerHTML = '<div class="alerta info">Recibí <b>' + esc(arch.name) + '</b>. Estoy terminando de leer la planilla actual; en unos segundos se compara solo.</div>';
+      out.innerHTML = '<div class="alerta info">Recibí <b>' + esc(arch.name) + '</b>. Estoy terminando de leer la solapa "' + esc(d.hoja) + '" de la planilla; en unos segundos se compara solo.</div>';
       return;
     }
+    if (HOJA_ERROR[d.hoja]) return error('No se pudo leer la solapa "' + esc(d.hoja) + '" de la planilla, así que no se puede comparar. ' + esc(HOJA_ERROR[d.hoja]) + ' Tocá "Reintentar" arriba, en este cuadro.');
     if (!PLANILLA) return error('No se pudo leer la planilla actual, así que no se puede comparar. ' + esc(PLANILLA_ERROR));
     var wb;
     try { wb = XLSX.read(arch.buffer, { type: 'array', cellDates: true }); } catch (e) {
@@ -496,7 +505,12 @@
     return '<ul>' + li.map(function(t){ return '<li>' + t + '</li>'; }).join('') + '</ul>';
   }
 
-  function refrescarPlanilla(){ if (new URLSearchParams(location.search).get("planilla")) return; cargarPlanillaEnVivo(); }
+  // Vuelve a leer solo la solapa que se acaba de cargar o deshacer (es mucho más rápido que leer todas).
+  function refrescarPlanilla(hoja){ if (new URLSearchParams(location.search).get("planilla")) return; cargarPlanillaEnVivo(hoja ? [hoja] : null); }
+  document.addEventListener('click', function(e){
+    var b = e.target.closest ? e.target.closest('.btn-reintentar') : null;
+    if (b) cargarPlanillaEnVivo([b.dataset.hoja]);
+  });
 
   function tarjetaDe(el){ while (el && !(el.dataset && el.dataset.carga !== undefined)) el = el.parentNode; return el; }
 
@@ -533,7 +547,7 @@
         res.innerHTML = '<div class="ok"><b>Listo, la solapa “' + esc(c.def.hoja) + '” quedó actualizada.</b>' + listaResumen(j.resumen) +
           '<div style="font-size:12px;">Respaldo guardado como <i>' + esc(j.respaldo) + '</i>.</div></div>' +
           '<button type="button" class="btn peligro btn-deshacer">Deshacer esta carga</button>';
-        refrescarPlanilla();   // vuelve a leer la planilla para que los numeros de arriba reflejen lo nuevo
+        refrescarPlanilla(c.def.hoja);   // vuelve a leer esa solapa para que los numeros de arriba reflejen lo nuevo
       }).catch(function(err){ res.innerHTML = '<div class="alerta error"><b>No se cargó nada nuevo.</b> ' + esc(err.message || err) + '</div>'; });
     } else if (b.classList.contains('btn-deshacer')){
       if (!window.confirm('Se vuelve la solapa “' + c.def.hoja + '” al estado anterior a la carga. ¿Seguro?')) return;
@@ -542,34 +556,87 @@
         if (!j.ok) throw new Error(j.error || 'No se pudo deshacer.');
         res.innerHTML = '<div class="ok"><b>Listo, la solapa “' + esc(c.def.hoja) + '” volvió al estado anterior.</b><div style="font-size:12px;">Restaurado desde <i>' + esc(j.restaurado) + '</i>.</div></div>' +
           '<button type="button" class="btn btn-cargar">Cargar de nuevo</button>';
-        refrescarPlanilla();
+        refrescarPlanilla(c.def.hoja);
       }).catch(function(err){ res.innerHTML = '<div class="alerta error">No se pudo deshacer: ' + esc(err.message || err) + '</div>'; });
     }
   });
 
-  function cargarPlanillaEnVivo(){
+  // Mensaje entendible para el error que devuelve el servidor.
+  function textoError(m){
+    m = String(m || '');
+    if (/unauthorized/i.test(m)) return 'El servidor rechazó el pedido (suele ser momentáneo).';
+    if (/Failed to fetch|NetworkError|Load failed/i.test(m)) return 'No hubo conexión con el servidor.';
+    if (/respuesta vac/i.test(m)) return 'El servidor no devolvió datos.';
+    return m;
+  }
+  function esperar(ms){ return new Promise(function(ok){ setTimeout(ok, ms); }); }
+
+  // Pide una solapa al Apps Script. Si el servidor falla por un motivo pasajero, reintenta solo (hasta 3 veces).
+  function pedirHoja(token, hoja, intento){
+    return fetch(APPS_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ key: APPS_KEY, action: 'importadorLeer', token: token, hojas: [hoja] }) })
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        if (!j || j.error || !j.hojas) throw new Error(j && j.error ? j.error : 'respuesta vacía');
+        return j;
+      })
+      .catch(function(e){
+        var m = String(e && e.message || e);
+        if (intento < 3 && /unauthorized|respuesta vac|Failed to fetch|NetworkError|Load failed|JSON|Unexpected token/i.test(m)){
+          return esperar(2500 * intento).then(function(){ return pedirHoja(token, hoja, intento + 1); });
+        }
+        throw e;
+      });
+  }
+
+  // Lee de la planilla las solapas pedidas (todas si no se indica): una por vez, así cada cuadro queda
+  // listo apenas llega lo suyo y un fallo en una no frena a las demás.
+  function cargarPlanillaEnVivo(soloHojas){
     var est = $('estadoPlanilla');
-    function fallo(m){ PLANILLA_ERROR = m; est.className = 'estado-planilla mal'; est.textContent = m; liberarPendientes(); }
-    if (!window.supabase){ return fallo('No se pudo cargar el acceso del hub.'); }
-    var db = obtenerDb();
+    var lista = REPORTES.filter(function(d){ return !soloHojas || soloHojas.indexOf(d.hoja) !== -1; });
+    if (!window.supabase){ PLANILLA_ERROR = 'No se pudo cargar el acceso del hub.'; est.className = 'estado-planilla mal'; est.textContent = PLANILLA_ERROR; liberarPendientes(); return; }
+    var db = obtenerDb(), usuario = '', hechas = 0, errores = [];
+    if (!PLANILLA) PLANILLA = {};
+    lista.forEach(function(d){ CARGANDO[d.hoja] = true; delete HOJA_ERROR[d.hoja]; });
+    dibujarLimpieza();
+    function resumen(){
+      if (hechas < lista.length){ est.className = 'estado-planilla'; est.textContent = 'Leyendo la planilla actual… (' + hechas + ' de ' + lista.length + ')'; return; }
+      if (errores.length){ est.className = 'estado-planilla mal'; est.textContent = 'No se pudo leer: ' + errores.join(', ') + '. Tocá "Reintentar" en el cuadro de cada una.'; return; }
+      est.className = 'estado-planilla ok';
+      est.textContent = 'Planilla actual leída' + (usuario ? ' (' + usuario + ')' : '') + ': ' + REPORTES.filter(function(d){ return PLANILLA[d.hoja]; }).map(function(d){ return d.hoja + ' (' + num(PLANILLA[d.hoja].filas.length) + ')'; }).join(' · ');
+    }
+    function aplicar(j){          // guarda en memoria todas las solapas que traiga la respuesta
+      usuario = j.usuario || usuario;
+      lista.forEach(function(d){
+        var h = j.hojas[d.hoja]; if (!h || !CARGANDO[d.hoja]) return;
+        var t = leerTabla(h.valores, d.firma.slice(0, 1));
+        if (t) PLANILLA[d.hoja] = t; else delete PLANILLA[d.hoja];
+        CARGANDO[d.hoja] = false; hechas++;
+      });
+    }
+    function terminar(){ dibujarLimpieza(); resumen(); liberarPendientes(); }
+    function leerUna(d, token){
+      if (!CARGANDO[d.hoja]) return Promise.resolve();      // ya vino en una respuesta anterior
+      return pedirHoja(token, d.hoja, 1).then(function(j){ aplicar(j); }).catch(function(e){
+        CARGANDO[d.hoja] = false; HOJA_ERROR[d.hoja] = textoError(e && e.message || e); errores.push(d.hoja); hechas++;
+      }).then(terminar);
+    }
+
+    resumen();
     db.auth.getSession().then(function(r){
       var ses = r && r.data && r.data.session;
       if (!ses){ location.replace('./index.html?volver=importar_reportes.html'); throw new Error('sin sesión'); }
-      return fetch(APPS_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ key: APPS_KEY, action: 'importadorLeer', token: ses.access_token }) });
-    }).then(function(r){ return r.json(); }).then(function(j){
-      if (!j || j.error || !j.hojas) throw new Error(j && j.error ? j.error : 'respuesta vacía');
-      var res = {};
-      REPORTES.forEach(function(d){
-        var h = j.hojas[d.hoja]; if (!h) return;
-        var t = leerTabla(h.valores, d.firma.slice(0, 1));
-        if (t) res[d.hoja] = t;
+      var token = ses.access_token, cola = lista.slice();
+      // La primera va sola: si el servidor todavía no entiende "hojas" y manda todas juntas, ya quedan leídas.
+      return leerUna(cola.shift(), token).then(function(){
+        function obrero(){ var d = cola.shift(); return d ? leerUna(d, token).then(obrero) : Promise.resolve(); }
+        return Promise.all([obrero(), obrero()]);
       });
-      PLANILLA = res; dibujarLimpieza();
-      est.className = 'estado-planilla ok';
-      est.textContent = 'Planilla actual leída (' + esc(j.usuario || '') + '): ' + Object.keys(res).map(function(k){ return k + ' (' + num(res[k].filas.length) + ')'; }).join(' · ');
-      liberarPendientes();
-    }).catch(function(e){ if (String(e.message) !== 'sin sesión') fallo('No se pudo leer la planilla: ' + (e.message || e)); });
+    }).catch(function(e){
+      if (String(e.message) === 'sin sesión') return;
+      lista.forEach(function(d){ if (CARGANDO[d.hoja]){ CARGANDO[d.hoja] = false; HOJA_ERROR[d.hoja] = textoError(e && e.message || e); } });
+      PLANILLA_ERROR = textoError(e && e.message || e); terminar();
+    });
   }
 
   // ---------- Planilla actual ----------
