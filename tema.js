@@ -292,42 +292,97 @@
   // Adentro de un marco no va botón: ya lo tiene la página de afuera.
   if (window.top !== window.self) return
 
-  // Volver adonde estaba (Lucía, 15/10): la flecha ← de cada página llevaba
-  // siempre al inicio. Si se llegó desde otra página de la app, ahora vuelve
-  // a esa. Si se entró directo (link, ícono del celular) sigue yendo al
-  // inicio. Las páginas que no tenían flecha la reciben cuando se llegó desde
-  // otra de la app; el inicio no lleva.
+  // Si el ingreso de arriba ya mandó a entrar, esta página no se queda.
+  if (document.documentElement.style.visibility === 'hidden') return
+
+  // Volver adonde estaba y cerrar sesión (Lucía, 19/10).
+  //
+  // La flecha usaba el "atrás" del navegador, y fallaba justo en el caso más
+  // común: al entrar, index.html se reemplaza por la pantalla de cada uno
+  // (postventa.html, el panel de ventas), así que "atrás" no tenía a dónde ir
+  // o volvía a index.html, que la mandaba de vuelta. Con una cuenta de
+  // postventa no había forma de salir: ni flecha ni "Cerrar sesión".
+  //
+  // Ahora cada pestaña anota por qué páginas de la app pasó ('bydRastro') y
+  // la flecha lleva a la anterior. Si no hay anterior, al inicio de esa
+  // persona; en su propio inicio no hay flecha, hay "Cerrar sesión".
   var carpeta = location.pathname.replace(/[^/]*$/, '')
-  function vieneDeLaApp() {
-    try {
-      if (!document.referrer) return false
-      var r = new URL(document.referrer)
-      return r.origin === location.origin && r.pathname.indexOf(carpeta) === 0 &&
-        r.pathname + r.search !== location.pathname + location.search
-    } catch (e) { return false }
+  var archivo = function (ruta) { return (ruta.split('?')[0].replace(/^.*\//, '') || 'index.html') }
+  var aqui = location.pathname + location.search
+  var INICIOS = { vendedor: 'panel_ventas.html', jefe: 'panel_jefe.html', postventa: 'postventa.html' }
+  var acceso = window.bydAcceso && window.bydAcceso.leer()
+  var inicio = (acceso && INICIOS[acceso.tipo]) || 'index.html'
+  var enSuInicio = archivo(aqui) === inicio
+  // A quien no es de gerencia, index.html lo manda a su pantalla: no se vuelve
+  // ahí. Tampoco a "index.html?volver=…", que es sólo una pasada para entrar.
+  var sirve = function (ruta) {
+    return ruta !== aqui && ruta.indexOf('volver=') === -1 &&
+      (inicio === 'index.html' || archivo(ruta) !== 'index.html')
   }
+
+  var RASTRO = 'bydRastro'
+  var rastro = []
+  try { rastro = JSON.parse(sessionStorage.getItem(RASTRO) || '[]') || [] } catch (e) {}
+  if (rastro[rastro.length - 1] === aqui) { /* recargó la página */ }
+  else if (rastro[rastro.length - 2] === aqui) rastro.pop() // volvió con el "atrás" del navegador
+  else rastro.push(aqui)
+  rastro = rastro.slice(-30)
+  try { sessionStorage.setItem(RASTRO, JSON.stringify(rastro)) } catch (e) {}
+
+  var anterior = -1
+  for (var i = rastro.length - 2; i >= 0; i--) if (sirve(rastro[i])) { anterior = i; break }
+  var destino = anterior >= 0 ? rastro[anterior] : (enSuInicio ? null : carpeta + inicio)
+
   function flechaVolver() {
-    var desdeApp = vieneDeLaApp()
     var btn = document.getElementById('hubBackBtn')
+    if (!destino) { if (btn) btn.style.display = 'none'; return }
     if (!btn) {
-      var esInicio = location.pathname === carpeta || /\/index\.html$/.test(location.pathname)
-      if (esInicio || !desdeApp) return
       btn = document.createElement('a')
       btn.id = 'hubBackBtn'
-      btn.href = './index.html'
       btn.textContent = '←'
       btn.style.cssText = 'position:fixed;bottom:18px;left:18px;z-index:999999;width:44px;height:44px;border-radius:50%;' +
-        'display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:20px;'
+        'background:#0A0A0A;color:#fff;display:flex;align-items:center;justify-content:center;text-decoration:none;' +
+        'font-family:Arial,sans-serif;font-size:20px;box-shadow:0 4px 14px rgba(0,0,0,0.3);'
       document.body.appendChild(btn)
     }
-    if (desdeApp) {
-      btn.setAttribute('aria-label', 'Volver adonde estabas')
-      btn.title = 'Volver adonde estabas'
-      btn.addEventListener('click', function (e) { e.preventDefault(); history.back() })
-    }
+    btn.href = destino
+    btn.setAttribute('aria-label', 'Volver adonde estabas')
+    btn.title = 'Volver adonde estabas'
+    // Antes que el código propio de cada página, que a veces le cambia el destino.
+    btn.addEventListener('click', function (e) {
+      e.preventDefault()
+      e.stopImmediatePropagation()
+      try { sessionStorage.setItem(RASTRO, JSON.stringify(rastro.slice(0, Math.max(anterior, 0)))) } catch (er) {}
+      location.href = destino
+    }, true)
   }
-  if (document.body) flechaVolver()
-  else document.addEventListener('DOMContentLoaded', flechaVolver)
+
+  // En el inicio de cada uno va "Cerrar sesión", con el nombre de la cuenta:
+  // en un teléfono compartido es la forma de ver con quién se entró. Los
+  // paneles de ventas y del jefe ya tienen "Salir", y index.html el suyo.
+  function botonSalir() {
+    if (!enSuInicio || !acceso || document.getElementById('logoutBtn') || document.getElementById('bydSalir')) return
+    var b = document.createElement('button')
+    b.type = 'button'
+    b.id = 'bydSalirInicio'
+    // En un celular angosto, sólo "Cerrar sesión": con el nombre pisaba el título.
+    var primero = /@/.test(acceso.nombre || '') || window.innerWidth < 380 ? '' : String(acceso.nombre || '').trim().split(/\s+/)[0]
+    b.textContent = (primero ? primero + ' · ' : '') + 'Cerrar sesión'
+    b.setAttribute('aria-label', 'Cerrar sesión')
+    b.style.cssText = 'position:absolute;top:12px;right:12px;z-index:999998;max-width:60vw;overflow:hidden;' +
+      'text-overflow:ellipsis;white-space:nowrap;padding:8px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.35);' +
+      'background:rgba(255,255,255,.08);color:#fff;font:600 13px/1 "Segoe UI",Arial,sans-serif;cursor:pointer;'
+    b.addEventListener('click', function () {
+      b.disabled = true
+      b.textContent = 'Saliendo…'
+      try { sessionStorage.removeItem(RASTRO) } catch (e) {}
+      window.bydAcceso.salir()
+    })
+    document.body.appendChild(b)
+  }
+  function alCargar() { flechaVolver(); botonSalir() }
+  if (document.body) alCargar()
+  else document.addEventListener('DOMContentLoaded', alCargar)
 
   function ponerBoton() {
     if (document.getElementById('bydBotonTema')) return
