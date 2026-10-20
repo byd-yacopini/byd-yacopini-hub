@@ -68,6 +68,14 @@
   .part{ display:inline-flex; align-items:center; gap:6px; }
   .part .bar{ display:inline-block; height:6px; border-radius:4px; background:var(--azul-ev); opacity:.55; }
   .pos{ color:#1B7F4C; font-weight:700; } .neg{ color:#A32D2D; font-weight:700; } .neutro{ color:var(--gris-medio); }
+  .sub-h{ font-size:12.5px; font-weight:700; color:var(--carbon); margin:0 0 8px; }
+  table.rank.comp{ min-width:0; }
+  table.rank.comp th:nth-child(1){ text-align:left; }
+  table.rank.comp td:nth-child(1){ text-align:left; width:auto; font-weight:600; color:var(--carbon); }
+  table.rank.comp th:nth-child(2){ text-align:right; }
+  table.rank.comp td:nth-child(2){ text-align:right; font-weight:inherit; }
+  table.rank.comp td.sub{ color:var(--gris-medio); font-size:11px; font-weight:600; }
+  table.rank.comp .dif-pos{ color:#1B7F4C; font-weight:700; } table.rank.comp .dif-neg{ color:#A32D2D; font-weight:700; }
   .btn-mas{ margin-top:12px; width:100%; padding:10px; border-radius:10px; border:1px solid var(--gris-claro); background:var(--blanco); color:var(--carbon); font-weight:700; font-size:12.5px; font-family:inherit; cursor:pointer; }
 
   .dos-col{ display:grid; grid-template-columns:1fr; gap:14px; }
@@ -152,6 +160,29 @@
       <div class="lectura" id="lectura"></div>
 
       <div class="kpi-grid" id="kpis"></div>
+
+      <!-- Comparativa del país contra Cuyo (Mendoza + San Juan), para el mes y año elegidos arriba -->
+      <div class="tcard" id="comparativa" style="display:none;">
+        <h2>BYD: Argentina vs. Cuyo</h2>
+        <div class="lectura" id="compLectura" style="margin-bottom:12px;"></div>
+        <div class="tabla-wrap"><table class="rank comp" id="compTabla"></table></div>
+        <div class="dos-col" style="margin-top:16px;">
+          <div>
+            <h3 class="sub-h">Participación de BYD mes a mes</h3>
+            <div class="leyenda" id="compLeyenda1"></div>
+            <div id="compGrafico1"></div>
+          </div>
+          <div>
+            <h3 class="sub-h">Cuánto pesa Cuyo en el país</h3>
+            <div class="leyenda" id="compLeyenda2"></div>
+            <div id="compGrafico2"></div>
+          </div>
+        </div>
+        <h3 class="sub-h" style="margin-top:16px;" id="compTituloMarcas">Marcas: Argentina vs. Cuyo</h3>
+        <div class="tabla-wrap"><table class="rank comp" id="compMarcas"></table></div>
+        <button type="button" class="btn-mas" id="compMas"></button>
+        <p class="note" id="compNota"></p>
+      </div>
 
       <div class="dos-col">
         <div class="tcard">
@@ -329,10 +360,191 @@
     btn.textContent = VER_TODAS ? 'Ver solo las principales' : 'Ver las ' + rk.length + ' marcas';
   }
 
+  // ---------- Comparativa: Argentina vs. Cuyo ----------
+  // "Cuyo" = suma de las provincias que hay en la planilla de provincias (hoy Mendoza + San Juan). Un mes
+  // de Cuyo solo vale si están cargadas TODAS esas provincias; si falta una, el mes no se compara.
+  var COMP_TODAS = false;
+  function mapaArg(per){ return ((DATOS.arg && DATOS.arg.provincias.Argentina) || {})[per] || null; }
+  function mapaCuyo(per){
+    var provs = Object.keys(DATOS.provincias || {}); if (!provs.length) return null;
+    var out = {};
+    for (var i = 0; i < provs.length; i++){
+      var m = (DATOS.provincias[provs[i]] || {})[per]; if (!m) return null;
+      for (var k in m) out[k] = (out[k] || 0) + m[k];
+    }
+    return out;
+  }
+  function encArg(){ return (DATOS.arg && DATOS.arg.enCurso.Argentina) || null; }
+  function encCuyo(){
+    var provs = Object.keys(DATOS.provincias || {}), out = null;
+    for (var i = 0; i < provs.length; i++){
+      var e = DATOS.enCurso && DATOS.enCurso[provs[i]]; if (!e) return null;
+      if (!out) out = { periodo: e.periodo, cPer: e.cPer, ePer: e.ePer, c: {}, e: {} };
+      else if (out.periodo !== e.periodo || out.cPer !== e.cPer || out.ePer !== e.ePer) return null;
+      for (var k in e.c) out.c[k] = (out.c[k] || 0) + e.c[k];
+      for (var k2 in e.e) out.e[k2] = (out.e[k2] || 0) + e.e[k2];
+    }
+    return out;
+  }
+  function metricasBYD(mapa){
+    var t = total(mapa), u = mapa[MARCA_PROPIA] || 0, rk = ranking(mapa), pos = 0;
+    rk.forEach(function(r, i){ if (r.marca === MARCA_PROPIA) pos = i + 1; });
+    return { t: t, u: u, part: t ? u / t * 100 : 0, pos: pos, n: rk.length, rk: rk };
+  }
+  // Todo lo que se necesita de un ámbito (país o Cuyo) para el mes elegido.
+  function ambito(fPer, fEnc, anio, mes){
+    var cur = fPer(clave(anio, mes)); if (!cur) return null;
+    var e = fEnc(), enc = (e && e.periodo === clave(anio, mes)) ? e : null, mp = mesAnterior(anio, mes);
+    var prevMes = enc ? (enc.ePer === clave(mp.anio, mp.mes) ? enc.e : null) : fPer(clave(mp.anio, mp.mes));
+    var prevAnio = enc ? (enc.cPer === clave(anio - 1, mes) ? enc.c : null) : fPer(clave(anio - 1, mes));
+    var acum = {}, completo = true;
+    for (var m = 1; m <= mes; m++){
+      var p = fPer(clave(anio, m)); if (!p){ completo = false; continue; }
+      for (var k in p) acum[k] = (acum[k] || 0) + p[k];
+    }
+    return { cur: cur, enc: enc, m: metricasBYD(cur), mPrevMes: prevMes ? metricasBYD(prevMes) : null,
+             mPrevAnio: prevAnio ? metricasBYD(prevAnio) : null, acum: completo ? metricasBYD(acum) : null };
+  }
+  function pp(n){ return (n > 0 ? '+' : '') + dec(n, 2) + ' pp'; }
+  function difHtml(v, txt){ return '<span class="' + (v > 0.005 ? 'dif-pos' : (v < -0.005 ? 'dif-neg' : 'neutro')) + '">' + txt + '</span>'; }
+
+  // Participación de BYD mes a mes (dos líneas) para el año elegido.
+  function graficoCompPart(anio, mesSel){
+    var W = 480, H = 200, padL = 34, padR = 8, padT = 16, padB = 22, plotH = H - padT - padB, slot = (W - padL - padR) / 12;
+    var a = [], c = [], max = 1;
+    for (var m = 1; m <= 12; m++){
+      var pa = mapaArg(clave(anio, m)), pc = mapaCuyo(clave(anio, m));
+      a.push(pa ? metricasBYD(pa).part : null); c.push(pc ? metricasBYD(pc).part : null);
+      max = Math.max(max, a[m - 1] || 0, c[m - 1] || 0);
+    }
+    var tope = Math.max(1, Math.ceil(max)), s = '<svg class="grafico" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Participación de BYD por mes: Argentina y Cuyo">';
+    [0, 0.5, 1].forEach(function(f){
+      var y = padT + plotH - f * plotH;
+      s += '<line x1="' + padL + '" y1="' + y + '" x2="' + (W - padR) + '" y2="' + y + '" stroke="#E4E4E4"/><text x="' + (padL - 5) + '" y="' + (y + 3) + '" font-size="10" fill="#8C8C8C" text-anchor="end">' + dec(tope * f, tope < 4 ? 1 : 0) + '%</text>';
+    });
+    function linea(vals, color, dy){
+      var pts = [], out = '';
+      vals.forEach(function(v, i){ if (v == null) return; var x = padL + slot * i + slot / 2, y = padT + plotH - v / tope * plotH; pts.push(x + ',' + y); });
+      if (pts.length > 1) out += '<polyline points="' + pts.join(' ') + '" fill="none" stroke="' + color + '" stroke-width="2.2" stroke-linejoin="round"/>';
+      vals.forEach(function(v, i){
+        if (v == null) return; var x = padL + slot * i + slot / 2, y = padT + plotH - v / tope * plotH;
+        out += '<circle cx="' + x + '" cy="' + y + '" r="' + (i + 1 === mesSel ? 4.5 : 3) + '" fill="' + color + '"/>' +
+          '<text x="' + x + '" y="' + (y + dy) + '" font-size="9" fill="' + color + '" font-weight="700" text-anchor="middle">' + dec(v, 1) + '</text>';
+      });
+      return out;
+    }
+    for (var i = 0; i < 12; i++){
+      var cx = padL + slot * i + slot / 2;
+      if (i + 1 === mesSel) s += '<rect x="' + (cx - slot / 2 + 1) + '" y="' + padT + '" width="' + (slot - 2) + '" height="' + plotH + '" fill="#EAF1FC" rx="4"/>';
+      s += '<text x="' + cx + '" y="' + (H - 7) + '" font-size="11" fill="' + (i + 1 === mesSel ? '#0A0A0A' : '#8C8C8C') + '" font-weight="' + (i + 1 === mesSel ? '700' : '400') + '" text-anchor="middle">' + MESES_CORTO[i] + '</text>';
+    }
+    return s + linea(a, '#1565D8', -8) + linea(c, '#E07B00', 14) + '</svg>';
+  }
+
+  // Peso de Cuyo: % del mercado nacional que es Cuyo vs. % de los BYD del país que se patentan en Cuyo.
+  function graficoCompPeso(anio, mesSel){
+    var W = 480, H = 200, padL = 34, padR = 4, padT = 16, padB = 22, plotH = H - padT - padB, slot = (W - padL - padR) / 12, barW = Math.min(12, slot / 2 - 2);
+    var mk = [], by = [], max = 1;
+    for (var m = 1; m <= 12; m++){
+      var pa = mapaArg(clave(anio, m)), pc = mapaCuyo(clave(anio, m));
+      if (!pa || !pc){ mk.push(null); by.push(null); continue; }
+      var ma = metricasBYD(pa), mc = metricasBYD(pc);
+      mk.push(ma.t ? mc.t / ma.t * 100 : null); by.push(ma.u ? mc.u / ma.u * 100 : null);
+      max = Math.max(max, mk[m - 1] || 0, by[m - 1] || 0);
+    }
+    var tope = Math.max(2, Math.ceil(max / 2) * 2), s = '<svg class="grafico" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Peso de Cuyo en el mercado y en BYD">';
+    [0, 0.5, 1].forEach(function(f){
+      var y = padT + plotH - f * plotH;
+      s += '<line x1="' + padL + '" y1="' + y + '" x2="' + (W - padR) + '" y2="' + y + '" stroke="#E4E4E4"/><text x="' + (padL - 5) + '" y="' + (y + 3) + '" font-size="10" fill="#8C8C8C" text-anchor="end">' + dec(tope * f, 0) + '%</text>';
+    });
+    for (var i = 0; i < 12; i++){
+      var cx = padL + slot * i + slot / 2;
+      if (i + 1 === mesSel) s += '<rect x="' + (cx - slot / 2 + 1) + '" y="' + padT + '" width="' + (slot - 2) + '" height="' + plotH + '" fill="#EAF1FC" rx="4"/>';
+      if (mk[i] != null){ var h1 = mk[i] / tope * plotH; s += '<rect x="' + (cx - barW - 1) + '" y="' + (padT + plotH - h1) + '" width="' + barW + '" height="' + h1 + '" fill="#C9CED6" rx="2"/>'; }
+      if (by[i] != null){ var h2 = by[i] / tope * plotH; s += '<rect x="' + (cx + 1) + '" y="' + (padT + plotH - h2) + '" width="' + barW + '" height="' + h2 + '" fill="#1565D8" rx="2"/><text x="' + (cx + 1 + barW / 2) + '" y="' + (padT + plotH - h2 - 3) + '" font-size="8.5" fill="#4A4A4A" text-anchor="middle">' + dec(by[i], 1) + '</text>'; }
+      s += '<text x="' + cx + '" y="' + (H - 7) + '" font-size="11" fill="' + (i + 1 === mesSel ? '#0A0A0A' : '#8C8C8C') + '" font-weight="' + (i + 1 === mesSel ? '700' : '400') + '" text-anchor="middle">' + MESES_CORTO[i] + '</text>';
+    }
+    return s + '</svg>';
+  }
+
+  function renderComparativa(anio, mes){
+    var box = $('comparativa');
+    if (RESUMEN){ box.style.display = 'none'; return; }
+    box.style.display = '';
+    var provsCuyo = Object.keys(DATOS.provincias || {}).join(' + ');
+    var NOTA_CUYO = 'Cuyo = ' + (provsCuyo || 'provincias cargadas') + '. ';
+    if (!DATOS.arg){
+      $('compLectura').innerHTML = 'Todavía no se pudo leer la planilla de <b>patentamientos de Argentina</b>. En cuanto esté disponible, acá aparece la comparación de BYD contra Cuyo.';
+      ['compTabla', 'compGrafico1', 'compGrafico2', 'compLeyenda1', 'compLeyenda2', 'compMarcas', 'compNota'].forEach(function(id){ $(id).innerHTML = ''; });
+      $('compMas').style.display = 'none'; $('compTituloMarcas').style.display = 'none';
+      return;
+    }
+    var A = ambito(mapaArg, encArg, anio, mes), C = ambito(mapaCuyo, encCuyo, anio, mes);
+    $('compTituloMarcas').style.display = '';
+    if (!A || !C){
+      var falta = !A ? 'Argentina' : 'Cuyo (' + provsCuyo + ')';
+      $('compLectura').innerHTML = 'Todavía no hay patentamientos cargados de <b>' + esc(falta) + '</b> para <b>' + MESES[mes - 1] + ' ' + anio + '</b>. Elegí otro mes para comparar.';
+      ['compTabla', 'compMarcas'].forEach(function(id){ $(id).innerHTML = ''; });
+      $('compGrafico1').innerHTML = graficoCompPart(anio, mes); $('compGrafico2').innerHTML = graficoCompPeso(anio, mes);
+      $('compMas').style.display = 'none'; $('compNota').textContent = NOTA_CUYO + DATOS.arg.origen + '.';
+      return;
+    }
+    var enc = !!(A.enc || C.enc);
+    var dPart = C.m.part - A.m.part, indice = A.m.part ? C.m.part / A.m.part : null;
+    var pesoMercado = A.m.t ? C.m.t / A.m.t * 100 : 0, pesoByd = A.m.u ? C.m.u / A.m.u * 100 : 0;
+
+    var txt = 'En <b>' + MESES[mes - 1] + ' ' + anio + '</b> <span class="byd">' + MARCA_PROPIA + '</span> tiene el <b>' + pct(A.m.part) + '</b> del mercado argentino' +
+      (A.m.pos ? ' (puesto <b>#' + A.m.pos + '</b> de ' + A.m.n + ' marcas)' : '') + ' y el <b>' + pct(C.m.part) + '</b> en Cuyo (' + provsCuyo + ')' +
+      (C.m.pos ? ' (puesto <b>#' + C.m.pos + '</b> de ' + C.m.n + ')' : '') + ': <b>' + dec(Math.abs(dPart), 2) + ' pp</b> ' + (dPart >= 0 ? 'más' : 'menos') + ' que en el país.';
+    if (A.m.u > 0) txt += ' Cuyo es el <b>' + pct(pesoMercado) + '</b> de los patentamientos del país pero concentra el <b>' + pct(pesoByd) + '</b> de los ' + MARCA_PROPIA + ' (' + num(C.m.u) + ' de ' + num(A.m.u) + ')' +
+      (indice ? ' · índice de penetración <b>' + dec(indice, 2).replace(',00', ',0') + '</b> (1,0 = igual que el país)' : '') + '.';
+    $('compLectura').innerHTML = txt;
+
+    function vs(a, p){ if (p == null) return '–'; return variacion(a, p).txt; }
+    var f = function(valA, valC, lbl, ambitoTxt){ return '<tr><td>' + lbl + '</td><td>' + valA + '</td><td>' + valC + '</td><td>' + ambitoTxt + '</td></tr>'; };
+    var mm = A.mPrevMes && C.mPrevMes, aa = A.mPrevAnio && C.mPrevAnio;
+    var rows = '';
+    rows += f(num(A.m.t), num(C.m.t), 'Mercado del mes (unidades)', 'Cuyo = ' + pct(pesoMercado) + ' del país');
+    rows += f(num(A.m.u), num(C.m.u), MARCA_PROPIA + ' del mes (unidades)', 'Cuyo = ' + pct(pesoByd) + ' de ' + MARCA_PROPIA + ' país');
+    rows += f(pct(A.m.part), pct(C.m.part), 'Participación ' + MARCA_PROPIA, difHtml(dPart, pp(dPart)));
+    rows += f(A.m.pos ? '#' + A.m.pos + ' de ' + A.m.n : '–', C.m.pos ? '#' + C.m.pos + ' de ' + C.m.n : '–', 'Puesto de ' + MARCA_PROPIA,
+      (A.m.pos && C.m.pos) ? difHtml(A.m.pos - C.m.pos, (A.m.pos - C.m.pos === 0 ? 'igual puesto' : (A.m.pos > C.m.pos ? 'Cuyo sube ' + (A.m.pos - C.m.pos) + (A.m.pos - C.m.pos === 1 ? ' lugar' : ' lugares') : 'Cuyo baja ' + (C.m.pos - A.m.pos) + (C.m.pos - A.m.pos === 1 ? ' lugar' : ' lugares')))) : '–');
+    rows += f(mm ? vs(A.m.u, A.mPrevMes.u) : '–', mm ? vs(C.m.u, C.mPrevMes.u) : '–', MARCA_PROPIA + ' vs. ' + (enc ? 'mismos días mes ant.' : 'mes anterior') + ' (unid.)', '');
+    rows += f(mm ? (pp(A.m.part - A.mPrevMes.part)) : '–', mm ? (pp(C.m.part - C.mPrevMes.part)) : '–', 'Participación vs. ' + (enc ? 'mismos días mes ant.' : 'mes anterior'), '');
+    if (aa) rows += f(vs(A.m.u, A.mPrevAnio.u), vs(C.m.u, C.mPrevAnio.u), MARCA_PROPIA + ' vs. ' + (enc ? 'mismos días año ant.' : 'año anterior') + ' (unid.)', '');
+    if (A.acum && C.acum){
+      rows += f(num(A.acum.u), num(C.acum.u), MARCA_PROPIA + ' acumulado ' + anio + ' (unid.)', 'Cuyo = ' + pct(A.acum.u ? C.acum.u / A.acum.u * 100 : 0) + ' de ' + MARCA_PROPIA + ' país');
+      rows += f(pct(A.acum.part), pct(C.acum.part), 'Participación acumulada ' + anio, difHtml(C.acum.part - A.acum.part, pp(C.acum.part - A.acum.part)));
+      rows += f(A.acum.pos ? '#' + A.acum.pos : '–', C.acum.pos ? '#' + C.acum.pos : '–', 'Puesto acumulado ' + anio, '');
+    }
+    $('compTabla').innerHTML = '<thead><tr><th>Métrica</th><th>Argentina</th><th>Cuyo (' + provsCuyo + ')</th><th>Cuyo vs. Argentina</th></tr></thead><tbody>' + rows + '</tbody>';
+
+    $('compLeyenda1').innerHTML = '<span><i style="background:#1565D8"></i>Argentina</span><span><i style="background:#E07B00"></i>Cuyo</span>';
+    $('compGrafico1').innerHTML = graficoCompPart(anio, mes);
+    $('compLeyenda2').innerHTML = '<span><i style="background:#C9CED6"></i>% del mercado nacional que es Cuyo</span><span><i style="background:#1565D8"></i>% de ' + MARCA_PROPIA + ' país que se patenta en Cuyo</span>';
+    $('compGrafico2').innerHTML = graficoCompPeso(anio, mes);
+
+    // Marcas: participación en el país vs. en Cuyo (las que más patentan en el país + BYD)
+    $('compTituloMarcas').textContent = 'Marcas: Argentina vs. Cuyo · ' + MESES[mes - 1] + ' ' + anio;
+    var visibles = COMP_TODAS ? A.m.rk : A.m.rk.slice(0, 12);
+    if (!COMP_TODAS && A.m.pos > 12) visibles = A.m.rk.slice(0, 11).concat([A.m.rk[A.m.pos - 1]]);
+    var mh = '<thead><tr><th>Marca</th><th>Arg. unid.</th><th>Part. Arg.</th><th>Cuyo unid.</th><th>Part. Cuyo</th><th>Cuyo vs. país</th></tr></thead><tbody>';
+    mh += visibles.map(function(r){
+      var uc = C.cur[r.marca] || 0, pa = A.m.t ? r.u / A.m.t * 100 : 0, pc = C.m.t ? uc / C.m.t * 100 : 0, d = pc - pa;
+      return '<tr class="' + (r.marca === MARCA_PROPIA ? 'byd' : '') + '"><td>' + esc(bonita(r.marca)) + '</td><td>' + num(r.u) + '</td><td>' + pct(pa) + '</td><td>' + num(uc) + '</td><td>' + pct(pc) + '</td><td>' + difHtml(d, pp(d)) + '</td></tr>';
+    }).join('') + '</tbody>';
+    $('compMarcas').innerHTML = mh;
+    var btn = $('compMas'); btn.style.display = A.m.rk.length > 12 ? '' : 'none';
+    btn.textContent = COMP_TODAS ? 'Ver solo las principales' : 'Ver las ' + A.m.rk.length + ' marcas';
+    $('compNota').textContent = NOTA_CUYO + (enc ? 'Mes en curso: ambos ámbitos llegan hasta la fecha de carga de cada planilla; las variaciones comparan los mismos días. ' : '') +
+      'Índice de penetración = participación de BYD en Cuyo ÷ participación de BYD en el país. Fuente: ' + DATOS.arg.origen + '.';
+  }
+
   // ---------- Render principal ----------
   function render(){
     var prov = $('selProv').value, anio = +$('selAnio').value, mes = +$('selMes').value;
     var cur = periodo(prov, anio, mes);
+    renderComparativa(anio, mes);
     var avisoEl = $('avisoPeriodo');
     if (!cur){
       avisoEl.innerHTML = '<div class="aviso">Todavía no hay patentamientos cargados para <b>' + MESES[mes - 1] + ' ' + anio + '</b>. Elegí otro mes.</div>';
@@ -469,6 +681,7 @@
   $('selAnio').addEventListener('change', function(){ llenarMeses(+$('selMes').value); render(); });
   $('selMes').addEventListener('change', render);
   $('btnMas').addEventListener('click', function(){ VER_TODAS = !VER_TODAS; render(); });
+  $('compMas').addEventListener('click', function(){ COMP_TODAS = !COMP_TODAS; render(); });
   $('resumenMas').addEventListener('click', function(){ VER_TODAS = !VER_TODAS; render(); });
 
   // ---------- Carga ----------
@@ -477,7 +690,11 @@
   // Si no se puede leer (sin conexión, la planilla dejó de estar publicada), se usa la última
   // copia guardada en patentamientos.json.
   var URL_PLANILLA = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS7-XBF-7Qkl4C1bbTb74lKLIWaWnXjlQHXCkbZpJD9mqrciJWh0Vtxx2ipE0oiEVqvY_UtfqEjPC3P/pub?output=xlsx';
-  var PROVINCIAS = { MZA: 'Mendoza', SJ: 'San Juan' };
+  var PROVINCIAS = { MZA: 'Mendoza', SJ: 'San Juan', SL: 'San Luis' };
+  // Planilla de TODO el país (una hoja por mes, "ENERO 2026"): mismo formato que la de las provincias.
+  // La lee el Apps Script (no hace falta publicarla); si no responde se usa patentamiento_argentina.json.
+  var APPS_URL = 'https://script.google.com/macros/s/AKfycbzTYBoM56BBMj2B-8hUG_MIuOh7r5qG4qq2sGlTRM-y6QyFm0XHqgE6XUG5OQB022iy/exec';
+  var APPS_KEY = 'i4uH92SO1sFyNYi8PJ2dsGb9LDM-Xoq3';
 
   // Cada hoja es un mes ("SEPTIEMBRE MZA"; el sufijo es la provincia). La columna B es el mes,
   // la D el mismo mes del año anterior y la F el mes previo: los tres encabezados traen la fecha
@@ -489,11 +706,20 @@
   // la columna del mes; las otras dos se guardan aparte (enCurso) para mostrar la comparación
   // "mismos días" tal como la trae la planilla, sin mezclarlas con los meses completos.
   function leerLibro(wb){
+    return procesarHojas(wb.SheetNames.map(function(n){
+      return { nombre: n, filas: XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: true, defval: '' }) };
+    }));
+  }
+  // Una hoja "ENERO 2026" (termina en el año) es el total del país; "SEPTIEMBRE MZA" es una provincia.
+  function provinciaDeHoja(nombre){
+    var partes = nombre.trim().split(/\s+/), codigo = partes[partes.length - 1].toUpperCase();
+    return /^\d{4}$/.test(codigo) ? 'Argentina' : (PROVINCIAS[codigo] || codigo);
+  }
+  function procesarHojas(lista){
     var hoy = new Date(), hoyKey = hoy.getFullYear() + '-' + ('0' + (hoy.getMonth() + 1)).slice(-2);
     var hojas = [];
-    wb.SheetNames.forEach(function(nombre){
-      var partes = nombre.trim().split(/\s+/), codigo = partes[partes.length - 1].toUpperCase();
-      var filas = XLSX.utils.sheet_to_json(wb.Sheets[nombre], { header: 1, raw: true, defval: '' });
+    lista.forEach(function(h0){
+      var nombre = h0.nombre, filas = h0.filas || [];
       if (filas.length < 3) return;
       var cols = [1, 3, 5].map(function(c){
         var m = /(\d{2})\/(\d{2})/.exec(String(filas[0][c] || ''));
@@ -506,7 +732,7 @@
         if (!marca || marca.toUpperCase() === 'TOTAL') continue;
         [1, 3, 5].forEach(function(c, i){ var v = Number(filas[r][c]); if (v > 0) mapas[i][marca] = v; });
       }
-      hojas.push({ prov: PROVINCIAS[codigo] || codigo, cols: cols, mapas: mapas });
+      hojas.push({ prov: provinciaDeHoja(nombre), cols: cols, mapas: mapas });
     });
 
     var provincias = {}, enCurso = {};
@@ -549,12 +775,36 @@
       .catch(copiaGuardada);
   }
 
+  // Total del país: primero en vivo (Apps Script lee la planilla), si no, la última copia guardada.
+  // Devuelve { provincias:{Argentina:{...}}, enCurso:{Argentina:{...}}, origen } o null si no hay nada.
+  function obtenerArgentina(){
+    function aDatos(hojas, origen){
+      var l = procesarHojas(hojas);
+      if (!l.provincias.Argentina || !Object.keys(l.provincias.Argentina).length) throw new Error('vacío');
+      l.origen = origen; return l;
+    }
+    return fetch(APPS_URL + '?key=' + encodeURIComponent(APPS_KEY) + '&action=patentamientoArgentina', { cache: 'no-store' })
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        if (!j || j.error || !j.hojas) throw new Error(j && j.error ? j.error : 'sin datos');
+        var ahora = new Date();
+        return aDatos(j.hojas, 'Argentina en vivo (leída a las ' + ahora.getHours() + ':' + ('0' + ahora.getMinutes()).slice(-2) + ')');
+      })
+      .catch(function(){
+        return fetch('./patentamiento_argentina.json?v=' + Math.floor(Date.now() / 60000), { cache: 'no-store' })
+          .then(function(r){ if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+          .then(function(d){ return aDatos(d.hojas, 'Argentina: última copia guardada (' + d.actualizado + ')'); });
+      })
+      .catch(function(){ return null; });
+  }
+
   // Se lee al abrir y se vuelve a leer cada 3 min (solo si la pantalla se está viendo), sin
   // mover el mes/año que se esté mirando.
   var ultimaCarga = 0;
   function cargar(primeraVez){
     ultimaCarga = Date.now();
-    return obtenerDatos()
+    return Promise.all([obtenerDatos(), obtenerArgentina()])
+      .then(function(r){ var d = r[0]; if (d) d.arg = r[1]; return d; })
       .then(function(d){
         if (!d || !d.provincias || !Object.keys(d.provincias).length) throw new Error('vacío');
         var provPrevia = $('selProv').value;
