@@ -82,11 +82,15 @@
     return String(plantilla || '')
       .replace(/\{(\w+)\}/g, function (_, k) { return datos[k] ? String(datos[k]).trim() : '' })
       .replace(/\(\s*\)/g, '').replace(/[ \t]{2,}/g, ' ').replace(/ ([,.?!])/g, '$1')
-      .replace(/,([!?])/g, '$1').trim() // "¡Hola, {cliente}!" sin nombre queda "¡Hola!"
+      .replace(/,([!?])/g, '$1') // "¡Hola, {cliente}!" sin nombre queda "¡Hola!"
+      // Sin modelo ni patente, la línea "🚗 BYD" queda sola: se saca.
+      .replace(/^[^\w\n]* BYD\s*$/gm, '').replace(/\n{3,}/g, '\n\n').trim()
   }
+  // Directo a api.whatsapp.com y no a wa.me: la redirección de wa.me rompe
+  // los emojis (👋😊 llegaban como "?" al chat). Comprobado el 20/10.
   function linkWa(tel, texto) {
     var n = telefonoWa(tel)
-    return n ? 'https://wa.me/' + n + '?text=' + encodeURIComponent(texto) : null
+    return n ? 'https://api.whatsapp.com/send?phone=' + n + (texto ? '&text=' + encodeURIComponent(texto) : '') : null
   }
 
   function textoError(e) {
@@ -135,10 +139,13 @@
         return r(db.rpc('dar_turno', {
           p_cliente: d.cliente, p_vehiculo: d.vehiculo, p_servicio: d.servicio, p_inicio: d.inicio,
           p_minutos: d.minutos, p_origen: d.origen, p_observaciones: d.observaciones,
+          p_sobreturno: d.sobreturno ? true : undefined,
         }))
       },
-      reprogramar: function (id, inicio, minutos) {
-        return r(db.rpc('reprogramar_turno', { p_turno: id, p_inicio: inicio, p_minutos: minutos }))
+      reprogramar: function (id, inicio, minutos, sobreturno) {
+        var args = { p_turno: id, p_inicio: inicio, p_minutos: minutos }
+        if (sobreturno) args.p_sobreturno = true
+        return r(db.rpc('reprogramar_turno', args))
       },
       cambiarEstado: function (id, estado, motivo) {
         var cambios = { estado: estado }
@@ -406,6 +413,10 @@
     '.pt-datos{display:grid;grid-template-columns:auto 1fr;gap:10px 18px;font-size:14px;margin:4px 0;padding:16px 18px;background:var(--pt-campo);border-radius:16px}',
     '.pt-datos dt{color:var(--pt-tenue);font-weight:500;font-size:12.5px;padding-top:1px}.pt-datos dd{margin:0;overflow-wrap:anywhere;font-weight:500}',
     '.pt-estado{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;padding:3px 10px;border-radius:999px;background:#fff4dc;color:#8a5d0c;vertical-align:1px}',
+    '.pt-estado.sobre{background:#efe9ff;color:#5b3fc4}',
+    '.pt-check{display:flex!important;align-items:center;gap:10px;font-weight:600;cursor:pointer}.pt-check input{width:20px;height:20px;accent-color:var(--pt-acento)}',
+    '.pt-sobre-hora{margin-top:8px}.pt-sobre-hora input{max-width:160px}',
+    '.pt-apagado{opacity:.4;pointer-events:none}',
     '.pt-estado.completado,.pt-estado.confirmado{background:#e3f5ea;color:#1d6b40}.pt-estado.cancelado,.pt-estado.no_show{background:#fdecea;color:#9b2c22}',
     '.pt-aviso{background:#fff;box-shadow:var(--pt-anillo);color:var(--pt-tinta);font-size:13.5px;border-radius:16px;padding:12px 16px;margin:0 0 16px;line-height:1.5;display:flex;gap:10px;align-items:flex-start}',
     '.pt-aviso:before{content:"";flex:none;width:8px;height:8px;border-radius:50%;background:var(--pt-acento);margin-top:6px}',
@@ -974,6 +985,24 @@
       (extra.ayuda ? '<div class="pt-ayuda">' + extra.ayuda + '</div>' : '') + '</div>'
   }
 
+  // Sobreturno (Lucía, 20/10): dar un turno aunque ese horario ya esté lleno.
+  // La hora se elige a mano, el mismo día. La base lo deja pasar y lo marca.
+  function htmlSobreturno(id) {
+    return '<div class="pt-campo ancho pt-sobre" data-c="sobre-' + id + '">' +
+      '<label class="pt-check"><input type="checkbox" id="pt-' + id + '-sobre"> Sobreturno: darlo aunque el horario esté lleno</label>' +
+      '<div class="pt-sobre-hora" hidden><input id="pt-' + id + '-sobre-hora" type="time" step="300" value="09:00">' +
+      '<div class="pt-ayuda">Elegí la hora a mano. Queda marcado como sobreturno en la agenda.</div></div></div>'
+  }
+  function armarSobreturno(el, id, alCambiar) {
+    var chk = $('#pt-' + id + '-sobre', el)
+    var caja = $('.pt-sobre-hora', $('[data-c="sobre-' + id + '"]', el))
+    chk.addEventListener('change', function () { caja.hidden = !chk.checked; alCambiar(chk.checked) })
+    return {
+      activo: function () { return chk.checked },
+      hora: function () { return $('#pt-' + id + '-sobre-hora', el).value },
+    }
+  }
+
   // datos: { dia, hora, minutos, cliente:{...}, vehiculo:{...}, servicio }
   function abrirNuevo(datos) {
     if (!S.puedeEditar) return
@@ -1008,6 +1037,7 @@
       '<div class="pt-campo" data-c="origen"><label for="pt-origen">Lo pidió por</label><select id="pt-origen">' +
       '<option value="whatsapp">WhatsApp</option><option value="telefono">Teléfono</option><option value="presencial">En persona</option><option value="mail">Mail</option><option value="otro">Otro</option></select></div>' +
       '<div class="pt-campo ancho" data-c="hora"><label>Horario * <span style="font-weight:600;color:var(--gris-medio)">(sólo los que tienen lugar)</span></label><div id="pt-horas" class="pt-chips"></div></div>' +
+      htmlSobreturno('n') +
       '<div class="pt-campo ancho" data-c="obs"><label for="pt-obs">Observaciones</label><textarea id="pt-obs" placeholder="Lo que cuenta el cliente, km, etc."></textarea></div>' +
       '</div>' +
       '<div id="pt-error"></div>' +
@@ -1016,6 +1046,7 @@
     var el = m.el
     var elegida = datos.hora || null
     var fechaEntrega = v.fecha_entrega || null
+    var sobre = armarSobreturno(el, 'n', function (on) { $('[data-c="hora"]', el).classList.toggle('pt-apagado', on) })
 
     function cargarHoras() {
       var d = $('#pt-dia', el).value, min = +$('#pt-minutos', el).value
@@ -1024,7 +1055,7 @@
       caja.innerHTML = '<div class="pt-vacio">Buscando horarios…</div>'
       api.libres(d, min).then(function (libres) {
         if (!libres.length) {
-          caja.innerHTML = '<div class="pt-vacio">No quedan horarios para ' + duracionTexto(min) + ' ese día.</div><div id="pt-sugeridos" class="pt-chips"></div>'
+          caja.innerHTML = '<div class="pt-vacio">No quedan horarios para ' + duracionTexto(min) + ' ese día. Si igual lo querés dar ese día, marcalo como sobreturno.</div><div id="pt-sugeridos" class="pt-chips"></div>'
           sugerirDias(d, min, $('#pt-sugeridos', el), function (nuevo) { $('#pt-dia', el).value = nuevo; elegida = null; cargarHoras() })
           return
         }
@@ -1120,7 +1151,8 @@
       if (vin && vin.length !== 17) falta('vin', 'El chasis tiene 17 caracteres (tiene ' + vin.length + ').')
       if (!val('servicio')) falta('servicio', 'Elegí el servicio.')
       if (!val('dia')) falta('dia', 'Elegí el día.')
-      if (!elegida) falta('hora', 'Elegí un horario.')
+      var esSobre = sobre.activo(), horaFinal = esSobre ? sobre.hora() : elegida
+      if (!horaFinal) falta(esSobre ? 'sobre-n' : 'hora', esSobre ? 'Elegí la hora del sobreturno.' : 'Elegí un horario (o marcalo como sobreturno).')
       if (errores.length) { var p = $('[data-c="' + errores[0] + '"]', el); if (p) p.scrollIntoView({ block: 'center', behavior: 'smooth' }); return }
 
       boton.disabled = true; boton.textContent = 'Guardando…'
@@ -1132,8 +1164,9 @@
           titular_nombre: titulo(val('nombre')), titular_apellido: titulo(val('apellido')),
         } : null,
         servicio: val('servicio'),
-        inicio: val('dia') + 'T' + elegida + ':00-03:00',
+        inicio: val('dia') + 'T' + horaFinal + ':00-03:00',
         minutos: min,
+        sobreturno: esSobre,
         origen: val('origen'),
         observaciones: [val('obs'), (!vin && !pat && val('modelo')) ? 'Modelo: ' + val('modelo') : ''].filter(Boolean).join(' · '),
       }).then(function (r) {
@@ -1143,8 +1176,8 @@
         avisoGuardado({
           numero: r.numero,
           cliente_nombre: val('nombre'), cliente_apellido: val('apellido'), cliente_telefono: val('telefono'),
-          inicio: val('dia') + 'T' + elegida + ':00-03:00', fin: null, modelo: val('modelo'), patente: pat,
-          servicio: serv ? serv.nombre : '', minutos: min,
+          inicio: val('dia') + 'T' + horaFinal + ':00-03:00', fin: null, modelo: val('modelo'), patente: pat,
+          servicio: serv ? serv.nombre : '', minutos: min, sobreturno: esSobre,
         })
       }).catch(function (e) {
         boton.disabled = false; boton.textContent = 'Guardar turno'
@@ -1175,15 +1208,17 @@
       patente: t.patente || '',
       modelo: t.modelo || '',
       servicios: t.servicio || 'Service',
+      numero: t.numero || '',
     }
   }
   // Los mismos textos de 0036_mensajes_whatsapp_amigables.sql, por si el
   // concesionario todavía no tiene su configuración en la base.
   var MENSAJES_BASE = {
-    confirmacion: '¡Hola, {cliente}! 👋😊 ¿Cómo estás?\n\nTe escribimos de BYD Yacopini Postventa para confirmarte el turno de tu BYD {modelo} ({patente}):\n\n📅 {fecha}\n🕐 {hora} hs\n🔧 {servicios}\n\n¿Nos confirmás que podés venir? Si necesitás cambiar el día, avisanos por acá y lo coordinamos. ¡Estamos para ayudarte! 🙌',
-    recordatorio: '¡Hola, {cliente}! 👋😊 ¿Cómo estás?\n\nTe escribimos de BYD Yacopini Postventa para recordarte el turno de tu BYD {modelo} ({patente}):\n\n📅 {fecha}\n🕐 {hora} hs\n🔧 {servicios}\n\nSi por algún motivo no podés venir, avisanos por acá así te damos otro día. ¡Te esperamos! 🚗⚡',
-    listo: '¡Hola, {cliente}! 👋😊 ¿Cómo estás?\n\nTe contamos que tu BYD {modelo} ({patente}) ya está listo para retirar. 🚗✨\n\nTe esperamos en BYD Yacopini Postventa. ¡Gracias por confiar en nosotros! 🙌',
-    reprogramar: '¡Hola, {cliente}! 👋😊 ¿Cómo estás?\n\nTe escribimos de BYD Yacopini Postventa por el turno de tu BYD {modelo} ({patente}) del {fecha}.\n\n¿Te gustaría que coordinemos otro día? Contanos qué día y horario te quedan cómodos y lo agendamos. ¡Estamos para ayudarte! 🙌',
+    confirmacion: '✅ *Turno agendado* · BYD Yacopini Postventa\n\n¡Hola, {cliente}! Ya tenés tu turno reservado 🙌\n\n🚗 BYD {modelo} ({patente})\n📅 {fecha}\n⏰ {hora} hs\n🔧 {servicios}\n🎫 Turno N.º {numero}\n\nRespondé *SÍ* para confirmar que venís. Si necesitás cambiarlo, escribinos por acá y lo coordinamos 😊',
+    recordatorio: '⏰ *Recordatorio de turno* · BYD Yacopini Postventa\n\n¡Hola, {cliente}! 👋 Te esperamos el *{fecha}* a las *{hora} hs* con tu BYD {modelo} ({patente}).\n\n🔧 {servicios}\n\nSi por algún motivo no podés venir, avisanos por acá así le damos el lugar a otro cliente 🙏 ¡Nos vemos! 🚗⚡',
+    reprogramado: '🔄 *Turno reprogramado* · BYD Yacopini Postventa\n\n¡Hola, {cliente}! Te pasamos el *nuevo día y horario* de tu turno:\n\n📅 {fecha}\n⏰ {hora} hs\n🔧 {servicios}\n🚗 BYD {modelo} ({patente})\n\n¿Te queda bien? Respondé *SÍ* y listo ✅',
+    reprogramar: '📆 *Coordinemos otro día* · BYD Yacopini Postventa\n\n¡Hola, {cliente}! Vimos que no pudiste venir al turno de tu BYD {modelo} ({patente}) del {fecha}.\n\n¿Qué día y horario te quedan cómodos? Contanos y te lo reservamos 😊',
+    listo: '🎉 *Tu BYD está listo* · BYD Yacopini Postventa\n\n¡Hola, {cliente}! Tu BYD {modelo} ({patente}) ya está listo para retirar 🚗✨\n\nTe esperamos. ¡Gracias por confiar en nosotros! 🙌',
   }
   function botonWa(t, tipo, texto) {
     var plantillas = (S.config && S.config.mensajes) || {}
@@ -1196,7 +1231,8 @@
       '<h2>Turno ' + (t.numero ? 'N.º ' + esc(t.numero) + ' ' : '') + 'guardado</h2>' +
       '<p class="pt-sub">' + esc(titulo(t.cliente_apellido) + ', ' + titulo(t.cliente_nombre)) + ' · ' + esc(t.servicio) + '<br>' +
       esc(diaCorto(t.inicio)) + ' a las ' + esc(hora(t.inicio)) + ' · ' + esc(duracionTexto(t.minutos)) + '</p>' +
-      '<div class="pt-acciones">' + (botonWa(t, 'confirmacion', 'Mandar confirmación por WhatsApp') ||
+      (t.sobreturno ? '<p class="pt-sub"><span class="pt-estado sobre">Sobreturno</span></p>' : '') +
+      '<div class="pt-acciones">' + (botonWa(t, 'confirmacion', 'Mandar "turno agendado" por WhatsApp') ||
         '<div class="pt-aviso mal">El teléfono no sirve para WhatsApp: avisale por otro medio.</div>') +
       '<button type="button" class="pt-btn" id="pt-listo">Listo</button></div>'
     )
@@ -1210,7 +1246,8 @@
     var html =
       '<div class="pt-cinta" style="--c:' + esc(t.estado === 'no_show' ? '#d6483a' : (t.color || '#45b6f7')) + '"></div>' +
       '<h2>' + esc(titulo(t.cliente_apellido) + ', ' + titulo(t.cliente_nombre)) + '</h2>' +
-      '<p class="pt-sub">Turno N.º ' + esc(t.numero) + ' · <span class="pt-estado ' + est + '">' + esc(ETIQUETA_ESTADO[est] || est) + '</span></p>' +
+      '<p class="pt-sub">Turno N.º ' + esc(t.numero) + ' · <span class="pt-estado ' + est + '">' + esc(ETIQUETA_ESTADO[est] || est) + '</span>' +
+      (t.sobreturno ? ' <span class="pt-estado sobre">Sobreturno</span>' : '') + '</p>' +
       '<dl class="pt-datos">' +
       '<dt>Servicio</dt><dd>' + esc(t.servicio || '—') + '</dd>' +
       '<dt>Día</dt><dd>' + esc(diaCorto(t.inicio)) + ' · ' + esc(fecha(t.inicio)) + '</dd>' +
@@ -1240,12 +1277,13 @@
     }
     var wa = []
     if (activo) {
-      wa.push(botonWa(t, est === 'pendiente' ? 'confirmacion' : 'recordatorio', est === 'pendiente' ? 'WhatsApp: pedir confirmación' : 'WhatsApp: recordatorio'))
+      if (est === 'pendiente') wa.push(botonWa(t, 'confirmacion', 'WhatsApp: turno agendado'))
+      wa.push(botonWa(t, 'recordatorio', 'WhatsApp: recordatorio'))
     }
     if (est === 'completado') wa.push(botonWa(t, 'listo', 'WhatsApp: ya está listo'))
     if (est === 'cancelado' || est === 'no_show' || est === 'a_reprogramar') wa.push(botonWa(t, 'reprogramar', 'WhatsApp: ofrecer otro día'))
     var tel = telefonoWa(t.cliente_telefono)
-    if (tel) wa.push('<a class="pt-btn wa" target="_blank" rel="noopener" href="https://wa.me/' + tel + '">Abrir chat</a>')
+    if (tel) wa.push('<a class="pt-btn wa" target="_blank" rel="noopener" href="' + esc(linkWa(t.cliente_telefono, '')) + '">Abrir chat</a>')
     // El que sólo mira (taller, gerencia) no le escribe a los clientes.
     if (S.puedeEditar && wa.join('')) html += '<div class="pt-acciones">' + wa.join('') + '</div>'
     html += '<div id="pt-extra"></div>'
@@ -1299,16 +1337,18 @@
       '<div class="pt-grilla">' +
       '<div class="pt-campo"><label for="pt-r-dia">Día nuevo</label><input id="pt-r-dia" type="date" min="' + hoyISO() + '" value="' + dia + '"></div>' +
       '<div class="pt-campo"><label for="pt-r-min">¿Cuánto demora?</label><select id="pt-r-min">' + opcionesDuracion(minutos) + '</select></div>' +
-      '<div class="pt-campo ancho"><label>Horario</label><div id="pt-r-horas" class="pt-chips"></div></div>' +
+      '<div class="pt-campo ancho" data-c="r-hora"><label>Horario</label><div id="pt-r-horas" class="pt-chips"></div></div>' +
+      htmlSobreturno('r') +
       '</div><div class="pt-acciones"><button type="button" class="pt-btn prim" id="pt-r-guardar">Guardar nuevo horario</button></div>'
     )
     var el = m.el, elegida = null
+    var sobre = armarSobreturno(el, 'r', function (on) { $('[data-c="r-hora"]', el).classList.toggle('pt-apagado', on) })
     function cargar() {
       var d = $('#pt-r-dia', el).value, min = +$('#pt-r-min', el).value, caja = $('#pt-r-horas', el)
       caja.innerHTML = '<div class="pt-vacio">Buscando horarios…</div>'
       api.libres(d, min, t.id).then(function (libres) {
         if (!libres.length) {
-          caja.innerHTML = '<div class="pt-vacio">No quedan horarios ese día.</div><div id="pt-r-sug" class="pt-chips"></div>'
+          caja.innerHTML = '<div class="pt-vacio">No quedan horarios ese día. Si igual lo querés dar ese día, marcalo como sobreturno.</div><div id="pt-r-sug" class="pt-chips"></div>'
           sugerirDias(d, min, $('#pt-r-sug', el), function (nuevo) { $('#pt-r-dia', el).value = nuevo; elegida = null; cargar() })
           return
         }
@@ -1327,15 +1367,18 @@
     $('#pt-r-min', el).addEventListener('change', cargar)
     cargar()
     $('#pt-r-guardar', el).addEventListener('click', function () {
-      if (!elegida) { toast('Elegí un horario.', true); return }
+      var esSobre = sobre.activo(), horaFinal = esSobre ? sobre.hora() : elegida
+      if (!horaFinal) { toast(esSobre ? 'Elegí la hora del sobreturno.' : 'Elegí un horario.', true); return }
       var btn = this; btn.disabled = true
-      var inicio = $('#pt-r-dia', el).value + 'T' + elegida + ':00-03:00'
-      api.reprogramar(t.id, inicio, +$('#pt-r-min', el).value).then(function () {
+      var inicio = $('#pt-r-dia', el).value + 'T' + horaFinal + ':00-03:00'
+      api.reprogramar(t.id, inicio, +$('#pt-r-min', el).value, esSobre).then(function () {
         m.cerrar()
         refrescarTodo()
-        var nuevo = Object.assign({}, t, { inicio: inicio, estado: 'pendiente' })
-        var m2 = modal('<h2>Turno reprogramado</h2><p class="pt-sub">Nuevo horario: ' + esc(diaCorto(inicio)) + ' a las ' + esc(elegida) + '. El anterior quedó libre.</p>' +
-          '<div class="pt-acciones">' + botonWa(nuevo, 'confirmacion', 'Avisarle por WhatsApp') + '<button type="button" class="pt-btn" id="pt-ok2">Listo</button></div>')
+        var nuevo = Object.assign({}, t, { inicio: inicio, estado: 'pendiente', sobreturno: esSobre })
+        var m2 = modal('<h2>Turno reprogramado</h2><p class="pt-sub">Nuevo horario: ' + esc(diaCorto(inicio)) + ' a las ' + esc(horaFinal) + (esSobre ? ' (sobreturno)' : '') + '. El anterior quedó libre.</p>' +
+          '<div class="pt-acciones">' + (botonWa(nuevo, 'reprogramado', 'Avisarle el nuevo horario por WhatsApp') ||
+            '<div class="pt-aviso mal">El teléfono no sirve para WhatsApp: avisale por otro medio.</div>') +
+          '<button type="button" class="pt-btn" id="pt-ok2">Listo</button></div>')
         $('#pt-ok2', m2.el).addEventListener('click', m2.cerrar)
       }).catch(function (e) { btn.disabled = false; toast(textoError(e), true); cargar() })
     })

@@ -97,7 +97,7 @@
   <p class="sub">Unidades entregadas (datos de la hoja Entregas del CRM) y cuándo le toca el próximo service a cada una.</p>
 
   <div class="reglas">
-    <b>Plan de services:</b> eléctricos cada <b>20.000 km o 1 año</b>; híbridos cada <b>15.000 km o 1 año</b> (lo que ocurra primero).
+    <b>Plan de services:</b> eléctricos cada <b>20.000 km o 1 año</b>; híbridos cada <b>12.000 km o 1 año</b> (lo que ocurra primero).
     <b>Garantía:</b> <b>6 años</b> mecánica, <b>8 años</b> batería, con tope de <b>150.000 km</b>.<br>
     El primer service se cuenta desde la <b>entrega</b>. Cuando pedís el ingreso a servicio (service N.º y km con los que entra), <b>la cuenta empieza de nuevo</b>: el siguiente se calcula desde esa fecha y esos km.
     El CRM no trae kilómetros: hasta el primer ingreso las fechas se calculan solo por tiempo.
@@ -133,7 +133,7 @@
 
   // ---------- Reglas (un solo lugar) ----------
   var REGLAS = {
-    servicio: { anios: 1, km: { EV: 20000, HEV: 15000 } },
+    servicio: { anios: 1, km: { EV: 20000, HEV: 12000 } },
     garantia: { mecanicaAnios: 6, bateriaAnios: 8, km: 150000 }
   };
 
@@ -216,12 +216,17 @@
     }
     var nombre = u.f.nombre ? titulo(u.f.nombre.split(' ')[0]) : '';
     var cuando = u.bucket === 'vencido' ? 'Ya pasó la fecha del service de tu ' : 'Se acerca el service de tu ';
-    var texto = '¡Hola' + (nombre ? ', ' + nombre : '') + '! 👋😊 ¿Cómo estás?\n\n' +
-      'Te escribimos de BYD Yacopini para saber cómo viene tu BYD ' + u.modelo + ' y recordarte que ' +
-      (u.bucket === 'vencido' ? 'ya estaría en fecha para realizar su service oficial' : 'se acerca la fecha de su service oficial') + '. 🚗⚡\n\n' +
-      '¡Es importante para mantener tu auto en óptimas condiciones y cuidar su garantía!\n\n' +
-      '¿Te gustaría que coordinemos un turno? ¡Estamos para ayudarte! 🙌';
-    return 'https://wa.me/' + d + '?text=' + encodeURIComponent(texto);
+    var vencido = u.bucket === 'vencido';
+    var cual = (ORD[u.n] ? ORD[u.n] + ' ' : '') + 'service oficial';
+    var texto = '🔔 *Aviso de service* · BYD Yacopini Postventa\n\n' +
+      '¡Hola' + (nombre ? ', ' + nombre : '') + '! 😊 ' +
+      (vencido ? 'Tu BYD ' + u.modelo + ' ya está en fecha para su ' + cual + '.' : 'Se acerca el ' + cual + ' de tu BYD ' + u.modelo + '.') + '\n\n' +
+      '🗓️ ' + (vencido ? 'Le tocaba el ' : 'Le toca el ') + fmt(u.prox) +
+      (u.kmProx ? ' o a los ' + numAr(u.kmProx) + ' km (lo que llegue primero)' : '') + '\n' +
+      '🛡️ Hacerlo a tiempo cuida la garantía de fábrica\n' +
+      '🔧 Lo atienden técnicos oficiales BYD\n\n' +
+      '¿Te reservamos un turno? Respondé este mensaje con el día que te quede cómodo 📅';
+    return 'https://api.whatsapp.com/send?phone=' + d + '&text=' + encodeURIComponent(texto);
   }
 
   function filtradas(){
