@@ -369,7 +369,8 @@
     var primero = /@/.test(acceso.nombre || '') || window.innerWidth < 380 ? '' : String(acceso.nombre || '').trim().split(/\s+/)[0]
     b.textContent = (primero ? primero + ' · ' : '') + 'Cerrar sesión'
     b.setAttribute('aria-label', 'Cerrar sesión')
-    b.style.cssText = 'position:absolute;top:12px;right:12px;z-index:999998;max-width:60vw;overflow:hidden;' +
+    // Debajo de las ventanas de la agenda (z-index 100000), que lo tienen que tapar.
+    b.style.cssText = 'position:absolute;top:12px;right:12px;z-index:9000;max-width:60vw;overflow:hidden;' +
       'text-overflow:ellipsis;white-space:nowrap;padding:8px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.35);' +
       'background:rgba(255,255,255,.08);color:#fff;font:600 13px/1 "Segoe UI",Arial,sans-serif;cursor:pointer;'
     b.addEventListener('click', function () {
