@@ -60,6 +60,13 @@
     color:var(--blanco); font-size:12px; font-weight:700; cursor:pointer;
   }
   #bydSalir[hidden]{ display:none; }
+  /* Vendedores y jefe entran acá (Lucía, 20/10) y su panel queda a un toque. */
+  #bydMiPanel{
+    margin-left:auto; padding:6px 14px; border-radius:999px; white-space:nowrap;
+    background:#45b6f7; color:#0f1c27; font-size:12px; font-weight:700; text-decoration:none;
+  }
+  #bydMiPanel + #bydSalir{ margin-left:8px; }
+  #bydMiPanel[hidden]{ display:none; }
 
   .tabs{
     display:flex;
@@ -636,8 +643,10 @@
   // tema.js ya comprobó que esta marca es de la cuenta guardada en el teléfono.
   // Se saca la puerta en el acto, sin desvanecerla: al volver atrás desde otra
   // pantalla, el desvanecido se veía como un pantallazo del inicio de sesión.
+  // Desde el 20/10 todos se quedan en esta página (menos el taller, que sólo
+  // ve los turnos): a cualquiera ya reconocido se le saca la puerta en el acto.
   var acceso = window.bydAcceso && window.bydAcceso.leer();
-  if (acceso && acceso.tipo === 'gerencia') {
+  if (acceso && acceso.tipo !== 'taller') {
     var g = document.getElementById('bydGate'); if (g) g.remove();
     body.classList.remove('gate-locked');
     return;
@@ -746,9 +755,10 @@ const pedirPlanilla = () =>
 if (document.getElementById('bydGate')) pedirPlanilla()
 
 // { nombre, rol } tal cual en la planilla, o null si no está o no llegó.
+// Google a veces tarda: pasados 2,5 s se sigue sin ella (la base ya sabe el rol).
 async function filaEnLaPlanilla(nombre) {
   try {
-    const texto = await pedirPlanilla()
+    const texto = await Promise.race([pedirPlanilla(), new Promise((r) => setTimeout(() => r(null), 2500))])
     if (!texto) return null
     const filas = texto.split(/\r?\n/).map((l) => l.split(','))
     const col = filas[0].findIndex((h) => /vendedor/i.test(h))
@@ -767,10 +777,15 @@ const volver = (() => {
   return /^[\w-]+\.html$/.test(v) && v !== 'index.html' ? v : null
 })()
 
+const leerPerfil = (id) => db.from('perfiles').select('nombre,rol,activo').eq('id', id).maybeSingle()
+
 // Reconoce a la persona por su cuenta y la manda a su pantalla. Devuelve
 // { yendo } si se va de acá, { ok } si se queda, o { ok:false, mensaje }.
-async function ubicar(user) {
-  const { data: perfil, error } = await db.from('perfiles').select('nombre,rol,activo').eq('id', user.id).maybeSingle()
+// opciones.perfil: el perfil ya leído (ahorra una consulta al entrar).
+// opciones.formulario: entró recién con mail y código.
+async function ubicar(user, opciones = {}) {
+  let perfil = opciones.perfil, error = null
+  if (!perfil) ({ data: perfil, error } = await leerPerfil(user.id))
   if (error) return { ok: false, mensaje: 'No pudimos leer tu usuario. Probá de nuevo en un momento.' }
   // Sin perfil activo no se deja la cuenta abierta: la base igual no le
   // mostraría nada, y adentro parecería que todo está vacío.
@@ -792,24 +807,32 @@ async function ubicar(user) {
   // diga otra cosa. "Jefe" sólo existe en la planilla (en la base es gerencia).
   // "Gte Admin" / "Gte Administracion" en la planilla: ve solo Patentamiento y Entregas del Tablero
   // (ver la vista de administracion al final de esta pagina).
-  // "Post Venta" / "Servicios Post Venta" en la planilla: entra directo a la pantalla de Post venta.
+  // "Post Venta" / "Servicios Post Venta" en la planilla: postventa (da turnos).
+  // "Taller" / "Técnico": taller, que sólo ve los turnos.
   const tipo = perfil.rol === 'vendedor' ? 'vendedor'
+    : (['tecnico', 'taller'].includes(perfil.rol) || /taller|t[eé]cnico/i.test(fila?.rol || '')) ? 'taller'
     : /jefe/i.test(fila?.rol || '') ? 'jefe'
-    : (/post.?venta|servicio|taller|t[eé]cnico/i.test(fila?.rol || '') ||
-       ['asesor_servicio', 'tecnico', 'taller'].includes(perfil.rol)) ? 'postventa'
+    : (/post.?venta|servicio/i.test(fila?.rol || '') || perfil.rol === 'asesor_servicio') ? 'postventa'
     : /admin/i.test(fila?.rol || '') ? 'administracion'
     : 'gerencia'
   window.bydAcceso?.marcar({ uid: user.id, tipo, nombre })
 
-  const destino = volver || { vendedor: 'panel_ventas.html', jefe: 'panel_jefe.html', postventa: 'postventa.html' }[tipo]
+  // Desde el 20/10 (Lucía) todos arrancan en esta página, la del gerente,
+  // menos el taller, que va a los turnos. Al entrar con mail y código no se
+  // vuelve a la última página usada: siempre acá.
+  const destino = tipo === 'taller' ? 'postventa.html' : (opciones.formulario ? null : volver)
   if (destino) { location.replace('./' + destino); return { yendo: true } }
-  saludar(perfil.nombre)
+  saludar(perfil.nombre, tipo)
   return { ok: true }
 }
 
 // El saludo de arriba dice con qué cuenta se entró, y al lado va "Salir":
 // en un teléfono o una PC compartida es la forma de darse cuenta.
-function saludar(nombre) {
+function saludar(nombre, tipo) {
+  tipo = tipo || window.bydAcceso?.leer()?.tipo
+  const panel = { vendedor: ['panel_ventas.html', 'Mi panel'], jefe: ['panel_jefe.html', 'Panel del jefe'] }[tipo]
+  const enlace = document.getElementById('bydMiPanel')
+  if (enlace && panel) { enlace.href = './' + panel[0]; enlace.textContent = panel[1]; enlace.hidden = false }
   const el = document.getElementById('greeting')
   // Alguna cuenta tiene el mail como nombre: eso no se muestra.
   const primero = /@/.test(nombre || '') ? '' : (nombre || '').trim().split(/\s+/)[0]
@@ -864,15 +887,20 @@ window.__bydEntrarConCuenta = async function (email, password) {
     usuario = await crearCuentaDesdePlanilla(email, password)
     if (!usuario) return { ok: false, mensaje: 'Ese mail o ese código no coinciden. Si te acaban de agregar a la planilla, probá de nuevo en 5 minutos.' }
   }
-  // A una cuenta activa no le toca nada; a un vendedor nuevo lo activa. Los
-  // demás roles los activa Calidad: la planilla es pública.
-  const { data: alta } = await db.rpc('alta_desde_planilla', { p_codigo: password })
-  if (alta === 'pendiente') {
-    await db.auth.signOut()
-    window.bydAcceso?.limpiar()
-    return { ok: false, mensaje: 'Tu cuenta quedó creada. Falta que Calidad la active: avisales.' }
+  // La activación desde la planilla sólo hace falta si la cuenta no está
+  // activa. Antes se pedía siempre y era el paso que a veces trababa el
+  // "Entrando…" (20/10): a una cuenta activa se la deja pasar directo.
+  let { data: perfil, error: errorPerfil } = await leerPerfil(usuario.id)
+  if (!errorPerfil && !perfil?.activo) {
+    const { data: alta } = await db.rpc('alta_desde_planilla', { p_codigo: password })
+    if (alta === 'pendiente') {
+      await db.auth.signOut()
+      window.bydAcceso?.limpiar()
+      return { ok: false, mensaje: 'Tu cuenta quedó creada. Falta que Calidad la active: avisales.' }
+    }
+    if (alta === 'activado') perfil = (await leerPerfil(usuario.id)).data
   }
-  return ubicar(usuario)
+  return ubicar(usuario, { perfil: errorPerfil ? null : perfil, formulario: true })
 }
 
 // Si ya había entrado con su cuenta en este teléfono, no se le vuelve a pedir
@@ -944,6 +972,7 @@ if (data.session) {
       <div class="greeting" id="greeting">Hola</div>
       <div class="subtitle">Godoy Cruz · Mendoza</div>
     </div>
+    <a id="bydMiPanel" hidden></a>
     <button type="button" id="bydSalir" hidden>Salir</button>
   </div>
 

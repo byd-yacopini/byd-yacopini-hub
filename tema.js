@@ -46,7 +46,7 @@
       MARCAS.forEach(function (m) { sessionStorage.removeItem(m) })
     } catch (e) {}
   }
-  // { uid, tipo: 'gerencia' | 'vendedor' | 'jefe', nombre, clave? }
+  // { uid, tipo: 'gerencia' | 'administracion' | 'vendedor' | 'jefe' | 'postventa' | 'taller', nombre, clave? }
   function marcar(acceso) {
     limpiar()
     try {
@@ -309,11 +309,13 @@
   var carpeta = location.pathname.replace(/[^/]*$/, '')
   var archivo = function (ruta) { return (ruta.split('?')[0].replace(/^.*\//, '') || 'index.html') }
   var aqui = location.pathname + location.search
-  var INICIOS = { vendedor: 'panel_ventas.html', jefe: 'panel_jefe.html', postventa: 'postventa.html' }
+  // Desde el 20/10 todos arrancan en index.html (la página del gerente),
+  // menos el taller, que sólo ve los turnos.
+  var INICIOS = { taller: 'postventa.html' }
   var acceso = window.bydAcceso && window.bydAcceso.leer()
   var inicio = (acceso && INICIOS[acceso.tipo]) || 'index.html'
   var enSuInicio = archivo(aqui) === inicio
-  // A quien no es de gerencia, index.html lo manda a su pantalla: no se vuelve
+  // Al taller, index.html lo manda a los turnos: no se vuelve
   // ahí. Tampoco a "index.html?volver=…", que es sólo una pasada para entrar.
   var sirve = function (ruta) {
     return ruta !== aqui && ruta.indexOf('volver=') === -1 &&
