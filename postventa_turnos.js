@@ -1543,7 +1543,7 @@
     var bajada = $('#pt-agenda .pt-bajada')
     if (bajada) bajada.textContent = 'Los turnos de hoy y de los próximos días. Tocá un turno para ver sus datos.'
     var titulo = $('.app-topbar b')
-    if (titulo) titulo.textContent = 'BYD Yacopini · Taller'
+    if (titulo) titulo.textContent = 'BYD Yacopini · Turnos del taller'
   }
 
   // ------------------------------------------------------------ arranque
@@ -1588,8 +1588,9 @@
     api.sesion().then(function (perfil) {
       S.perfil = perfil
       S.puedeEditar = !!(perfil && perfil.activo && (perfil.rol === 'admin' || perfil.rol === 'asesor_servicio'))
-      // Taller · visualización (0039) y técnicos: sólo la agenda, para mirar.
-      S.soloAgenda = !!(perfil && perfil.activo && (perfil.rol === 'taller' || perfil.rol === 'tecnico'))
+      // Taller · visualización (0039), técnicos y el responsable de entregas
+      // (0043, Ailén): sólo la agenda, para mirar.
+      S.soloAgenda = !!(perfil && perfil.activo && ['taller', 'tecnico', 'responsable'].indexOf(perfil.rol) >= 0)
       if (!perfil) return null
       return Promise.all([api.config(), api.servicios()]).then(function (r) {
         S.config = r[0]
