@@ -147,6 +147,12 @@
         if (sobreturno) args.p_sobreturno = true
         return r(db.rpc('reprogramar_turno', args))
       },
+      editarTurno: function (id, d) {
+        return r(db.rpc('editar_turno', {
+          p_turno: id, p_cliente: d.cliente, p_vehiculo: d.vehiculo, p_servicio: d.servicio,
+          p_origen: d.origen, p_observaciones: d.observaciones,
+        }))
+      },
       cambiarEstado: function (id, estado, motivo) {
         var cambios = { estado: estado }
         if (motivo != null) cambios.motivo_cancelacion = motivo
@@ -1273,6 +1279,7 @@
       if (est === 'cancelado' || est === 'no_show' || est === 'a_reprogramar') {
         b.push('<button type="button" class="pt-btn prim" data-a="reprogramar">Darle otro día</button>')
       }
+      b.push('<button type="button" class="pt-btn" data-a="editar">Editar datos</button>')
       html += '<div class="pt-acciones">' + b.join('') + '</div>'
     }
     var wa = []
@@ -1293,6 +1300,7 @@
       btn.addEventListener('click', function () {
         var a = btn.dataset.a
         if (a === 'reprogramar') { m.cerrar(); abrirReprogramar(t); return }
+        if (a === 'editar') { m.cerrar(); abrirEditar(t); return }
         if (a === 'cancelado' || a === 'no_show') { pedirMotivo(m, t, a); return }
         cambiar(m, t, a, null, btn)
       })
@@ -1382,6 +1390,83 @@
         $('#pt-ok2', m2.el).addEventListener('click', m2.cerrar)
       }).catch(function (e) { btn.disabled = false; toast(textoError(e), true); cargar() })
     })
+  }
+
+  // Editar los datos de un turno ya dado (Lucía, 20/10): titular, auto,
+  // servicio, origen y observaciones. Día y hora, con "Reprogramar".
+  function abrirEditar(t) {
+    var origenes = [['whatsapp', 'WhatsApp'], ['telefono', 'Teléfono'], ['presencial', 'En persona'], ['mail', 'Mail'], ['otro', 'Otro']]
+    var m = modal(
+      '<h2>Editar turno' + (t.numero ? ' N.º ' + esc(t.numero) : '') + '</h2>' +
+      '<p class="pt-sub">' + esc(diaCorto(t.inicio)) + ' a las ' + esc(hora(t.inicio)) + '. Para cambiar el día o la hora usá <b>Reprogramar</b>.</p>' +
+      '<div class="pt-seccion">Titular y vehículo</div>' +
+      '<div class="pt-grilla">' +
+      campo('e-nombre', 'Nombre del titular *', titulo(t.cliente_nombre || ''), { attrs: ' autocomplete="off"' }) +
+      campo('e-apellido', 'Apellido del titular *', titulo(t.cliente_apellido || ''), { attrs: ' autocomplete="off"' }) +
+      campo('e-telefono', 'Teléfono *', t.cliente_telefono || '', { tipo: 'tel', ph: '261 555 1234' }) +
+      campo('e-modelo', 'Modelo del vehículo', t.modelo || '', { ph: 'Dolphin Mini, Yuan Pro…' }) +
+      campo('e-vin', 'Chasis / VIN', t.vin || '', { attrs: ' autocapitalize="characters" autocomplete="off"' }) +
+      campo('e-patente', 'Patente', t.patente || '', { ph: 'AB123CD', attrs: ' autocapitalize="characters" autocomplete="off"' }) +
+      '</div>' +
+      '<div class="pt-seccion">Turno</div>' +
+      '<div class="pt-grilla">' +
+      '<div class="pt-campo" data-c="e-servicio"><label for="pt-e-servicio">Servicio *</label><select id="pt-e-servicio"><option value="">Elegí…</option>' +
+      S.servicios.map(function (sv) {
+        return '<option value="' + sv.id + '"' + (sv.id === t.servicio_id ? ' selected' : '') + '>' + esc(sv.nombre) + '</option>'
+      }).join('') + '</select></div>' +
+      '<div class="pt-campo" data-c="e-origen"><label for="pt-e-origen">Lo pidió por</label><select id="pt-e-origen">' +
+      origenes.map(function (o) { return '<option value="' + o[0] + '"' + (o[0] === t.origen ? ' selected' : '') + '>' + o[1] + '</option>' }).join('') +
+      '</select></div>' +
+      '<div class="pt-campo ancho" data-c="e-obs"><label for="pt-e-obs">Observaciones</label><textarea id="pt-e-obs">' + esc(t.observaciones || '') + '</textarea></div>' +
+      '</div>' +
+      '<div id="pt-e-error"></div>' +
+      '<div class="pt-acciones"><button type="button" class="pt-btn prim" id="pt-e-guardar">Guardar cambios</button>' +
+      '<button type="button" class="pt-btn" id="pt-e-cancelar">Cancelar</button></div>'
+    )
+    var el = m.el
+    $('#pt-e-cancelar', el).addEventListener('click', m.cerrar)
+    $('#pt-e-guardar', el).addEventListener('click', function () {
+      var boton = this
+      $$('.pt-campo', el).forEach(function (x) { x.classList.remove('error'); var e = $('.pt-err', x); if (e) e.remove() })
+      $('#pt-e-error', el).innerHTML = ''
+      var val = function (id) { return $('#pt-' + id, el).value.trim() }
+      var errores = []
+      function falta(id, texto) {
+        errores.push(id)
+        var c = $('[data-c="' + id + '"]', el); if (!c) return
+        c.classList.add('error')
+        var e = document.createElement('div'); e.className = 'pt-err'; e.textContent = texto; c.appendChild(e)
+      }
+      if (!val('e-nombre')) falta('e-nombre', 'Cargá el nombre del titular.')
+      if (!val('e-apellido')) falta('e-apellido', 'Cargá el apellido del titular.')
+      if (!val('e-telefono')) falta('e-telefono', 'Cargá un teléfono.')
+      else if (!telefonoWa(val('e-telefono'))) falta('e-telefono', 'Revisá el número: con característica, por ejemplo 261 555 1234.')
+      var pat = val('e-patente').replace(/[^A-Za-z0-9]/g, '').toUpperCase()
+      if (pat && !/^([A-Z]{3}\d{3}|[A-Z]{2}\d{3}[A-Z]{2})$/.test(pat)) falta('e-patente', 'La patente tiene que ser como ABC123 o AB123CD.')
+      var vin = val('e-vin').replace(/[^A-Za-z0-9]/g, '').toUpperCase()
+      if (vin && vin.length !== 17) falta('e-vin', 'El chasis tiene 17 caracteres (tiene ' + vin.length + ').')
+      if (!val('e-servicio')) falta('e-servicio', 'Elegí el servicio.')
+      if (errores.length) { var c0 = $('[data-c="' + errores[0] + '"]', el); if (c0) c0.scrollIntoView({ block: 'center', behavior: 'smooth' }); return }
+
+      boton.disabled = true; boton.textContent = 'Guardando…'
+      api.editarTurno(t.id, {
+        cliente: { nombre: titulo(val('e-nombre')), apellido: titulo(val('e-apellido')), telefono: val('e-telefono') },
+        vehiculo: { vin: vin, patente: pat, modelo: val('e-modelo') },
+        servicio: val('e-servicio'),
+        origen: val('e-origen'),
+        observaciones: val('e-obs'),
+      }).then(function () {
+        m.cerrar()
+        toast('Turno actualizado.')
+        refrescarTodo()
+      }).catch(function (e) {
+        boton.disabled = false; boton.textContent = 'Guardar cambios'
+        var texto = /function public\.editar_turno|could not find the function/i.test(String(e && e.message))
+          ? 'Falta actualizar la base de datos (migración 0044).' : textoError(e)
+        $('#pt-e-error', el).innerHTML = '<div class="pt-aviso mal">' + esc(texto) + '</div>'
+      })
+    })
+    setTimeout(function () { $('#pt-e-nombre', el).focus() }, 50)
   }
 
   // ---------------------------------------------------------- registro
