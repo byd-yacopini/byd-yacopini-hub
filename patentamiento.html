@@ -494,8 +494,8 @@
     var pesoMercado = A.m.t ? C.m.t / A.m.t * 100 : 0, pesoByd = A.m.u ? C.m.u / A.m.u * 100 : 0;
 
     var txt = 'En <b>' + MESES[mes - 1] + ' ' + anio + '</b> <span class="byd">' + MARCA_PROPIA + '</span> tiene el <b>' + pct(A.m.part) + '</b> del mercado argentino' +
-      (A.m.pos ? ' (puesto <b>#' + A.m.pos + '</b> de ' + A.m.n + ' marcas)' : '') + ' y el <b>' + pct(C.m.part) + '</b> en Cuyo (' + provsCuyo + ')' +
-      (C.m.pos ? ' (puesto <b>#' + C.m.pos + '</b> de ' + C.m.n + ')' : '') + ': <b>' + dec(Math.abs(dPart), 2) + ' pp</b> ' + (dPart >= 0 ? 'más' : 'menos') + ' que en el país.';
+      (A.m.pos ? ' (puesto <b>#' + A.m.pos + '</b> de ' + A.m.n + ' marcas)' : '') + ' y el <b>' + pct(C.m.part) + '</b> en Cuyo (' + provsCuyo +
+      (C.m.pos ? ', puesto <b>#' + C.m.pos + '</b> de ' + C.m.n + ' marcas' : '') + '): <b>' + dec(Math.abs(dPart), 2) + ' pp</b> ' + (dPart >= 0 ? 'más' : 'menos') + ' que en el país.';
     if (A.m.u > 0) txt += ' Cuyo es el <b>' + pct(pesoMercado) + '</b> de los patentamientos del país pero concentra el <b>' + pct(pesoByd) + '</b> de los ' + MARCA_PROPIA + ' (' + num(C.m.u) + ' de ' + num(A.m.u) + ')' +
       (indice ? ' · índice de penetración <b>' + dec(indice, 2).replace(',00', ',0') + '</b> (1,0 = igual que el país)' : '') + '.';
     $('compLectura').innerHTML = txt;
