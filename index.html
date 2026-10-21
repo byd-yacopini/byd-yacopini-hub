@@ -2376,7 +2376,17 @@ if (data.session) {
       document.querySelectorAll('#subTabs .tab-btn').forEach(function (b) {
         if (!PERMITIDAS[b.dataset.tab]) b.style.display = 'none';
       });
-      var wrapSel = document.querySelector('.main-select-wrap'); if (wrapSel) wrapSel.style.display = 'none';
+      // En lugar del desplegable de vistas, Administración tiene un único acceso: Importar reportes.
+      var wrapSel = document.querySelector('.main-select-wrap');
+      if (wrapSel) {
+        var selProp = document.getElementById('mainViewSelect'); if (selProp) selProp.style.display = 'none';
+        if (!document.getElementById('accesoImportar')) {
+          var a = document.createElement('a');
+          a.id = 'accesoImportar'; a.href = './importar_reportes.html'; a.textContent = 'Importar reportes';
+          a.style.cssText = 'display:inline-block;margin:6px 0 2px;padding:11px 18px;border-radius:12px;background:#7B1FA2;color:#fff;font-weight:700;font-size:14px;text-decoration:none;font-family:inherit;';
+          wrapSel.appendChild(a);
+        }
+      }
       var sel = document.getElementById('mainViewSelect');
       if (sel && sel.value !== 'tablero') { sel.value = 'tablero'; sel.dispatchEvent(new Event('change')); }
       var activa = document.querySelector('#subTabs .tab-btn.active');
