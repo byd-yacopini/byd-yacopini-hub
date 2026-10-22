@@ -79,7 +79,7 @@
   <div class="modo"><b>Cómo funciona:</b> la planilla <b>no se toca</b> hasta que confirmás. Antes de cada carga se guarda un respaldo y podés volver atrás.</div>
 
   <p class="estado-planilla" id="estadoPlanilla">Leyendo la planilla actual…</p>
-  <p class="sub" style="font-size:11px;margin-top:-6px">Versión del importador: 15/10 · fechas ISO</p>
+  <p class="sub" style="font-size:11px;margin-top:-6px">Versión del importador: 21/10 · aviso de cambio masivo</p>
   <div id="slots"></div>
 </div></div>
 
@@ -245,8 +245,14 @@
     if (cambiadasPct > 0.6){
       var frec = {}; res.actualizadas.forEach(function(a){ a.difs.forEach(function(c){ frec[c] = (frec[c] || 0) + 1; }); });
       var masCambiadas = Object.keys(frec).filter(function(c){ return frec[c] >= res.actualizadas.length * 0.9; });
-      if (masCambiadas.length){
-        // Una misma columna cambia en casi todas las filas: señal de columnas desplazadas → se bloquea.
+      if (masCambiadas.length === 1 || masCambiadas.length === 2){
+        // Una o dos columnas cambian en casi todas las filas y el resto no: la solapa está alineada, es un cambio real del CRM
+        // (ej.: nueva lista de precios en todo el stock). No se bloquea, pero se muestra el ejemplo para que se revise.
+        var ej = res.actualizadas[0];
+        var ejTxt = masCambiadas.map(function(c){ return esc(c) + ': ' + esc(String(ej.viejo[c])) + ' → ' + esc(String(ej.fila[c])); }).join(' · ');
+        res.alertas.unshift({ t:'aviso', m:'La columna <b>' + esc(masCambiadas.join(', ')) + '</b> cambió en casi todas las filas (ej.: ' + ejTxt + '), pero las demás columnas coinciden: la estructura de la solapa es la misma. Suele ser un cambio real del CRM (por ejemplo, una nueva lista de precios). Revisalo en "Ver qué cambió" antes de cargar.' });
+      } else if (masCambiadas.length){
+        // Varias columnas cambian en casi todas las filas: señal de columnas desplazadas → se bloquea.
         res.alertas.unshift({ t:'error', m:'Casi todas las filas figuran como actualizadas: las columnas <b>' + esc(masCambiadas.join(', ')) + '</b> no coinciden. Suele pasar cuando la solapa tiene <b>columnas extra o desplazadas</b> respecto del reporte. Hay que revisar la estructura de la solapa antes de cargar.' });
       } else {
         // Cada fila cambia en campos distintos: son avances reales del CRM (seguimiento, primer movimiento, etc.).
