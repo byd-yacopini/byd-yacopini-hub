@@ -721,6 +721,7 @@
      guarda y la segunda vez ni la pide. -->
 <link rel="preconnect" href="https://mgicnwnvtfkrxmkmewnt.supabase.co">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.min.js"></script>
+<script defer src="postventa_tablero.js"></script>
 <script type="module">
 // El ingreso con la cuenta del Portal de Calidad.
 const { createClient } = window.supabase
@@ -1040,6 +1041,19 @@ if (data.session) {
           <h2>Patentamientos — cómo venimos en el mes</h2>
           <iframe id="marcoResumenPat" title="Resumen de patentamientos" data-src="./patentamiento.html?embebido=1&amp;resumen=1"
                   style="width:100%;height:340px;border:0;display:block;background:transparent;"></iframe>
+        </div>
+
+        <div class="tcard" id="tarjetaPostVenta">
+          <h2>Post venta — taller y services</h2>
+          <div class="kpi-grid" style="margin-bottom:0;">
+            <div class="kpi"><div class="n" id="pvService">–</div><div class="l">Services cumplidos (mes)</div><div class="kpi-usd" id="pvServiceSub"></div></div>
+            <div class="kpi"><div class="n" id="pvTurnos">–</div><div class="l">Turnos programados (mes)</div><div class="kpi-usd" id="pvTurnosSub"></div></div>
+            <div class="kpi"><div class="n" id="pvP30">–</div><div class="l">Unidades con service en los próximos 30 días</div><div class="kpi-usd" id="pvP30Sub"></div></div>
+            <div class="kpi"><div class="n" id="pvP90">–</div><div class="l">Unidades con service en 31 a 90 días</div><div class="kpi-usd" id="pvP90Sub"></div></div>
+            <div class="kpi"><div class="n" id="pvPromedio">–</div><div class="l">Unidades ingresadas por día al taller (promedio)</div><div class="kpi-usd" id="pvPromedioSub"></div></div>
+          </div>
+          <p class="note" id="pvNota"></p>
+          <p class="note">Turnos de la agenda del taller: "programados" no cuenta los cancelados ni los que no vinieron; el promedio cuenta unidades que ingresaron (sin las consultas) sobre los días que el taller abrió. Las unidades con service salen de las entregas del CRM y se calculan igual que en Post venta.</p>
         </div>
 
         <div class="tcard">
