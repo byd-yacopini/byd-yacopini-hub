@@ -1027,6 +1027,7 @@ if (data.session) {
         <div class="kpi-grid">
           <div class="kpi"><div class="n" id="kpiLeadsTotal">–</div><div class="l">Leads BYD (mes)</div></div>
           <div class="kpi"><div class="n" id="kpiSolicitudesTotal">–</div><div class="l">Solicitudes (mes)</div></div>
+          <div class="kpi"><div class="n" id="kpiFacturacionPromedio">–</div><div class="l">Facturación promedio por solicitud</div><div class="kpi-usd" id="kpiFacturacionPromedioSub"></div></div>
           <div class="kpi"><div class="n" id="kpiEntregasTotal">–</div><div class="l">Entregas (mes)</div></div>
           <div class="kpi"><div class="n" id="kpiStockTotal">–</div><div class="l">Stock físico</div></div>
           <div class="kpi"><div class="n" id="kpiPruebasGeneral">–</div><div class="l">Test drives (mes)</div><div class="pct-badge neutral" id="kpiPruebasGeneralPct"></div></div>
@@ -2124,6 +2125,10 @@ if (data.session) {
     // General
     document.getElementById('kpiLeadsTotal').textContent = d.leadsTotal;
     document.getElementById('kpiSolicitudesTotal').textContent = d.solicitudesTotal;
+    // Facturación promedio por solicitud = total facturado del período / cantidad de solicitudes del período.
+    var solsProm = Number(d.solicitudesTotal) || 0, factTot = Number(d.facturadoTotal) || 0;
+    document.getElementById('kpiFacturacionPromedio').textContent = solsProm > 0 ? fmtUSD_K(factTot / solsProm) : '–';
+    document.getElementById('kpiFacturacionPromedioSub').textContent = solsProm > 0 ? fmtUSD_K(factTot) + ' en ' + solsProm.toLocaleString('es-AR') + ' solicitudes' : '';
     document.getElementById('kpiEntregasTotal').textContent = d.entregasTotal;
     document.getElementById('kpiStockTotal').textContent = d.stockTotal;
     document.getElementById('kpiPruebasGeneral').textContent = d.pruebasTotal;
