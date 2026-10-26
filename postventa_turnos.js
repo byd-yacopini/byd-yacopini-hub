@@ -125,9 +125,12 @@
       turnos: function (desde, hasta) {
         return r(db.from('v_turnos_registro').select('*').gte('inicio', desde).lt('inicio', hasta).order('inicio'))
       },
+      // Los turnos por venir y los atendidos en los últimos 30 días, por VIN:
+      // marcan las unidades y las sacan de la lista de services pendientes.
       proximosPorVin: function () {
         return r(db.from('v_turnos_registro').select('id, vin, inicio, estado, servicio')
-          .gte('inicio', new Date().toISOString()).in('estado', ['pendiente', 'confirmado']).not('vin', 'is', null))
+          .gte('inicio', new Date(Date.now() - 30 * 864e5).toISOString())
+          .in('estado', ['pendiente', 'confirmado', 'completado']).not('vin', 'is', null))
       },
       dias: function (desde, hasta, minutos) {
         return r(db.rpc('dias_disponibles', { p_desde: desde, p_hasta: hasta, p_minutos: minutos }))
@@ -180,6 +183,8 @@
     cal: null,
     verCancelados: false,
     proximos: {},      // vin → turno próximo
+    atendidos: {},     // vin → turno cumplido en los últimos 30 días
+    verConTurno: false, // la lista de unidades muestra también las que ya tienen turno
     disponibles: {},   // 'YYYY-MM-DD' → { libres, feriado }
   }
 
@@ -494,6 +499,9 @@
     '.pt-esq .c{width:46px;height:46px;border-radius:50%;float:left;margin:0 14px 0 0}',
     '.pt-esq .a{width:38%;height:14px;margin-top:6px}.pt-esq .b{width:24%}.pt-esq .d{clear:both;width:100%;height:56px;border-radius:14px;margin:18px 0 0}',
     '@keyframes pt-brillo{from{background-position:200% 0}to{background-position:-200% 0}}',
+    '#lista .u.pt-con-turno{display:none!important}',
+    '#pt-aviso-turno{font-size:12.5px;color:var(--pt-gris);margin:0 auto 0 12px}',
+    '#pt-aviso-turno .pt-link{border:0;background:none;padding:0;font:600 12.5px/1 Inter,system-ui,sans-serif;color:var(--pt-acento-oscuro,#1a73c4);cursor:pointer;text-decoration:underline}',
     '.pt-turno-pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;padding:4px 10px;border-radius:999px;background:#e3f5ea;color:#1d6b40;white-space:nowrap}',
     '.pt-turno-pill:before{content:"";width:6px;height:6px;border-radius:50%;background:var(--pt-ok)}',
     '.btn-turno{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:999px;border:0;background:var(--pt-acento);color:var(--pt-sobre);font:600 12.5px/1.2 Inter,system-ui,sans-serif;cursor:pointer;box-shadow:var(--pt-sombra-acento)}',
@@ -1569,10 +1577,99 @@
   function cargarProximos() {
     if (!S.config) return
     api.proximosPorVin().then(function (filas) {
+      var ahora = new Date().toISOString()
       S.proximos = {}
-      filas.forEach(function (t) { if (!S.proximos[t.vin] || t.inicio < S.proximos[t.vin].inicio) S.proximos[t.vin] = t })
+      S.atendidos = {}
+      filas.forEach(function (t) {
+        if (t.estado === 'completado') {
+          if (!S.atendidos[t.vin] || t.inicio > S.atendidos[t.vin].inicio) S.atendidos[t.vin] = t
+          return
+        }
+        // Un turno de hoy que ya pasó y nadie marcó sigue contando como dado.
+        if (t.inicio < ahora && t.inicio.slice(0, 10) < ahora.slice(0, 10)) return
+        if (!S.proximos[t.vin] || t.inicio < S.proximos[t.vin].inicio) S.proximos[t.vin] = t
+      })
       marcarUnidades()
+      ajustarKpis()
     }).catch(function () { /* las marcas son una ayuda */ })
+  }
+
+  // Pedido de Postventa (26/10): a quien ya se le dio turno sale de la lista
+  // de services pendientes, así quedan sólo los que falta agendar. Vuelve
+  // solo si el turno se cancela o el cliente no vino. "Ver" los muestra igual.
+  function tieneTurno(vin) { return !!(S.proximos[vin] || S.atendidos[vin]) }
+
+  // Los cuadros de arriba descuentan a los que ya tienen turno.
+  function ajustarKpis() {
+    var pv = window.__postventa
+    var kpis = $('#kpis')
+    if (!kpis || !pv || typeof pv.unidades !== 'function') return
+    var c = { vencido: 0, p30: 0, p60: 0 }
+    pv.unidades().forEach(function (u) {
+      if (!u.f || !tieneTurno(u.f.vin)) return
+      if (u.bucket === 'vencido') c.vencido++
+      else if (u.bucket === 'p30') c.p30++
+      else if (u.bucket === 'p60' || u.bucket === 'p90') c.p60++
+    })
+    $$('.kpi', kpis).forEach(function (b) {
+      var k = b.dataset.k, n = $('.n', b)
+      if (!n || !(k in c)) return
+      // El número que puso la página de Nicolás queda guardado en el cuadro.
+      if (!b.dataset.ptBase) b.dataset.ptBase = n.textContent.replace(/\D/g, '')
+      var base = parseInt(b.dataset.ptBase, 10)
+      if (isNaN(base)) return
+      var resta = S.verConTurno ? 0 : c[k]
+      n.textContent = Math.max(0, base - resta).toLocaleString('es-AR')
+      b.title = resta ? 'Sin contar ' + resta + (resta === 1 ? ' unidad que ya tiene' : ' unidades que ya tienen') + ' turno' : ''
+    })
+  }
+
+  // Oculta las tarjetas con turno y lo dice arriba de la lista.
+  function ocultarConTurno() {
+    var lista = $('#lista')
+    if (!lista) return
+    var ocultas = 0, visibles = 0
+    $$('.u', lista).forEach(function (card) {
+      var vin = card.dataset.vin || (($('.vin', card) || {}).textContent || '').trim()
+      var ocultar = !S.verConTurno && tieneTurno(vin)
+      card.classList.toggle('pt-con-turno', ocultar)
+      if (ocultar) ocultas++
+      else visibles++
+    })
+    var vacio = $('.pt-vacio-turno', lista)
+    if (ocultas && !visibles) {
+      if (!vacio) {
+        vacio = document.createElement('div')
+        vacio.className = 'vacio pt-vacio-turno'
+        vacio.textContent = 'Todas las unidades de esta lista ya tienen turno.'
+        lista.appendChild(vacio)
+      }
+    } else if (vacio) vacio.remove()
+
+    // "13 de 811 unidades": la página de Nicolás lo reescribe en cada
+    // dibujo; se guarda su texto y se le resta lo que está oculto.
+    var cuenta = $('#cuenta')
+    if (cuenta) {
+      if (cuenta.textContent !== cuenta.dataset.ptTexto) cuenta.dataset.ptOriginal = cuenta.textContent
+      var original = cuenta.dataset.ptOriginal || ''
+      var texto = ocultas ? original.replace(/^[\d.]+/, function (n) {
+        return Math.max(0, parseInt(n.replace(/\D/g, ''), 10) - ocultas).toLocaleString('es-AR')
+      }) : original
+      cuenta.textContent = texto
+      cuenta.dataset.ptTexto = texto
+    }
+    var aviso = $('#pt-aviso-turno')
+    var total = Object.keys(S.proximos).length + Object.keys(S.atendidos || {}).length
+    if (!cuenta || !total) { if (aviso) aviso.remove(); return }
+    if (!aviso) {
+      aviso = document.createElement('span')
+      aviso.id = 'pt-aviso-turno'
+      cuenta.parentNode.insertBefore(aviso, cuenta.nextSibling)
+    }
+    aviso.innerHTML = S.verConTurno
+      ? 'Mostrando también las que ya tienen turno · <button type="button" class="pt-link" data-a="ocultar-turno">Ocultarlas</button>'
+      : (ocultas ? ocultas + (ocultas === 1 ? ' ya tiene turno y no se muestra' : ' ya tienen turno y no se muestran') + ' · ' : 'Las que ya tienen turno no se muestran · ') +
+        '<button type="button" class="pt-link" data-a="ver-turno">Ver</button>'
   }
   // Marca en cada tarjeta si ya tiene turno, y deja el botón Agregar turno.
   // La hoja Entregas del CRM a veces trae en "Celular" el texto de los
@@ -1609,12 +1706,14 @@
       if (boton && !S.puedeEditar) boton.remove()
       var pill = $('.pt-turno-pill', card)
       var t = S.proximos[vin]
-      if (t) {
+      var hecho = !t && S.atendidos && S.atendidos[vin]
+      if (t || hecho) {
         if (!pill) { pill = document.createElement('span'); pill.className = 'pt-turno-pill'; var a = $('.acc', card); if (a) a.insertBefore(pill, a.firstChild) }
-        pill.textContent = 'Turno ' + diaCorto(t.inicio) + ' ' + hora(t.inicio)
-        pill.title = t.servicio || ''
+        pill.textContent = t ? 'Turno ' + diaCorto(t.inicio) + ' ' + hora(t.inicio) : 'Atendido ' + diaCorto(hecho.inicio)
+        pill.title = (t || hecho).servicio || ''
       } else if (pill) pill.remove()
     })
+    ocultarConTurno()
   }
 
   // Para la gente del taller: la agenda sola, sin las unidades (con datos del
@@ -1662,11 +1761,21 @@
     $('#pt-nuevo').addEventListener('click', function () { abrirNuevo({}) })
     $('#pt-cancelados').addEventListener('change', function () { S.verCancelados = this.checked; if (S.cal) S.cal.refetchEvents() })
     document.addEventListener('click', function (e) {
+      var v = e.target.closest('[data-a="ver-turno"], [data-a="ocultar-turno"]')
+      if (v && v.closest('#pt-aviso-turno')) {
+        e.preventDefault()
+        S.verConTurno = v.dataset.a === 'ver-turno'
+        marcarUnidades()
+        ajustarKpis()
+        return
+      }
       var b = e.target.closest('.btn-turno'); if (!b) return
       e.preventDefault(); darTurnoDesdeUnidad(b.dataset.vin)
     })
     var lista = $('#lista')
     if (lista) new MutationObserver(function () { marcarUnidades() }).observe(lista, { childList: true })
+    var kpis = $('#kpis')
+    if (kpis) new MutationObserver(function () { ajustarKpis() }).observe(kpis, { childList: true })
 
     try { api = crearApi() } catch (e) { api = null }
     if (!api) return
