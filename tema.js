@@ -86,23 +86,40 @@
     limpiar()
     olvidarCuenta(function () { irAEntrar(false) })
   }
-  // Lucía, 26/10: el que entra con su cuenta usa todas las herramientas del
-  // inicio sin que le pidan la clave de gerencia. Esas páginas las regenera la
-  // sincronización de Nicolás, así que no se tocan: se les deja la marca que
-  // ya miran (bydGateOk) sólo mientras están abiertas; marcar() la borra en la
-  // página siguiente. La Lista de Precios de Gerencia tiene el piso
-  // confidencial: el vendedor va a la suya; el jefe ya veía la de Gerencia.
-  var CON_CLAVE = /\/(remitos_test_drive|horas_extras|objetivos_vendedores)\.html$/
+  // Lucía, 26/10: el vendedor ve en el inicio sólo las herramientas de su
+  // categoría, las mismas que tiene en panel_ventas.html, y ninguna le pide
+  // clave. La Lista de Precios de Gerencia tiene el piso confidencial: el
+  // vendedor va a la suya (también si llega por un enlace viejo); el jefe ya
+  // veía la de Gerencia.
+  var DEL_VENDEDOR = ['lista_precios_vendedores', 'calculadora_creditos', 'cotizador_operaciones',
+    'fichas_tecnicas', 'calidad', 'ranking_vendedores', 'calendario', 'plantillas_mensajes', 'tarjeta_usuario']
   function herramientas(acceso) {
-    if (acceso.tipo === 'gerencia' || acceso.clave) return
-    if (/\/lista_precios\.html$/.test(ruta) && acceso.tipo !== 'jefe') {
+    if (acceso.tipo !== 'vendedor') return
+    if (/\/lista_precios\.html$/.test(ruta)) {
       document.documentElement.style.visibility = 'hidden'
       location.replace(carpeta + 'lista_precios_vendedores.html' + location.search)
       return
     }
-    if (CON_CLAVE.test(ruta)) {
-      try { sessionStorage.setItem('bydGateOk', '1') } catch (e) {}
+    if (!esPuerta) return
+    var ordenar = function () {
+      var vista = document.getElementById('view-herramientas')
+      if (!vista) return
+      var titulo = vista.querySelector('h1')
+      if (titulo) titulo.textContent = 'Herramientas'
+      vista.querySelectorAll('a.card').forEach(function (a) {
+        var pagina = (a.getAttribute('href') || '').replace(/^\.\//, '').replace(/\.html.*$/, '')
+        if (pagina === 'lista_precios') {
+          a.setAttribute('href', './lista_precios_vendedores.html')
+          var d = a.querySelector('.d')
+          if (d) d.textContent = 'Lista vigente para el equipo de ventas'
+        } else if (DEL_VENDEDOR.indexOf(pagina) === -1) a.style.display = 'none'
+      })
+      // El Portal de Calidad y Post venta tampoco son de su categoría.
+      document.querySelectorAll('#mainViewSelect option[value="portal"], #mainViewSelect option[value="postventa"]')
+        .forEach(function (o) { o.remove() })
     }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ordenar)
+    else ordenar()
   }
 
   window.bydAcceso = { cuenta: cuentaGuardada, leer: leerAcceso, marcar: marcar, limpiar: limpiar, salir: salir, olvidarCuenta: olvidarCuenta }
