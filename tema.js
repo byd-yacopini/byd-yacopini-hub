@@ -86,6 +86,25 @@
     limpiar()
     olvidarCuenta(function () { irAEntrar(false) })
   }
+  // Lucía, 26/10: el que entra con su cuenta usa todas las herramientas del
+  // inicio sin que le pidan la clave de gerencia. Esas páginas las regenera la
+  // sincronización de Nicolás, así que no se tocan: se les deja la marca que
+  // ya miran (bydGateOk) sólo mientras están abiertas; marcar() la borra en la
+  // página siguiente. La Lista de Precios de Gerencia tiene el piso
+  // confidencial: el vendedor va a la suya; el jefe ya veía la de Gerencia.
+  var CON_CLAVE = /\/(remitos_test_drive|horas_extras|objetivos_vendedores)\.html$/
+  function herramientas(acceso) {
+    if (acceso.tipo === 'gerencia' || acceso.clave) return
+    if (/\/lista_precios\.html$/.test(ruta) && acceso.tipo !== 'jefe') {
+      document.documentElement.style.visibility = 'hidden'
+      location.replace(carpeta + 'lista_precios_vendedores.html' + location.search)
+      return
+    }
+    if (CON_CLAVE.test(ruta)) {
+      try { sessionStorage.setItem('bydGateOk', '1') } catch (e) {}
+    }
+  }
+
   window.bydAcceso = { cuenta: cuentaGuardada, leer: leerAcceso, marcar: marcar, limpiar: limpiar, salir: salir, olvidarCuenta: olvidarCuenta }
 
   // Los botones "Salir" de los paneles de Ventas y del Jefe sólo borraban las
@@ -101,7 +120,7 @@
   var cuenta = cuentaGuardada()
   var acceso = leerAcceso()
   var vale = acceso && (acceso.clave ? !cuenta : cuenta && acceso.uid === cuenta.id)
-  if (vale) { marcar(acceso); return }
+  if (vale) { marcar(acceso); herramientas(acceso); return }
   limpiar()
   if (esPuerta || ABIERTAS.test(ruta)) return
   // Se tapa la página mientras se va, para que no asome su puerta vieja.
