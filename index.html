@@ -771,13 +771,6 @@ async function filaEnLaPlanilla(nombre) {
   return null
 }
 
-// Si vino desde otra página del hub (tema.js lo mandó a entrar), vuelve ahí.
-// Sólo un nombre de archivo de esta misma carpeta, nunca otro sitio.
-const volver = (() => {
-  const v = new URLSearchParams(location.search).get('volver') || ''
-  return /^[\w-]+\.html$/.test(v) && v !== 'index.html' ? v : null
-})()
-
 const leerPerfil = (id) => db.from('perfiles').select('nombre,rol,activo').eq('id', id).maybeSingle()
 
 // Reconoce a la persona por su cuenta y la manda a su pantalla. Devuelve
@@ -819,9 +812,10 @@ async function ubicar(user, opciones = {}) {
   window.bydAcceso?.marcar({ uid: user.id, tipo, nombre })
 
   // Desde el 20/10 (Lucía) todos arrancan en esta página, la del gerente,
-  // menos el taller, que va a los turnos. Al entrar con mail y código no se
-  // vuelve a la última página usada: siempre acá.
-  const destino = tipo === 'taller' ? 'postventa.html' : (opciones.formulario ? null : volver)
+  // menos el taller, que va a los turnos. Desde el 29/10 tampoco se vuelve a
+  // la página que se abrió con la cuenta ya guardada (un ícono, una pestaña
+  // nueva, el Portal): cada vez que alguien entra, arranca acá.
+  const destino = tipo === 'taller' ? 'postventa.html' : null
   if (destino) { location.replace('./' + destino); return { yendo: true } }
   saludar(perfil.nombre, tipo)
   return { ok: true }
@@ -987,6 +981,7 @@ if (data.session) {
            acordarse de dos direcciones. -->
       <option value="portal">Portal de Calidad</option>
       <option value="postventa">Post venta</option>
+      <option value="accesorios">Accesorios</option>
     </select>
   </div>
   <div class="tabs sub-tabs" id="subTabs">
@@ -2844,7 +2839,7 @@ if (data.session) {
   var ultima = sel.value;
 
   sel.addEventListener('change', function (e) {
-    var destinos = { portal: './portal/', postventa: './postventa.html' };
+    var destinos = { portal: './portal/', postventa: './postventa.html', accesorios: './portal/#/accesorios' };
     if (!destinos[sel.value]) { ultima = sel.value; return; }
     e.stopImmediatePropagation();
     var destino = destinos[sel.value];

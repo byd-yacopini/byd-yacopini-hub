@@ -59,10 +59,10 @@
       }
     } catch (e) {}
   }
-  function irAEntrar(volver) {
+  // Siempre al inicio, la página de Nicolás: desde el 29/10 (Lucía) no se
+  // vuelve a la página que se había abierto.
+  function irAEntrar() {
     var destino = carpeta + 'index.html'
-    var pagina = ruta.slice(carpeta.length)
-    if (volver && pagina && !esPuerta) destino += '?volver=' + encodeURIComponent(pagina)
     // Adentro de un marco (la solapa Calidad) se manda la página de afuera.
     var ventana = window
     try { if (window.top.location.origin === location.origin) ventana = window.top } catch (e) {}
@@ -84,7 +84,7 @@
   }
   function salir() {
     limpiar()
-    olvidarCuenta(function () { irAEntrar(false) })
+    olvidarCuenta(function () { irAEntrar() })
   }
   // Lucía, 26/10: el vendedor ve en el inicio sólo las herramientas de su
   // categoría, las mismas que tiene en panel_ventas.html, y ninguna le pide
@@ -142,7 +142,7 @@
   if (esPuerta || ABIERTAS.test(ruta)) return
   // Se tapa la página mientras se va, para que no asome su puerta vieja.
   document.documentElement.style.visibility = 'hidden'
-  irAEntrar(true)
+  irAEntrar()
 })();
 
 // Modo claro u oscuro para las páginas del hub.
