@@ -1,3 +1,64 @@
+// Abrir la app es empezar por el inicio (29/10, Lucía: "quiero que todos
+// cuando ingresen a la app los dirija a la primera parte"). El celular reabre
+// la última pantalla tal como quedó, y index.html recordaba la vista, la
+// solapa y el scroll: eso cuenta como abrir la app y arranca de cero, en
+// index.html y arriba. Moverse adentro (otra página del sitio, atrás,
+// recargar) no: ahí sigue volviendo a la misma solapa (01/10).
+//
+// Es abrir la app: llegar sin venir de una página del sitio (el ícono, un
+// link de WhatsApp), o volver después de 15 minutos sin usarla, también si
+// quedó abierta en segundo plano. La misma regla, con tests, está en
+// src/lib/apertura.ts del Portal; las dos comparten 'bydUltimaVez'.
+(function () {
+  var ULTIMA = 'bydUltimaVez'
+  var DESDE_CERO = 'bydDesdeCero'
+  var PAUSA = 15 * 60 * 1000
+  var RECUERDOS = ['bydMainView', 'bydSubTab', 'bydScroll', 'bydRastro']
+  var ABIERTAS = /\/(fichas_tecnicas|calculadora_carga|ranking_vendedores|tablero_control)\.html$/
+
+  var ruta = location.pathname
+  if (ruta.indexOf('/portal/') !== -1) return // el Portal tiene su propia copia
+  try { if (window.top !== window) return } catch (e) { return } // en un marco manda la de afuera
+  var inicio = ruta.replace(/[^/]*$/, '') + 'index.html'
+  var esInicio = /\/(index\.html)?$/.test(ruta)
+
+  function ultimaVez() { try { return Number(localStorage.getItem(ULTIMA)) || 0 } catch (e) { return 0 } }
+  function anotar() { try { localStorage.setItem(ULTIMA, String(Date.now())) } catch (e) {} }
+  function hayCuenta() { try { return !!localStorage.getItem('sb-mgicnwnvtfkrxmkmewnt-auth-token') } catch (e) { return false } }
+  function irAlInicio() {
+    try { sessionStorage.setItem(DESDE_CERO, '1') } catch (e) {}
+    document.documentElement.style.visibility = 'hidden'
+    location.replace(inicio)
+  }
+
+  var desdeCero = false
+  try { desdeCero = sessionStorage.getItem(DESDE_CERO) === '1' } catch (e) {}
+  var tipo = ''
+  try { var nav = performance.getEntriesByType('navigation')[0]; tipo = nav ? nav.type : '' } catch (e) {}
+  var desdeElSitio = document.referrer.indexOf(location.origin + '/') === 0
+  var nueva = desdeCero || Date.now() - ultimaVez() > PAUSA ||
+    (tipo !== 'back_forward' && tipo !== 'reload' && !desdeElSitio)
+  anotar()
+
+  if (nueva) {
+    // Fichas y ranking se comparten con gente sin cuenta: a esos se los deja.
+    if (!esInicio && !(ABIERTAS.test(ruta) && !hayCuenta())) { irAlInicio(); return }
+    try {
+      sessionStorage.removeItem(DESDE_CERO)
+      RECUERDOS.forEach(function (k) { sessionStorage.removeItem(k) })
+    } catch (e) {}
+  }
+
+  var oculta = 0
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'hidden') oculta = Date.now()
+    else if (oculta && Date.now() - oculta > PAUSA) { irAlInicio(); return }
+    anotar()
+  })
+  window.addEventListener('pagehide', anotar)
+  setInterval(function () { if (document.visibilityState === 'visible') anotar() }, 60000)
+})();
+
 // Quién entró. Va en este archivo porque es el único que carga cada página del
 // hub en el <head>, antes de pintar, incluidas las que regenera la
 // sincronización (a esas se lo agrega sw.js).
