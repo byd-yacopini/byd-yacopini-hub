@@ -153,7 +153,16 @@
   // vendedor va a la suya (también si llega por un enlace viejo); el jefe ya
   // veía la de Gerencia.
   var DEL_VENDEDOR = ['lista_precios_vendedores', 'calculadora_creditos', 'cotizador_operaciones',
-    'fichas_tecnicas', 'calidad', 'ranking_vendedores', 'calendario', 'plantillas_mensajes', 'tarjeta_usuario']
+    'fichas_tecnicas', 'calidad', 'ranking_vendedores', 'calendario', 'plantillas_mensajes', 'tarjeta_usuario',
+    'horas_extras']
+  // Lucía, 04/11: Horas Extras es para todos los que entran con su cuenta. La
+  // página es de Nicolás, la regenera el sync y pide la clave de gerencia, así
+  // que se le da el pase desde acá y sólo para ella: marcar() lo saca en la
+  // página siguiente y las otras herramientas de gerencia siguen pidiendo clave.
+  var HORAS_EXTRAS = /\/horas_extras\.html$/
+  function pasarAHorasExtras() {
+    try { sessionStorage.setItem('bydGateOk', '1') } catch (e) {}
+  }
   function herramientas(acceso) {
     if (acceso.tipo !== 'vendedor') return
     if (/\/lista_precios\.html$/.test(ruta)) {
@@ -195,10 +204,28 @@
     salir()
   }, true)
 
+  // Sin el service worker, Horas Extras no carga este archivo: el pase se da
+  // al tocar la tarjeta.
+  document.addEventListener('click', function (e) {
+    var a = e.target && e.target.closest && e.target.closest('a[href*="horas_extras.html"]')
+    if (a && leerAcceso() && cuentaGuardada()) pasarAHorasExtras()
+  }, true)
+  // Volver atrás restaura la página sin correr este archivo: sin esto, el pase
+  // seguiría vivo y abriría las otras herramientas de gerencia.
+  window.addEventListener('pageshow', function (e) {
+    var quien = leerAcceso()
+    if (e.persisted && quien) marcar(quien)
+  })
+
   var cuenta = cuentaGuardada()
   var acceso = leerAcceso()
   var vale = acceso && (acceso.clave ? !cuenta : cuenta && acceso.uid === cuenta.id)
-  if (vale) { marcar(acceso); herramientas(acceso); return }
+  if (vale) {
+    marcar(acceso)
+    if (cuenta && HORAS_EXTRAS.test(ruta)) pasarAHorasExtras()
+    herramientas(acceso)
+    return
+  }
   limpiar()
   if (esPuerta || ABIERTAS.test(ruta)) return
   // Se tapa la página mientras se va, para que no asome su puerta vieja.
