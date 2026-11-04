@@ -155,10 +155,11 @@
   var DEL_VENDEDOR = ['lista_precios_vendedores', 'calculadora_creditos', 'cotizador_operaciones',
     'fichas_tecnicas', 'calidad', 'ranking_vendedores', 'calendario', 'plantillas_mensajes', 'tarjeta_usuario',
     'horas_extras']
-  // Lucía, 04/11: Horas Extras es para todos los que entran con su cuenta. La
-  // página es de Nicolás, la regenera el sync y pide la clave de gerencia, así
-  // que se le da el pase desde acá y sólo para ella: marcar() lo saca en la
-  // página siguiente y las otras herramientas de gerencia siguen pidiendo clave.
+  // Lucía, 04/11: Horas Extras es para todos los que entran con su cuenta, pero
+  // el vendedor sólo ve las suyas, en mis_horas.html. La página completa es de
+  // Nicolás, la regenera el sync y pide la clave de gerencia, así que al resto
+  // se le da el pase desde acá y sólo para ella: marcar() lo saca en la página
+  // siguiente y las otras herramientas de gerencia siguen pidiendo clave.
   var HORAS_EXTRAS = /\/horas_extras\.html$/
   function pasarAHorasExtras() {
     try { sessionStorage.setItem('bydGateOk', '1') } catch (e) {}
@@ -168,6 +169,11 @@
     if (/\/lista_precios\.html$/.test(ruta)) {
       document.documentElement.style.visibility = 'hidden'
       location.replace(carpeta + 'lista_precios_vendedores.html' + location.search)
+      return
+    }
+    if (HORAS_EXTRAS.test(ruta)) {
+      document.documentElement.style.visibility = 'hidden'
+      location.replace(carpeta + 'mis_horas.html')
       return
     }
     if (!esPuerta) return
@@ -182,6 +188,10 @@
           a.setAttribute('href', './lista_precios_vendedores.html')
           var d = a.querySelector('.d')
           if (d) d.textContent = 'Lista vigente para el equipo de ventas'
+        } else if (pagina === 'horas_extras') {
+          a.setAttribute('href', './mis_horas.html')
+          var h = a.querySelector('.d')
+          if (h) h.textContent = 'Tus horas y tu saldo'
         } else if (DEL_VENDEDOR.indexOf(pagina) === -1) a.style.display = 'none'
       })
       // El Portal de Calidad y Post venta tampoco son de su categoría.
@@ -208,7 +218,12 @@
   // al tocar la tarjeta.
   document.addEventListener('click', function (e) {
     var a = e.target && e.target.closest && e.target.closest('a[href*="horas_extras.html"]')
-    if (a && leerAcceso() && cuentaGuardada()) pasarAHorasExtras()
+    var quien = leerAcceso()
+    if (!a || !quien || !cuentaGuardada()) return
+    if (quien.tipo === 'vendedor') {
+      e.preventDefault()
+      location.href = carpeta + 'mis_horas.html'
+    } else pasarAHorasExtras()
   }, true)
   // Volver atrás restaura la página sin correr este archivo: sin esto, el pase
   // seguiría vivo y abriría las otras herramientas de gerencia.
@@ -222,7 +237,7 @@
   var vale = acceso && (acceso.clave ? !cuenta : cuenta && acceso.uid === cuenta.id)
   if (vale) {
     marcar(acceso)
-    if (cuenta && HORAS_EXTRAS.test(ruta)) pasarAHorasExtras()
+    if (cuenta && acceso.tipo !== 'vendedor' && HORAS_EXTRAS.test(ruta)) pasarAHorasExtras()
     herramientas(acceso)
     return
   }

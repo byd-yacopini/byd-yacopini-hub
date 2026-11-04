@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mis horas extras · Yacopini BYD</title>
+<script src="tema.js"></script>
+<style>
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:#F2F3F5; color:#0A0A0A; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif; }
+  .topbar{ background:#0A0A0A; color:#fff; padding:18px 16px; }
+  .topbar h1{ margin:0; font-size:20px; font-weight:800; }
+  .topbar p{ margin:4px 0 0; font-size:13px; color:#BDBDBD; }
+  main{ max-width:560px; margin:0 auto; padding:16px 16px 84px; }
+  .card{ background:#fff; border-radius:16px; padding:18px; margin-bottom:14px; }
+  .etiqueta{ font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#6B6B6B; margin:0 0 8px; }
+  .saldo{ font-size:30px; font-weight:800; margin:0; }
+  .saldo.debes{ color:#B3261E; }
+  .saldo.te-deben{ color:#1E7F4F; }
+  .mov{ display:flex; justify-content:space-between; gap:12px; padding:12px 0; border-top:1px solid #ECECEC; }
+  .mov:first-of-type{ border-top:0; }
+  .mov b{ display:block; font-size:14px; }
+  .mov span{ font-size:12px; color:#6B6B6B; }
+  .mov .horas{ font-size:14px; font-weight:700; color:#0A0A0A; white-space:nowrap; }
+  .aviso{ text-align:center; font-size:14px; color:#6B6B6B; padding:18px 6px; margin:0; }
+  #volver{ position:fixed; bottom:18px; left:18px; width:44px; height:44px; border-radius:50%; background:#0A0A0A; color:#fff;
+    display:flex; align-items:center; justify-content:center; text-decoration:none; font-size:20px; }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <h1>Mis horas extras</h1>
+  <p id="quien"></p>
+</div>
+<main id="contenido"><div class="card"><p class="aviso">Cargando tus horas…</p></div></main>
+<a id="volver" href="./index.html" aria-label="Volver al inicio">‹</a>
+
+<script>
+// Las horas que Gerencia le cargó a quien entró, sólo para mirar: se cargan y
+// se corrigen en horas_extras.html. Los datos salen del mismo Apps Script.
+var TABLERO_API_URL = 'https://script.google.com/macros/s/AKfycbzTYBoM56BBMj2B-8hUG_MIuOh7r5qG4qq2sGlTRM-y6QyFm0XHqgE6XUG5OQB022iy/exec'
+var TABLERO_API_KEY = 'i4uH92SO1sFyNYi8PJ2dsGb9LDM-Xoq3'
+
+// "DIAZ NICOLAS" = "Nicolás Díaz": las mismas palabras en cualquier orden.
+function clave(nombre) {
+  return String(nombre || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+    .split(/\s+/).filter(Boolean).sort().join(' ')
+}
+function esc(t) {
+  return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  })
+}
+function horas(h) {
+  var n = Math.round(Math.abs(Number(h) || 0) * 100) / 100
+  return String(n).replace('.', ',') + ' hs'
+}
+function fecha(iso) {
+  var p = String(iso || '').slice(0, 10).split('-')
+  return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : '—'
+}
+function mostrar(html) { document.getElementById('contenido').innerHTML = html }
+
+function pintar(movimientos) {
+  if (movimientos.length === 0) {
+    mostrar('<div class="card"><p class="aviso">Todavía no tenés horas extras cargadas.</p></div>')
+    return
+  }
+  // Un saldo positivo es que el vendedor le debe horas a la empresa.
+  var saldo = Number(movimientos[0].saldoTrasMovimiento) || 0
+  var texto = saldo > 0 ? 'Debés ' + horas(saldo) : saldo < 0 ? 'Te deben ' + horas(saldo) : 'Estás al día'
+  var clase = saldo > 0 ? 'debes' : saldo < 0 ? 'te-deben' : ''
+  mostrar(
+    '<div class="card"><p class="etiqueta">Tu saldo</p><p class="saldo ' + clase + '">' + esc(texto) + '</p></div>' +
+    '<div class="card"><p class="etiqueta">Movimientos</p>' +
+    movimientos.map(function (m) {
+      return '<div class="mov"><div><b>' + (m.tipo === 'devolucion' ? 'Devolución' : 'Solicitud') + '</b>' +
+        '<span>' + esc(fecha(m.fecha)) + ' · ' + esc(m.numero) + '</span></div>' +
+        '<div class="horas">' + esc(horas(m.horas)) + '</div></div>'
+    }).join('') + '</div>'
+  )
+}
+
+function cargar() {
+  var acceso = null
+  try { acceso = JSON.parse(sessionStorage.getItem('bydAcceso') || 'null') } catch (e) {}
+  if (!acceso || !acceso.nombre) {
+    mostrar('<div class="card"><p class="aviso">Entrá con tu cuenta para ver tus horas.</p></div>')
+    return
+  }
+  document.getElementById('quien').textContent = acceso.nombre
+  var mia = clave(acceso.nombre)
+  fetch(TABLERO_API_URL + '?key=' + encodeURIComponent(TABLERO_API_KEY) + '&action=listarMovimientosHoras', { cache: 'no-store' })
+    .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json() })
+    .then(function (d) {
+      if (d.error) throw new Error(d.error)
+      pintar((d.movimientos || [])
+        .filter(function (m) { return clave(m.vendedor) === mia })
+        .sort(function (a, b) { return String(b.fechaRegistro || '').localeCompare(String(a.fechaRegistro || '')) }))
+    })
+    .catch(function () {
+      mostrar('<div class="card"><p class="aviso">No pudimos traer tus horas. Revisá la conexión y probá de nuevo.</p></div>')
+    })
+}
+cargar()
+</script>
+</body>
+</html>
