@@ -982,6 +982,7 @@ if (data.session) {
       <option value="portal">Portal de Calidad</option>
       <option value="postventa">Post venta</option>
       <option value="accesorios">Accesorios</option>
+      <option value="cargas">Cargas</option>
     </select>
   </div>
   <div class="tabs sub-tabs" id="subTabs">
@@ -2839,7 +2840,7 @@ if (data.session) {
   var ultima = sel.value;
 
   sel.addEventListener('change', function (e) {
-    var destinos = { portal: './portal/', postventa: './postventa.html', accesorios: './portal/#/accesorios' };
+    var destinos = { portal: './portal/', postventa: './postventa.html', accesorios: './portal/#/accesorios', cargas: './portal/#/cargas' };
     if (!destinos[sel.value]) { ultima = sel.value; return; }
     e.stopImmediatePropagation();
     var destino = destinos[sel.value];
