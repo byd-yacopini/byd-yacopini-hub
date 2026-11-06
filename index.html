@@ -812,11 +812,16 @@ async function ubicar(user, opciones = {}) {
   window.bydAcceso?.marcar({ uid: user.id, tipo, nombre })
 
   // Desde el 20/10 (Lucía) todos arrancan en esta página, la del gerente,
-  // menos el taller, que va a los turnos. Desde el 29/10 tampoco se vuelve a
+  // menos el taller, que va a los turnos, y desde el 06/11 el vendedor, que va
+  // a su panel: acá está el Tablero con los números de todos. Desde el 29/10 tampoco se vuelve a
   // la página que se abrió con la cuenta ya guardada (un ícono, una pestaña
   // nueva, el Portal): cada vez que alguien entra, arranca acá.
-  const destino = tipo === 'taller' ? 'postventa.html' : null
-  if (destino) { location.replace('./' + destino); return { yendo: true } }
+  const destino = { taller: 'postventa.html', vendedor: 'panel_ventas.html' }[tipo]
+  if (destino) {
+    try { sessionStorage.setItem('bydSalto', '1') } catch (e) {}
+    location.replace('./' + destino)
+    return { yendo: true }
+  }
   saludar(perfil.nombre, tipo)
   return { ok: true }
 }

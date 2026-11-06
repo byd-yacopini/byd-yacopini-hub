@@ -36,6 +36,12 @@
   var tipo = ''
   try { var nav = performance.getEntriesByType('navigation')[0]; tipo = nav ? nav.type : '' } catch (e) {}
   var desdeElSitio = document.referrer.indexOf(location.origin + '/') === 0
+  // El inicio manda al vendedor y al taller a su página. Si el navegador no
+  // informa de dónde vino, sin esta marca rebotarían entre las dos para siempre.
+  try {
+    if (sessionStorage.getItem('bydSalto') === '1') desdeElSitio = true
+    sessionStorage.removeItem('bydSalto')
+  } catch (e) {}
   var nueva = desdeCero || Date.now() - ultimaVez() > PAUSA ||
     (tipo !== 'back_forward' && tipo !== 'reload' && !desdeElSitio)
   anotar()
@@ -147,14 +153,11 @@
     limpiar()
     olvidarCuenta(function () { irAEntrar() })
   }
-  // Lucía, 26/10: el vendedor ve en el inicio sólo las herramientas de su
-  // categoría, las mismas que tiene en panel_ventas.html, y ninguna le pide
-  // clave. La Lista de Precios de Gerencia tiene el piso confidencial: el
-  // vendedor va a la suya (también si llega por un enlace viejo); el jefe ya
-  // veía la de Gerencia.
-  var DEL_VENDEDOR = ['lista_precios_vendedores', 'calculadora_creditos', 'cotizador_operaciones',
-    'fichas_tecnicas', 'calidad', 'ranking_vendedores', 'calendario', 'plantillas_mensajes', 'tarjeta_usuario',
-    'horas_extras']
+  // Lucía, 06/11: el vendedor ve sólo lo suyo. El inicio tiene el Tablero del
+  // gerente, así que va siempre a panel_ventas.html, que ya trae sus leads,
+  // solicitudes y entregas, y no tiene patentamientos. La Lista de Precios de
+  // Gerencia tiene el piso confidencial: el vendedor va a la suya (también si
+  // llega por un enlace viejo); el jefe ya veía la de Gerencia.
   // Lucía, 04/11: Horas Extras es para todos los que entran con su cuenta, pero
   // el vendedor sólo ve las suyas, en mis_horas.html. La página completa es de
   // Nicolás, la regenera el sync y pide la clave de gerencia, así que al resto
@@ -176,30 +179,56 @@
       location.replace(carpeta + 'mis_horas.html')
       return
     }
-    if (!esPuerta) return
-    var ordenar = function () {
-      var vista = document.getElementById('view-herramientas')
-      if (!vista) return
-      var titulo = vista.querySelector('h1')
-      if (titulo) titulo.textContent = 'Herramientas'
-      vista.querySelectorAll('a.card').forEach(function (a) {
-        var pagina = (a.getAttribute('href') || '').replace(/^\.\//, '').replace(/\.html.*$/, '')
-        if (pagina === 'lista_precios') {
-          a.setAttribute('href', './lista_precios_vendedores.html')
-          var d = a.querySelector('.d')
-          if (d) d.textContent = 'Lista vigente para el equipo de ventas'
-        } else if (pagina === 'horas_extras') {
-          a.setAttribute('href', './mis_horas.html')
-          var h = a.querySelector('.d')
-          if (h) h.textContent = 'Tus horas y tu saldo'
-        } else if (DEL_VENDEDOR.indexOf(pagina) === -1) a.style.display = 'none'
-      })
-      // El Portal de Calidad y Post venta tampoco son de su categoría.
-      document.querySelectorAll('#mainViewSelect option[value="portal"], #mainViewSelect option[value="postventa"]')
-        .forEach(function (o) { o.remove() })
+    if (esPuerta) {
+      document.documentElement.style.visibility = 'hidden'
+      try { sessionStorage.setItem('bydSalto', '1') } catch (e) {}
+      location.replace(carpeta + 'panel_ventas.html')
+      return
     }
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ordenar)
-    else ordenar()
+    if (!/\/panel_ventas\.html$/.test(ruta)) return
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', sumarAlPanel)
+    else sumarAlPanel()
+  }
+
+  // Lo que el vendedor tenía en el inicio y el panel no trae. La página es de
+  // Nicolás y la regenera el sync: se agrega desde acá.
+  var RAYO = '<path d="M13 2.5 4.5 13.5H11l-1 8 8.5-11H12z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>'
+  var RELOJ = '<circle cx="12" cy="12" r="9" stroke="#fff" stroke-width="2"/><path d="M12 7v5l3.5 2" stroke="#fff" stroke-width="2" stroke-linecap="round"/>'
+  function sumarAlPanel() {
+    var destinos = { calidad: './calidad.html', cargas: './portal/#/cargas', accesorios: './portal/#/accesorios' }
+    var nombres = { calidad: 'Mi Calidad', cargas: 'Cargas', accesorios: 'Accesorios' }
+    var sel = document.getElementById('mainViewSelect')
+    if (sel) {
+      Object.keys(destinos).forEach(function (valor) {
+        var o = document.createElement('option')
+        o.value = valor
+        o.textContent = nombres[valor]
+        sel.appendChild(o)
+      })
+      var ultima = sel.value
+      sel.addEventListener('change', function (e) {
+        if (!destinos[sel.value]) { ultima = sel.value; return }
+        e.stopImmediatePropagation()
+        var destino = destinos[sel.value]
+        // Si vuelve atrás, que no quede elegido algo que no se está mostrando.
+        sel.value = ultima
+        location.href = destino
+      }, true)
+    }
+    var molde = document.querySelector('#view-herramientas a.card[href="./calidad.html"]')
+    if (!molde) return
+    var sumar = function (href, titulo, detalle, color, dibujo) {
+      var a = molde.cloneNode(true)
+      a.setAttribute('href', href)
+      a.querySelector('.t').textContent = titulo
+      a.querySelector('.d').textContent = detalle
+      var icono = a.querySelector('.icon')
+      icono.style.background = color
+      icono.innerHTML = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' + dibujo + '</svg>'
+      molde.parentNode.insertBefore(a, molde.nextSibling)
+    }
+    sumar('./mis_horas.html', 'Mis horas extras', 'Tus horas y tu saldo', 'linear-gradient(135deg,#1565D8,#0D3E86)', RELOJ)
+    sumar('./portal/#/cargas', 'Cargas', 'Batería y tiempo de carga de cada auto', 'linear-gradient(135deg,#1E7F4F,#125C38)', RAYO)
   }
 
   window.bydAcceso = { cuenta: cuentaGuardada, leer: leerAcceso, marcar: marcar, limpiar: limpiar, salir: salir, olvidarCuenta: olvidarCuenta }
@@ -219,11 +248,7 @@
   document.addEventListener('click', function (e) {
     var a = e.target && e.target.closest && e.target.closest('a[href*="horas_extras.html"]')
     var quien = leerAcceso()
-    if (!a || !quien || !cuentaGuardada()) return
-    if (quien.tipo === 'vendedor') {
-      e.preventDefault()
-      location.href = carpeta + 'mis_horas.html'
-    } else pasarAHorasExtras()
+    if (a && quien && quien.tipo !== 'vendedor' && cuentaGuardada()) pasarAHorasExtras()
   }, true)
   // Volver atrás restaura la página sin correr este archivo: sin esto, el pase
   // seguiría vivo y abriría las otras herramientas de gerencia.
