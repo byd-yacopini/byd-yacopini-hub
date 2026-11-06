@@ -97,6 +97,12 @@
   var carpeta = ruta.replace(/[^/]*$/, '')
   var esPuerta = /\/(index\.html)?$/.test(ruta)
 
+  // Lucía, 06/11: Horas Extras no se usa por ahora. Se esconde la tarjeta en
+  // todas las páginas; la herramienta y sus datos quedan como estaban.
+  var sinHoras = document.createElement('style')
+  sinHoras.textContent = 'a[href*="horas_extras.html"]{display:none!important}'
+  ;(document.head || document.documentElement).appendChild(sinHoras)
+
   function cuentaGuardada() {
     try {
       var s = JSON.parse(localStorage.getItem(CLAVE_CUENTA) || 'null')
@@ -158,25 +164,11 @@
   // solicitudes y entregas, y no tiene patentamientos. La Lista de Precios de
   // Gerencia tiene el piso confidencial: el vendedor va a la suya (también si
   // llega por un enlace viejo); el jefe ya veía la de Gerencia.
-  // Lucía, 04/11: Horas Extras es para todos los que entran con su cuenta, pero
-  // el vendedor sólo ve las suyas, en mis_horas.html. La página completa es de
-  // Nicolás, la regenera el sync y pide la clave de gerencia, así que al resto
-  // se le da el pase desde acá y sólo para ella: marcar() lo saca en la página
-  // siguiente y las otras herramientas de gerencia siguen pidiendo clave.
-  var HORAS_EXTRAS = /\/horas_extras\.html$/
-  function pasarAHorasExtras() {
-    try { sessionStorage.setItem('bydGateOk', '1') } catch (e) {}
-  }
   function herramientas(acceso) {
     if (acceso.tipo !== 'vendedor') return
     if (/\/lista_precios\.html$/.test(ruta)) {
       document.documentElement.style.visibility = 'hidden'
       location.replace(carpeta + 'lista_precios_vendedores.html' + location.search)
-      return
-    }
-    if (HORAS_EXTRAS.test(ruta)) {
-      document.documentElement.style.visibility = 'hidden'
-      location.replace(carpeta + 'mis_horas.html')
       return
     }
     if (esPuerta) {
@@ -193,7 +185,6 @@
   // Lo que el vendedor tenía en el inicio y el panel no trae. La página es de
   // Nicolás y la regenera el sync: se agrega desde acá.
   var RAYO = '<path d="M13 2.5 4.5 13.5H11l-1 8 8.5-11H12z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>'
-  var RELOJ = '<circle cx="12" cy="12" r="9" stroke="#fff" stroke-width="2"/><path d="M12 7v5l3.5 2" stroke="#fff" stroke-width="2" stroke-linecap="round"/>'
   function sumarAlPanel() {
     var destinos = { calidad: './calidad.html', cargas: './portal/#/cargas', accesorios: './portal/#/accesorios' }
     var nombres = { calidad: 'Mi Calidad', cargas: 'Cargas', accesorios: 'Accesorios' }
@@ -227,7 +218,6 @@
       icono.innerHTML = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' + dibujo + '</svg>'
       molde.parentNode.insertBefore(a, molde.nextSibling)
     }
-    sumar('./mis_horas.html', 'Mis horas extras', 'Tus horas y tu saldo', 'linear-gradient(135deg,#1565D8,#0D3E86)', RELOJ)
     sumar('./portal/#/cargas', 'Cargas', 'Batería y tiempo de carga de cada auto', 'linear-gradient(135deg,#1E7F4F,#125C38)', RAYO)
   }
 
@@ -243,26 +233,11 @@
     salir()
   }, true)
 
-  // Sin el service worker, Horas Extras no carga este archivo: el pase se da
-  // al tocar la tarjeta.
-  document.addEventListener('click', function (e) {
-    var a = e.target && e.target.closest && e.target.closest('a[href*="horas_extras.html"]')
-    var quien = leerAcceso()
-    if (a && quien && quien.tipo !== 'vendedor' && cuentaGuardada()) pasarAHorasExtras()
-  }, true)
-  // Volver atrás restaura la página sin correr este archivo: sin esto, el pase
-  // seguiría vivo y abriría las otras herramientas de gerencia.
-  window.addEventListener('pageshow', function (e) {
-    var quien = leerAcceso()
-    if (e.persisted && quien) marcar(quien)
-  })
-
   var cuenta = cuentaGuardada()
   var acceso = leerAcceso()
   var vale = acceso && (acceso.clave ? !cuenta : cuenta && acceso.uid === cuenta.id)
   if (vale) {
     marcar(acceso)
-    if (cuenta && acceso.tipo !== 'vendedor' && HORAS_EXTRAS.test(ruta)) pasarAHorasExtras()
     herramientas(acceso)
     return
   }
