@@ -249,6 +249,17 @@
     .cfgsub-panel{ display:none; }
     .cfgsub-panel.active{ display:block; }
     .cfgsub-panel h2{ font-size:14px; font-weight:800; margin:0 0 8px; }
+    #configMsg, #gpMsg{ display:none; }
+    .cfg-savebar{ position:sticky; bottom:0; z-index:5; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin:22px -20px -20px; padding:12px 20px 12px 74px; background:var(--blanco); border-top:1px solid var(--gris-claro); border-radius:0 0 12px 12px; }
+    .cfg-save-estado{ font-size:13px; font-weight:600; color:var(--gris-oscuro); flex:1 1 220px; line-height:1.4; }
+    .cfg-save-estado.pend{ color:#9A6200; }
+    .cfg-save-estado.ok{ color:var(--verde-dm); }
+    .cfg-save-estado.mal{ color:var(--rojo-piso); }
+    .cfg-save-acc{ display:flex; gap:8px; flex-wrap:wrap; }
+    .cfg-save-btn{ padding:10px 22px; font-size:14px; font-weight:800; border-radius:10px; border:0; background:var(--negro); color:#fff; cursor:pointer; font-family:inherit; }
+    .cfg-save-btn:disabled{ background:var(--gris-claro); color:var(--gris-medio); cursor:default; }
+    .cfg-save-sec{ padding:10px 16px; font-size:13px; font-weight:700; border-radius:10px; border:1px solid var(--gris-claro); background:#fff; color:var(--carbon); cursor:pointer; font-family:inherit; }
+    .cfg-sucio td, .cfg-sucio input, .cfg-sucio select{ background:#FFF8E1; }
     .cfg-vigencia-input{ width:100%; max-width:340px; padding:9px 12px; border:1px solid var(--gris-claro); border-radius:8px; font-family:inherit; font-size:13.5px; color:var(--carbon); margin-bottom:6px; }
     .cfg-table-wrap{ overflow-x:auto; }
     table.cfg-table-modelos, table.cfg-table-accesorios{ width:100%; border-collapse:collapse; font-size:12px; }
@@ -679,7 +690,7 @@
       </div>
       <div id="cfgsub-vendedores" class="cfgsub-panel active">
       <h2>Qué ven los vendedores</h2>
-      <p class="note">Elegí qué campos de precio quedan visibles en la Lista de Precios del equipo de ventas. El Piso de Gerencia nunca se muestra a vendedores, sin importar esta configuración. Los cambios tardan hasta 5 minutos en reflejarse ahí.</p>
+      <p class="note">Elegí qué campos de precio quedan visibles en la Lista de Precios del equipo de ventas. El Piso de Gerencia nunca se muestra a vendedores, sin importar esta configuración. Los cambios se aplican al tocar «Guardar cambios» (abajo) y tardan unos minutos en verse en la lista de ventas.</p>
       <div class="config-row" data-campo="lista"><span>Lista</span><label class="config-switch"><input type="checkbox"><span class="config-slider"></span></label></div>
       <div class="config-row" data-campo="composicion"><span>Composición (Flete / Patentamiento)</span><label class="config-switch"><input type="checkbox"><span class="config-slider"></span></label></div>
       <div class="config-row" data-campo="lleno"><span>Precio Lleno</span><label class="config-switch"><input type="checkbox"><span class="config-slider"></span></label></div>
@@ -725,6 +736,13 @@
         <p class="note">Los precios de Promociones son texto libre (ej: "USD 27.000"). "Ahorro" es el texto que se muestra abajo del precio promo (ej: "Ahorrás USD 500").</p>
         <div class="config-msg" id="gpMsg"></div>
       </div>
+      <div class="cfg-savebar" id="cfgSaveBar">
+        <div class="cfg-save-estado" id="cfgEstado">No hay cambios por guardar.</div>
+        <div class="cfg-save-acc">
+          <button type="button" class="cfg-save-sec" id="cfgRecargar" style="display:none;">Recargar la lista</button>
+          <button type="button" class="cfg-save-btn" id="cfgGuardar" disabled>Guardar cambios</button>
+        </div>
+      </div>
 
     </div>
   </div>
@@ -741,32 +759,68 @@
         document.getElementById('view-' + tab.getAttribute('data-view')).classList.add('active');
       });
     });
+    // ---- Configuración: los cambios se acumulan y se guardan juntos con "Guardar cambios" ----
+    var cfgOriginal = {};
+    var cfgPend = {};
+    var gpSucios = { modelos:{}, accesorios:{}, promos:{} };
+    var gpEliminados = { modelos:[], accesorios:[], promos:[] };
+    var gpVigenciaOriginal = '';
+    var gpVigenciaActual = '';
+    var gpSeq = 0;
+    var guardando = false;
+    var ultimoGuardado = '';
+    var ultimoMensaje = null;
+    function lpApi(accion, params){
+      var q = '';
+      Object.keys(params || {}).forEach(function(k){ q += '&' + k + '=' + encodeURIComponent(params[k] == null ? '' : params[k]); });
+      return fetch(TABLERO_API_URL + '?key=' + encodeURIComponent(TABLERO_API_KEY) + '&action=' + accion + q, {cache:'no-store'})
+        .then(function(r){ return r.json(); })
+        .then(function(d){ if (d && d.error) throw new Error(d.error); return d; });
+    }
+    function lpClave(x){ if (!x.id && !x._k) x._k = 'n' + (++gpSeq); return x.id || x._k; }
+    function lpContar(){
+      var n = Object.keys(cfgPend).length + (gpVigenciaActual !== gpVigenciaOriginal ? 1 : 0);
+      ['modelos','accesorios','promos'].forEach(function(t){ n += Object.keys(gpSucios[t]).length + gpEliminados[t].length; });
+      return n;
+    }
+    function lpEstado(){
+      var est = document.getElementById('cfgEstado'), btn = document.getElementById('cfgGuardar');
+      if (!est || !btn) return;
+      var n = lpContar();
+      btn.disabled = guardando || n === 0;
+      btn.textContent = guardando ? 'Guardando…' : (n > 0 ? 'Guardar cambios (' + n + ')' : 'Guardar cambios');
+      if (guardando) { est.className = 'cfg-save-estado'; est.textContent = 'Guardando…'; return; }
+      if (ultimoMensaje && ultimoMensaje.tipo === 'mal') { est.className = 'cfg-save-estado mal'; est.textContent = ultimoMensaje.texto; return; }
+      if (n > 0) { est.className = 'cfg-save-estado pend'; est.textContent = 'Tenés ' + n + (n === 1 ? ' cambio sin guardar' : ' cambios sin guardar') + '. Tocá «Guardar cambios» para aplicarlos.'; return; }
+      if (ultimoMensaje) { est.className = 'cfg-save-estado ' + ultimoMensaje.tipo; est.textContent = ultimoMensaje.texto; return; }
+      est.className = 'cfg-save-estado'; est.textContent = 'No hay cambios por guardar.';
+    }
+    window.addEventListener('beforeunload', function(e){ if (lpContar() > 0 && !guardando) { e.preventDefault(); e.returnValue = ''; } });
+
     function cargarConfig(){
       fetch(TABLERO_API_URL + '?key=' + encodeURIComponent(TABLERO_API_KEY) + '&action=listarConfigListaPrecios')
         .then(function(r){ return r.json(); })
         .then(function(data){
           var cfg = data.config || {};
+          cfgOriginal = {};
           document.querySelectorAll('.config-row').forEach(function(row){
             var campo = row.getAttribute('data-campo');
+            cfgOriginal[campo] = !!cfg[campo];
             row.querySelector('input').checked = !!cfg[campo];
           });
+          cfgPend = {};
+          lpEstado();
         }).catch(function(){});
     }
     document.querySelectorAll('.config-row input').forEach(function(input){
       input.addEventListener('change', function(){
-        var row = input.closest('.config-row');
-        var campo = row.getAttribute('data-campo');
-        var visible = input.checked;
-        var msg = document.getElementById('configMsg');
-        msg.textContent = 'Guardando...';
-        fetch(TABLERO_API_URL + '?key=' + encodeURIComponent(TABLERO_API_KEY) + '&action=guardarConfigCampoPrecio&campo=' + encodeURIComponent(campo) + '&visible=' + (visible ? 'true' : 'false'))
-          .then(function(r){ return r.json(); })
-          .then(function(d){
-            if (d && d.error) { msg.textContent = 'Error: ' + d.error; return; }
-            msg.textContent = 'Guardado — se refleja en la vista de Vendedores en unos minutos.';
-          }).catch(function(){ msg.textContent = 'No se pudo guardar. Probá de nuevo.'; });
+        var campo = input.closest('.config-row').getAttribute('data-campo');
+        if (!!cfgOriginal[campo] === input.checked) delete cfgPend[campo]; else cfgPend[campo] = input.checked;
+        ultimoMensaje = null;
+        lpEstado();
       });
     });
+
 var gpModelos = [];
 var gpAccesorios = [];
 var gpPromos = [];
@@ -776,9 +830,9 @@ function calcLleno(m){ return (m.lista || 0) + (m.flete || 0) + (m.patentamiento
 function calcPromWeb(m){ return (calcLleno(m) + (m.web || 0)) / 2; }
 function calcPisoVenta(m){ return (m.pisoGerencia || 0) + 300; }
 function calcPromPiso(m){ return ((m.web || 0) + calcPisoVenta(m)) / 2; }
-function gpSetMsg(texto){ var el = document.getElementById("gpMsg"); if (el) el.textContent = texto; }
+function sucioCls(tipo, x){ return gpSucios[tipo][lpClave(x)] ? " class=\"cfg-sucio\"" : ""; }
 function filaModelo(m){
-  return "<tr data-id=\"" + (m.id||"") + "\">" +
+  return "<tr data-id=\"" + lpClave(m) + "\"" + sucioCls("modelos", m) + ">" +
     "<td class=\"left\"><select data-campo=\"categoria\"><option value=\"EV\"" + (m.categoria==="EV"?" selected":"") + ">EV</option><option value=\"DM\"" + (m.categoria==="DM"?" selected":"") + ">DM</option></select></td>" +
     "<td class=\"left\"><input type=\"text\" data-campo=\"nombre\" value=\"" + escAttr(m.nombre) + "\"></td>" +
     "<td><input type=\"number\" data-campo=\"lista\" value=\"" + (m.lista != null ? m.lista : "") + "\"></td>" +
@@ -794,134 +848,14 @@ function filaModelo(m){
     "</tr>";
 }
 function filaAccesorio(a){
-  return "<tr data-id=\"" + (a.id||"") + "\">" +
+  return "<tr data-id=\"" + lpClave(a) + "\"" + sucioCls("accesorios", a) + ">" +
     "<td class=\"left\"><input type=\"text\" data-campo=\"nombre\" value=\"" + escAttr(a.nombre) + "\"></td>" +
     "<td><input type=\"text\" data-campo=\"precio\" value=\"" + escAttr(a.precio) + "\"></td>" +
     "<td style=\"text-align:center\"><button type=\"button\" class=\"cfg-icon-btn cfg-del-acc\" title=\"Eliminar\">&times;</button></td>" +
     "</tr>";
 }
-function renderGpModelos(){ document.getElementById("gpTablaModelos").innerHTML = gpModelos.map(filaModelo).join(""); }
-function renderGpAccesorios(){ document.getElementById("gpTablaAccesorios").innerHTML = gpAccesorios.map(filaAccesorio).join(""); }
-function cargarGestor(){
-  fetch(TABLERO_API_URL + "?key=" + encodeURIComponent(TABLERO_API_KEY) + "&action=listarListaPrecios", {cache:"no-store"})
-    .then(function(r){ return r.json(); })
-    .then(function(data){
-      gpModelos = data.modelos || [];
-      gpAccesorios = data.accesorios || [];
-      gpPromos = data.promos || [];
-      var vig = document.getElementById("gpVigencia");
-      if (vig) vig.value = data.vigencia || "";
-      renderGpModelos();
-      renderGpAccesorios();
-      renderGpPromos();
-    }).catch(function(){ gpSetMsg("No se pudo cargar. Probá recargar la página."); });
-}
-function guardarModeloEnServidor(m){
-  var url = TABLERO_API_URL + "?key=" + encodeURIComponent(TABLERO_API_KEY) + "&action=guardarModeloPrecio" +
-    "&id=" + encodeURIComponent(m.id || "") + "&categoria=" + encodeURIComponent(m.categoria) + "&nombre=" + encodeURIComponent(m.nombre) +
-    "&lista=" + encodeURIComponent(m.lista || 0) + "&flete=" + encodeURIComponent(m.flete || 0) + "&patentamiento=" + encodeURIComponent(m.patentamiento || 0) +
-    "&web=" + encodeURIComponent(m.web || 0) + "&pisoGerencia=" + encodeURIComponent(m.pisoGerencia || 0);
-  fetch(url, {cache:"no-store"}).then(function(r){ return r.json(); }).then(function(res){
-    if (!m.id && res && res.id) m.id = res.id;
-    gpSetMsg("Guardado — se refleja en la Lista de Precios en unos minutos.");
-  }).catch(function(){ gpSetMsg("Error al guardar — reintentá."); });
-}
-function actualizarModelo(id, campo, valor){
-  var m = gpModelos.filter(function(x){ return x.id === id; })[0];
-  if (!m) return;
-  if (campo === "nombre" || campo === "categoria") { m[campo] = valor; }
-  else { m[campo] = valor === "" ? 0 : Number(valor); }
-  if (campo !== "nombre" && campo !== "categoria") { renderGpModelos(); }
-  guardarModeloEnServidor(m);
-}
-function eliminarModelo(id){
-  gpModelos = gpModelos.filter(function(x){ return x.id !== id; });
-  renderGpModelos();
-  fetch(TABLERO_API_URL + "?key=" + encodeURIComponent(TABLERO_API_KEY) + "&action=eliminarModeloPrecio&id=" + encodeURIComponent(id), {cache:"no-store"})
-    .catch(function(){ gpSetMsg("No se pudo eliminar en el servidor."); });
-}
-function guardarAccesorioEnServidor(a){
-  var url = TABLERO_API_URL + "?key=" + encodeURIComponent(TABLERO_API_KEY) + "&action=guardarAccesorioPrecio" +
-    "&id=" + encodeURIComponent(a.id || "") + "&nombre=" + encodeURIComponent(a.nombre) + "&precio=" + encodeURIComponent(a.precio);
-  fetch(url, {cache:"no-store"}).then(function(r){ return r.json(); }).then(function(res){
-    if (!a.id && res && res.id) a.id = res.id;
-    gpSetMsg("Guardado — se refleja en la Lista de Precios en unos minutos.");
-  }).catch(function(){ gpSetMsg("Error al guardar — reintentá."); });
-}
-function actualizarAccesorio(id, campo, valor){
-  var a = gpAccesorios.filter(function(x){ return x.id === id; })[0];
-  if (!a) return;
-  a[campo] = valor;
-  guardarAccesorioEnServidor(a);
-}
-function eliminarAccesorio(id){
-  gpAccesorios = gpAccesorios.filter(function(x){ return x.id !== id; });
-  renderGpAccesorios();
-  fetch(TABLERO_API_URL + "?key=" + encodeURIComponent(TABLERO_API_KEY) + "&action=eliminarAccesorioPrecio&id=" + encodeURIComponent(id), {cache:"no-store"})
-    .catch(function(){ gpSetMsg("No se pudo eliminar en el servidor."); });
-}
-var gpTablaModelosEl = document.getElementById("gpTablaModelos");
-if (gpTablaModelosEl) {
-  gpTablaModelosEl.addEventListener("change", function(e){
-    var input = e.target.closest("input,select");
-    if (!input) return;
-    var tr = input.closest("tr");
-    actualizarModelo(tr.getAttribute("data-id"), input.getAttribute("data-campo"), input.value);
-  });
-  gpTablaModelosEl.addEventListener("click", function(e){
-    var btn = e.target.closest(".cfg-del-modelo");
-    if (!btn) return;
-    var tr = btn.closest("tr");
-    eliminarModelo(tr.getAttribute("data-id"));
-  });
-}
-var gpAddModeloBtn = document.getElementById("gpAddModelo");
-if (gpAddModeloBtn) gpAddModeloBtn.addEventListener("click", function(){
-  var nuevo = { id:"", categoria:"EV", nombre:"Nuevo modelo", lista:0, flete:0, patentamiento:0, web:0, pisoGerencia:0 };
-  gpModelos.push(nuevo);
-  renderGpModelos();
-  guardarModeloEnServidor(nuevo);
-});
-var gpTablaAccesoriosEl = document.getElementById("gpTablaAccesorios");
-if (gpTablaAccesoriosEl) {
-  gpTablaAccesoriosEl.addEventListener("change", function(e){
-    var input = e.target.closest("input");
-    if (!input) return;
-    var tr = input.closest("tr");
-    actualizarAccesorio(tr.getAttribute("data-id"), input.getAttribute("data-campo"), input.value);
-  });
-  gpTablaAccesoriosEl.addEventListener("click", function(e){
-    var btn = e.target.closest(".cfg-del-acc");
-    if (!btn) return;
-    var tr = btn.closest("tr");
-    eliminarAccesorio(tr.getAttribute("data-id"));
-  });
-}
-var gpAddAccesorioBtn = document.getElementById("gpAddAccesorio");
-if (gpAddAccesorioBtn) gpAddAccesorioBtn.addEventListener("click", function(){
-  var nuevo = { id:"", nombre:"Nuevo accesorio", precio:"" };
-  gpAccesorios.push(nuevo);
-  renderGpAccesorios();
-  guardarAccesorioEnServidor(nuevo);
-});
-var gpVigenciaInput = document.getElementById("gpVigencia");
-if (gpVigenciaInput) {
-  gpVigenciaInput.addEventListener("change", function(){
-    fetch(TABLERO_API_URL + "?key=" + encodeURIComponent(TABLERO_API_KEY) + "&action=guardarVigenciaListaPrecios&vigencia=" + encodeURIComponent(gpVigenciaInput.value), {cache:"no-store"})
-      .then(function(){ gpSetMsg("Vigencia guardada."); })
-      .catch(function(){ gpSetMsg("Error al guardar la vigencia."); });
-  });
-}
-document.querySelectorAll(".cfgsub-tab").forEach(function(tab){
-  tab.addEventListener("click", function(){
-    document.querySelectorAll(".cfgsub-tab").forEach(function(t){ t.classList.remove("active"); });
-    document.querySelectorAll(".cfgsub-panel").forEach(function(p){ p.classList.remove("active"); });
-    tab.classList.add("active");
-    document.getElementById("cfgsub-" + tab.getAttribute("data-sub")).classList.add("active");
-  });
-});
 function filaPromo(p){
-  return "<tr data-id=\"" + (p.id||"") + "\">" +
+  return "<tr data-id=\"" + lpClave(p) + "\"" + sucioCls("promos", p) + ">" +
     "<td class=\"left\"><select data-campo=\"tagCat\"><option value=\"ev\"" + (p.tagCat==="ev"?" selected":"") + ">EV</option><option value=\"dm\"" + (p.tagCat==="dm"?" selected":"") + ">DM</option></select></td>" +
     "<td class=\"left\"><input type=\"text\" data-campo=\"nombre\" value=\"" + escAttr(p.nombre) + "\"></td>" +
     "<td class=\"left\"><input type=\"text\" data-campo=\"vin\" value=\"" + escAttr(p.vin) + "\"></td>" +
@@ -934,51 +868,172 @@ function filaPromo(p){
     "<td style=\"text-align:center\"><button type=\"button\" class=\"cfg-icon-btn cfg-del-promo\" title=\"Eliminar\">&times;</button></td>" +
     "</tr>";
 }
+function renderGpModelos(){ document.getElementById("gpTablaModelos").innerHTML = gpModelos.map(filaModelo).join(""); }
+function renderGpAccesorios(){ document.getElementById("gpTablaAccesorios").innerHTML = gpAccesorios.map(filaAccesorio).join(""); }
 function renderGpPromos(){ document.getElementById("gpTablaPromos").innerHTML = gpPromos.map(filaPromo).join(""); }
-function guardarPromoEnServidor(p){
-  var url = TABLERO_API_URL + "?key=" + encodeURIComponent(TABLERO_API_KEY) + "&action=guardarPromoPrecio" +
-    "&id=" + encodeURIComponent(p.id || "") + "&tagCat=" + encodeURIComponent(p.tagCat) + "&nombre=" + encodeURIComponent(p.nombre) +
-    "&vin=" + encodeURIComponent(p.vin) + "&color=" + encodeURIComponent(p.color) + "&lleno=" + encodeURIComponent(p.lleno) +
-    "&web=" + encodeURIComponent(p.web) + "&piso=" + encodeURIComponent(p.piso) + "&promo=" + encodeURIComponent(p.promo) + "&ahorro=" + encodeURIComponent(p.ahorro);
-  fetch(url, {cache:"no-store"}).then(function(r){ return r.json(); }).then(function(res){
-    if (!p.id && res && res.id) p.id = res.id;
-    gpSetMsg("Guardado — se refleja en la Lista de Precios en unos minutos.");
-  }).catch(function(){ gpSetMsg("Error al guardar — reintentá."); });
+function cargarGestor(){
+  fetch(TABLERO_API_URL + "?key=" + encodeURIComponent(TABLERO_API_KEY) + "&action=listarListaPrecios", {cache:"no-store"})
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      gpModelos = data.modelos || [];
+      gpAccesorios = data.accesorios || [];
+      gpPromos = data.promos || [];
+      gpSucios = { modelos:{}, accesorios:{}, promos:{} };
+      gpEliminados = { modelos:[], accesorios:[], promos:[] };
+      gpVigenciaOriginal = gpVigenciaActual = data.vigencia || "";
+      var vig = document.getElementById("gpVigencia");
+      if (vig) vig.value = gpVigenciaOriginal;
+      renderGpModelos();
+      renderGpAccesorios();
+      renderGpPromos();
+      lpEstado();
+    }).catch(function(){ ultimoMensaje = { tipo:"mal", texto:"No se pudieron cargar los precios. Probá recargar la página." }; lpEstado(); });
 }
-function actualizarPromo(id, campo, valor){
-  var p = gpPromos.filter(function(x){ return x.id === id; })[0];
-  if (!p) return;
-  p[campo] = valor;
-  guardarPromoEnServidor(p);
+
+// Edición en pantalla: solo marca la fila como "sin guardar"; no toca el servidor.
+function lpBuscar(lista, id){ return lista.filter(function(x){ return lpClave(x) === id; })[0]; }
+function marcarSucio(tipo, x){ gpSucios[tipo][lpClave(x)] = true; ultimoMensaje = null; lpEstado(); }
+function actualizarModelo(id, campo, valor){
+  var m = lpBuscar(gpModelos, id); if (!m) return;
+  if (campo === "nombre" || campo === "categoria") { m[campo] = valor; } else { m[campo] = valor === "" ? 0 : Number(valor); }
+  marcarSucio("modelos", m);
+  if (campo !== "nombre" && campo !== "categoria") { renderGpModelos(); }
 }
-function eliminarPromo(id){
-  gpPromos = gpPromos.filter(function(x){ return x.id !== id; });
-  renderGpPromos();
-  fetch(TABLERO_API_URL + "?key=" + encodeURIComponent(TABLERO_API_KEY) + "&action=eliminarPromoPrecio&id=" + encodeURIComponent(id), {cache:"no-store"})
-    .catch(function(){ gpSetMsg("No se pudo eliminar en el servidor."); });
+function actualizarAccesorio(id, campo, valor){ var a = lpBuscar(gpAccesorios, id); if (!a) return; a[campo] = valor; marcarSucio("accesorios", a); }
+function actualizarPromo(id, campo, valor){ var p = lpBuscar(gpPromos, id); if (!p) return; p[campo] = valor; marcarSucio("promos", p); }
+function quitar(tipo, lista, id){
+  var x = lpBuscar(lista, id); if (!x) return lista;
+  delete gpSucios[tipo][id];
+  if (x.id) gpEliminados[tipo].push(x.id);
+  ultimoMensaje = null; lpEstado();
+  return lista.filter(function(y){ return y !== x; });
 }
+function eliminarModelo(id){ gpModelos = quitar("modelos", gpModelos, id); renderGpModelos(); }
+function eliminarAccesorio(id){ gpAccesorios = quitar("accesorios", gpAccesorios, id); renderGpAccesorios(); }
+function eliminarPromo(id){ gpPromos = quitar("promos", gpPromos, id); renderGpPromos(); }
+
+var gpTablaModelosEl = document.getElementById("gpTablaModelos");
+if (gpTablaModelosEl) {
+  gpTablaModelosEl.addEventListener("change", function(e){
+    var input = e.target.closest("input,select"); if (!input) return;
+    actualizarModelo(input.closest("tr").getAttribute("data-id"), input.getAttribute("data-campo"), input.value);
+  });
+  gpTablaModelosEl.addEventListener("click", function(e){
+    var btn = e.target.closest(".cfg-del-modelo"); if (!btn) return;
+    eliminarModelo(btn.closest("tr").getAttribute("data-id"));
+  });
+}
+var gpAddModeloBtn = document.getElementById("gpAddModelo");
+if (gpAddModeloBtn) gpAddModeloBtn.addEventListener("click", function(){
+  var nuevo = { id:"", categoria:"EV", nombre:"Nuevo modelo", lista:0, flete:0, patentamiento:0, web:0, pisoGerencia:0 };
+  gpModelos.push(nuevo); marcarSucio("modelos", nuevo); renderGpModelos();
+});
+var gpTablaAccesoriosEl = document.getElementById("gpTablaAccesorios");
+if (gpTablaAccesoriosEl) {
+  gpTablaAccesoriosEl.addEventListener("change", function(e){
+    var input = e.target.closest("input"); if (!input) return;
+    actualizarAccesorio(input.closest("tr").getAttribute("data-id"), input.getAttribute("data-campo"), input.value);
+  });
+  gpTablaAccesoriosEl.addEventListener("click", function(e){
+    var btn = e.target.closest(".cfg-del-acc"); if (!btn) return;
+    eliminarAccesorio(btn.closest("tr").getAttribute("data-id"));
+  });
+}
+var gpAddAccesorioBtn = document.getElementById("gpAddAccesorio");
+if (gpAddAccesorioBtn) gpAddAccesorioBtn.addEventListener("click", function(){
+  var nuevo = { id:"", nombre:"Nuevo accesorio", precio:"" };
+  gpAccesorios.push(nuevo); marcarSucio("accesorios", nuevo); renderGpAccesorios();
+});
 var gpTablaPromosEl = document.getElementById("gpTablaPromos");
 if (gpTablaPromosEl) {
   gpTablaPromosEl.addEventListener("change", function(e){
-    var input = e.target.closest("input,select");
-    if (!input) return;
-    var tr = input.closest("tr");
-    actualizarPromo(tr.getAttribute("data-id"), input.getAttribute("data-campo"), input.value);
+    var input = e.target.closest("input,select"); if (!input) return;
+    actualizarPromo(input.closest("tr").getAttribute("data-id"), input.getAttribute("data-campo"), input.value);
   });
   gpTablaPromosEl.addEventListener("click", function(e){
-    var btn = e.target.closest(".cfg-del-promo");
-    if (!btn) return;
-    var tr = btn.closest("tr");
-    eliminarPromo(tr.getAttribute("data-id"));
+    var btn = e.target.closest(".cfg-del-promo"); if (!btn) return;
+    eliminarPromo(btn.closest("tr").getAttribute("data-id"));
   });
 }
 var gpAddPromoBtn = document.getElementById("gpAddPromo");
 if (gpAddPromoBtn) gpAddPromoBtn.addEventListener("click", function(){
   var nuevo = { id:"", tagCat:"ev", nombre:"Nuevo modelo", vin:"", color:"", lleno:"", web:"", piso:"", promo:"", ahorro:"" };
-  gpPromos.push(nuevo);
-  renderGpPromos();
-  guardarPromoEnServidor(nuevo);
+  gpPromos.push(nuevo); marcarSucio("promos", nuevo); renderGpPromos();
 });
+var gpVigenciaInput = document.getElementById("gpVigencia");
+if (gpVigenciaInput) gpVigenciaInput.addEventListener("input", function(){ gpVigenciaActual = gpVigenciaInput.value; ultimoMensaje = null; lpEstado(); });
+document.querySelectorAll(".cfgsub-tab").forEach(function(tab){
+  tab.addEventListener("click", function(){
+    document.querySelectorAll(".cfgsub-tab").forEach(function(t){ t.classList.remove("active"); });
+    document.querySelectorAll(".cfgsub-panel").forEach(function(p){ p.classList.remove("active"); });
+    tab.classList.add("active");
+    document.getElementById("cfgsub-" + tab.getAttribute("data-sub")).classList.add("active");
+  });
+});
+
+// ---- Guardar ----
+function lpOperaciones(){
+  var ops = [];
+  Object.keys(cfgPend).forEach(function(campo){
+    ops.push({ desc:"visibilidad de " + campo, run:function(){ return lpApi("guardarConfigCampoPrecio", { campo:campo, visible:cfgPend[campo] ? "true" : "false" }).then(function(){ cfgOriginal[campo] = cfgPend[campo]; delete cfgPend[campo]; }); } });
+  });
+  if (gpVigenciaActual !== gpVigenciaOriginal) {
+    ops.push({ desc:"vigencia", run:function(){ var v = gpVigenciaActual; return lpApi("guardarVigenciaListaPrecios", { vigencia:v }).then(function(){ gpVigenciaOriginal = v; }); } });
+  }
+  gpModelos.forEach(function(m){ var k = lpClave(m); if (!gpSucios.modelos[k]) return;
+    ops.push({ desc:"modelo " + m.nombre, run:function(){
+      return lpApi("guardarModeloPrecio", { id:m.id || "", categoria:m.categoria, nombre:m.nombre, lista:m.lista || 0, flete:m.flete || 0, patentamiento:m.patentamiento || 0, web:m.web || 0, pisoGerencia:m.pisoGerencia || 0 })
+        .then(function(res){ if (!m.id && res && res.id) m.id = res.id; delete gpSucios.modelos[k]; }); } }); });
+  gpAccesorios.forEach(function(a){ var k = lpClave(a); if (!gpSucios.accesorios[k]) return;
+    ops.push({ desc:"accesorio " + a.nombre, run:function(){
+      return lpApi("guardarAccesorioPrecio", { id:a.id || "", nombre:a.nombre, precio:a.precio })
+        .then(function(res){ if (!a.id && res && res.id) a.id = res.id; delete gpSucios.accesorios[k]; }); } }); });
+  gpPromos.forEach(function(p){ var k = lpClave(p); if (!gpSucios.promos[k]) return;
+    ops.push({ desc:"promoción " + p.nombre, run:function(){
+      return lpApi("guardarPromoPrecio", { id:p.id || "", tagCat:p.tagCat, nombre:p.nombre, vin:p.vin, color:p.color, lleno:p.lleno, web:p.web, piso:p.piso, promo:p.promo, ahorro:p.ahorro })
+        .then(function(res){ if (!p.id && res && res.id) p.id = res.id; delete gpSucios.promos[k]; }); } }); });
+  [["modelos","eliminarModeloPrecio"],["accesorios","eliminarAccesorioPrecio"],["promos","eliminarPromoPrecio"]].forEach(function(par){
+    gpEliminados[par[0]].slice().forEach(function(id){
+      ops.push({ desc:"eliminar " + par[0].replace(/s$/, ""), run:function(){ return lpApi(par[1], { id:id }).then(function(){ gpEliminados[par[0]] = gpEliminados[par[0]].filter(function(x){ return x !== id; }); }); } });
+    });
+  });
+  return ops;
+}
+function lpHora(){ var d = new Date(); return ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2); }
+function lpGuardar(){
+  if (guardando) return;
+  var ops = lpOperaciones();
+  if (!ops.length) return;
+  guardando = true; ultimoMensaje = null; lpEstado();
+  var fallos = [], hechos = 0;
+  ops.reduce(function(prev, op){
+    return prev.then(function(){ return op.run().then(function(){ hechos++; }).catch(function(e){ fallos.push(op.desc + " (" + (e && e.message || "sin conexión") + ")"); }); });
+  }, Promise.resolve()).then(function(){
+    guardando = false;
+    if (fallos.length) {
+      ultimoMensaje = { tipo:"mal", texto:"No se pudo guardar: " + fallos.slice(0, 3).join("; ") + (fallos.length > 3 ? " y " + (fallos.length - 3) + " más" : "") + ". Lo guardado antes quedó bien; reintentá con «Guardar cambios»." };
+      renderGpModelos(); renderGpAccesorios(); renderGpPromos(); lpEstado();
+      return;
+    }
+    ultimoGuardado = lpHora();
+    renderGpModelos(); renderGpAccesorios(); renderGpPromos();
+    ultimoMensaje = { tipo:"ok", texto:"Guardado ✓ a las " + ultimoGuardado + " (" + hechos + (hechos === 1 ? " cambio" : " cambios") + "). Publicando la lista…" };
+    lpEstado();
+    // Pide armar la lista ya, sin esperar el ciclo automático de 5 minutos.
+    lpApi("publicarListaPrecios").then(function(){
+      ultimoMensaje = { tipo:"ok", texto:"Guardado ✓ a las " + ultimoGuardado + ". La lista se actualiza en 1 o 2 minutos: después tocá «Recargar la lista» para verla." };
+    }).catch(function(){
+      ultimoMensaje = { tipo:"ok", texto:"Guardado ✓ a las " + ultimoGuardado + ". La lista se actualiza sola en unos minutos (hasta 5): después recargá la página para verla." };
+    }).then(function(){
+      document.getElementById("cfgRecargar").style.display = "";
+      lpEstado();
+    });
+  });
+}
+var cfgGuardarBtn = document.getElementById("cfgGuardar");
+if (cfgGuardarBtn) cfgGuardarBtn.addEventListener("click", lpGuardar);
+var cfgRecargarBtn = document.getElementById("cfgRecargar");
+if (cfgRecargarBtn) cfgRecargarBtn.addEventListener("click", function(){ location.reload(); });
 cargarGestor();
 
 
