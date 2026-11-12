@@ -716,3 +716,358 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancar)
   else arrancar()
 })()
+
+// ── Lista de precios en PDF (12/11, Lucía) ─────────────────────────────────
+// lista_precios.html (Gerencia y jefe) y lista_precios_vendedores.html las
+// regenera la sincronización de Nicolás y no se tocan: el botón se agrega
+// desde acá. El PDF se arma en el momento con los mismos datos que guarda
+// Gerencia en su Configuración (el Apps Script de Nicolás, sólo lectura), así
+// que siempre sale con lo último guardado y con su fecha de vigencia, aunque
+// la página todavía no se haya regenerado.
+//
+// Es el mismo PDF para todos y se puede pasar a cualquiera del equipo: lleva
+// sólo las columnas que Gerencia habilitó para ventas y nunca el piso de
+// gerencia.
+;(function () {
+  if (!/lista_precios(_vendedores)?\.html$/.test(location.pathname)) return
+
+  var API = 'https://script.google.com/macros/s/AKfycbzTYBoM56BBMj2B-8hUG_MIuOh7r5qG4qq2sGlTRM-y6QyFm0XHqgE6XUG5OQB022iy/exec'
+  var LLAVE = 'i4uH92SO1sFyNYi8PJ2dsGb9LDM-Xoq3'
+  var JSPDF = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
+
+  function api(accion) {
+    return fetch(API + '?key=' + encodeURIComponent(LLAVE) + '&action=' + accion, { cache: 'no-store' })
+      .then(function (r) { return r.json() })
+      .then(function (d) { if (d && d.error) throw new Error(d.error); return d })
+  }
+  function cargarJsPDF() {
+    if (window.jspdf) return Promise.resolve()
+    return new Promise(function (listo, mal) {
+      var s = document.createElement('script')
+      s.src = JSPDF
+      s.onload = function () { listo() }
+      s.onerror = function () { mal(new Error('no se pudo cargar el generador de PDF')) }
+      document.head.appendChild(s)
+    })
+  }
+
+  // Mismas cuentas que la página de Gerencia.
+  function lleno(m) { return (m.lista || 0) + (m.flete || 0) + (m.patentamiento || 0) }
+  function promWeb(m) { return (lleno(m) + (m.web || 0)) / 2 }
+  function pisoVenta(m) { return (m.pisoGerencia || 0) + 300 }
+  function promPiso(m) { return ((m.web || 0) + pisoVenta(m)) / 2 }
+  function usd(n) {
+    if (n === null || n === undefined || isNaN(n)) return '—'
+    return 'USD ' + String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  }
+  function dos(n) { return ('0' + n).slice(-2) }
+  // Fecha y hora de Mendoza, sin depender de la zona del teléfono.
+  function ahora() {
+    try {
+      var p = {}
+      new Intl.DateTimeFormat('es-AR', {
+        timeZone: 'America/Argentina/Mendoza', day: '2-digit', month: '2-digit',
+        year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false
+      }).formatToParts(new Date()).forEach(function (x) { p[x.type] = x.value })
+      return p.day + '/' + p.month + '/' + p.year + ' ' + p.hour + ':' + p.minute
+    } catch (e) {
+      var d = new Date()
+      return dos(d.getDate()) + '/' + dos(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + dos(d.getHours()) + ':' + dos(d.getMinutes())
+    }
+  }
+
+  // Colores de la página de Nicolás.
+  var C = {
+    negro: [10, 10, 10], tinta: [27, 28, 30], gris: [120, 126, 133], tenue: [150, 156, 162],
+    linea: [226, 229, 232], fondo: [244, 245, 246], cabeza: [248, 249, 250],
+    ev: [21, 101, 216], dm: [56, 142, 60],
+    llenoF: [232, 245, 233], llenoT: [46, 125, 50],
+    webF: [255, 246, 224], webT: [166, 112, 0],
+    pisoF: [253, 236, 234], pisoT: [192, 57, 43]
+  }
+
+  function armar(datos, ocultos) {
+    var cfg = datos.config || {}
+    var vigencia = String(datos.vigencia || '').trim() || 'sin fecha cargada'
+    var generado = ahora()
+
+    // Columnas de autos: las mismas que Gerencia habilitó para ventas.
+    var cols = [{ titulo: 'MODELO', peso: 2.3, izq: true, modelo: true }]
+    if (cfg.lista !== false) cols.push({ titulo: 'LISTA', valor: function (m) { return m.lista }, fuerte: true })
+    if (cfg.composicion !== false) {
+      cols.push({ titulo: 'FLETE', valor: function (m) { return m.flete }, suave: true })
+      cols.push({ titulo: 'PATENTAM.', valor: function (m) { return m.patentamiento }, suave: true })
+    }
+    if (cfg.lleno !== false) cols.push({ titulo: 'LLENO', valor: lleno, fondo: C.llenoF, color: C.llenoT, fuerte: true })
+    if (cfg.promWeb) cols.push({ titulo: 'PROM. WEB', valor: promWeb })
+    if (cfg.web) cols.push({ titulo: 'WEB', valor: function (m) { return m.web }, fondo: C.webF, color: C.webT, fuerte: true })
+    if (cfg.promPiso) cols.push({ titulo: 'PROM. PISO', valor: promPiso })
+    if (cfg.pisoVenta) cols.push({ titulo: 'PISO VENTA', valor: pisoVenta, fondo: C.pisoF, color: C.pisoT, fuerte: true })
+
+    // Con muchas columnas los números no entran parados: la hoja va apaisada.
+    var apaisada = cols.length > 7
+    var pdf = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4', orientation: apaisada ? 'landscape' : 'portrait' })
+    var AN = apaisada ? 297 : 210, AL = apaisada ? 210 : 297, MX = 12, ANCHO = AN - MX * 2
+    var y = 0
+
+    function rect(x, yy, w, h, color) {
+      pdf.setFillColor(color[0], color[1], color[2])
+      pdf.rect(x, yy, w, h, 'F')
+    }
+    function linea(yy) {
+      pdf.setDrawColor(C.linea[0], C.linea[1], C.linea[2])
+      pdf.setLineWidth(0.25)
+      pdf.line(MX, yy, AN - MX, yy)
+    }
+    function fuente(negrita, tam) {
+      pdf.setFont('helvetica', negrita ? 'bold' : 'normal')
+      pdf.setFontSize(tam)
+    }
+    function texto(t, x, yy, op) {
+      op = op || {}
+      fuente(op.negrita, op.tam || 9)
+      var c = op.color || C.tinta
+      pdf.setTextColor(c[0], c[1], c[2])
+      var o = { align: op.alinear || 'left' }
+      // Con espaciado, jsPDF no corre el texto alineado a la derecha: sólo a la izquierda.
+      if (op.espacio && o.align === 'left') o.charSpace = op.espacio
+      if (op.max) o.maxWidth = op.max
+      pdf.text(String(t), x, yy, o)
+    }
+    function repartir(columnas) {
+      var total = columnas.reduce(function (s, c) { return s + (c.peso || 1) }, 0)
+      var x = MX
+      columnas.forEach(function (c) { c.x = x; c.w = ANCHO * (c.peso || 1) / total; x += c.w })
+    }
+    // Tamaño de letra para que el valor entre en su columna sin cortarse.
+    function tamQueEntra(t, negrita, tam, ancho) {
+      fuente(negrita, tam)
+      while (tam > 6 && pdf.getTextWidth(String(t)) > ancho) { tam -= 0.25; fuente(negrita, tam) }
+      return tam
+    }
+    repartir(cols)
+
+    // Encabezado negro y referencias, en la primera hoja.
+    rect(0, 0, AN, 34, C.negro)
+    texto('BYD  |  YACOPINI', MX, 10, { negrita: true, tam: 8, color: [200, 200, 200], espacio: 0.6 })
+    texto('Lista de Precios', MX, 21, { negrita: true, tam: 22, color: [255, 255, 255] })
+    texto('Valores de referencia para el equipo de ventas. Uso interno — no distribuir fuera del concesionario.', MX, 28.5, { tam: 8.5, color: [205, 205, 205] })
+    texto('VIGENCIA', AN - MX, 10, { negrita: true, tam: 7, color: [170, 170, 170], alinear: 'right', espacio: 0.6 })
+    texto(vigencia, AN - MX, 16.5, { negrita: true, tam: 11, color: [255, 255, 255], alinear: 'right' })
+    y = 34
+    rect(0, y, AN, 10, C.fondo)
+    var refs = [['EV — 100% eléctrico', C.ev, true], ['DM — Híbrido enchufable', C.dm, true]]
+    cols.forEach(function (c) {
+      if (c.titulo === 'LLENO') refs.push(['Precio Lleno', C.llenoT])
+      if (c.titulo === 'WEB') refs.push(['Precio Web', C.webT])
+      if (c.titulo === 'PISO VENTA') refs.push(['Piso de Venta', C.pisoT])
+    })
+    var rx = MX
+    refs.forEach(function (r) {
+      var c = r[1]
+      if (r[2]) rect(rx, y + 3.7, 2.6, 2.6, c)
+      else { pdf.setDrawColor(c[0], c[1], c[2]); pdf.setLineWidth(0.35); pdf.rect(rx, y + 3.7, 2.6, 2.6, 'S') }
+      texto(r[0], rx + 4, y + 6, { tam: 7.5, color: C.gris })
+      fuente(false, 7.5)
+      rx += 4 + pdf.getTextWidth(r[0]) + 7
+    })
+    y += 17
+
+    function lugar(alto) {
+      if (y + alto <= AL - 16) return false
+      pdf.addPage()
+      y = 14
+      return true
+    }
+
+    function tituloSeccion(pill, colorPill, titulo) {
+      lugar(30) // título + cabeza + al menos una fila
+      fuente(true, 8)
+      var w = pdf.getTextWidth(pill) + 8
+      pdf.setFillColor(colorPill[0], colorPill[1], colorPill[2])
+      pdf.roundedRect(MX, y, w, 6, 3, 3, 'F')
+      texto(pill, MX + w / 2, y + 4.2, { negrita: true, tam: 8, color: [255, 255, 255], alinear: 'center' })
+      texto(titulo, MX + w + 3, y + 4.2, { tam: 9.5, color: C.gris })
+      fuente(false, 9.5)
+      var fin = MX + w + 3 + pdf.getTextWidth(titulo) + 3
+      pdf.setDrawColor(C.linea[0], C.linea[1], C.linea[2])
+      pdf.setLineWidth(0.3)
+      pdf.line(fin, y + 3, AN - MX, y + 3)
+      y += 9
+    }
+
+    function cabezaTabla(columnas) {
+      rect(MX, y, ANCHO, 7, C.cabeza)
+      columnas.forEach(function (c) {
+        if (c.fondo) rect(c.x, y, c.w, 7, c.fondo)
+        texto(c.titulo, c.izq ? c.x + 3 : c.x + c.w - 2.5, y + 4.6, {
+          negrita: true, tam: 6.5, color: c.color || C.gris, alinear: c.izq ? 'left' : 'right', espacio: 0.3
+        })
+      })
+      linea(y + 7)
+      y += 7
+    }
+
+    function tablaModelos(modelos, esEV) {
+      var colorCat = esEV ? C.ev : C.dm
+      tituloSeccion(esEV ? 'EV' : 'DM', colorCat, esEV ? 'Eléctricos' : 'Híbridos enchufables')
+      cabezaTabla(cols)
+      var FILA = 11.5
+      modelos.forEach(function (m) {
+        if (lugar(FILA)) cabezaTabla(cols)
+        cols.forEach(function (c) {
+          if (c.fondo) rect(c.x, y, c.w, FILA, c.fondo)
+          if (c.modelo) {
+            fuente(true, 9.5)
+            var nombre = pdf.splitTextToSize(String(m.nombre || ''), c.w - 5)[0] || ''
+            texto(nombre, c.x + 3, y + 5, { negrita: true, tam: 9.5 })
+            texto('• ' + (esEV ? 'ELÉCTRICO' : 'HÍBRIDO'), c.x + 3, y + 9, { negrita: true, tam: 6.5, color: colorCat, espacio: 0.2 })
+            return
+          }
+          var monto = usd(c.valor(m))
+          texto(monto, c.x + c.w - 2.5, y + 7, {
+            negrita: !!c.fuerte, tam: tamQueEntra(monto, !!c.fuerte, c.fuerte ? 9.5 : 8.5, c.w - 4),
+            color: c.color || (c.suave ? C.tenue : C.tinta), alinear: 'right'
+          })
+        })
+        rect(MX, y, 1, FILA, colorCat) // franja de color a la izquierda
+        linea(y + FILA)
+        y += FILA
+      })
+      y += 8
+    }
+
+    function tablaSimple(pill, colorPill, titulo, columnas, filas) {
+      tituloSeccion(pill, colorPill, titulo)
+      repartir(columnas)
+      cabezaTabla(columnas)
+      filas.forEach(function (f, i) {
+        fuente(false, 8.5)
+        var primera = pdf.splitTextToSize(String(f[0] == null ? '' : f[0]), columnas[0].w - 5)
+        var alto = Math.max(8, primera.length * 3.8 + 4.2)
+        if (lugar(alto)) cabezaTabla(columnas)
+        if (i % 2) rect(MX, y, ANCHO, alto, [250, 250, 251])
+        columnas.forEach(function (c, j) {
+          if (c.fondo) rect(c.x, y, c.w, alto, c.fondo)
+          if (j === 0) {
+            fuente(false, 8.5)
+            pdf.setTextColor(C.tinta[0], C.tinta[1], C.tinta[2])
+            pdf.text(primera, c.x + 3, y + 5.2)
+            return
+          }
+          var v = String(f[j] == null ? '' : f[j])
+          texto(v, c.izq ? c.x + 2 : c.x + c.w - 2.5, y + 5.2, {
+            negrita: !!c.fuerte, tam: tamQueEntra(v, !!c.fuerte, 8.5, c.w - 4),
+            color: c.color || C.tinta, alinear: c.izq ? 'left' : 'right'
+          })
+        })
+        linea(y + alto)
+        y += alto
+      })
+      y += 8
+    }
+
+    var modelos = datos.modelos || []
+    var ev = modelos.filter(function (m) { return String(m.categoria).toUpperCase() === 'EV' })
+    var dm = modelos.filter(function (m) { return String(m.categoria).toUpperCase() !== 'EV' })
+    if (ev.length) tablaModelos(ev, true)
+    if (dm.length) tablaModelos(dm, false)
+
+    // Unidades en promoción: sólo si Gerencia las muestra a ventas, sin las
+    // que ocultó.
+    var promos = (datos.promos || []).filter(function (p) { return ocultos.indexOf(p.vin) === -1 })
+    if (cfg.promociones && promos.length) {
+      tablaSimple('PROMO', C.pisoT, 'Unidades en promoción', [
+        { titulo: 'MODELO', peso: 2, izq: true }, { titulo: 'VIN', peso: 1.7, izq: true },
+        { titulo: 'COLOR', peso: 1.1, izq: true },
+        { titulo: 'LLENO', fondo: C.llenoF, color: C.llenoT, fuerte: true }, { titulo: 'WEB' },
+        { titulo: 'PISO' }, { titulo: 'PROMO', fuerte: true }, { titulo: 'AHORRO', color: C.llenoT }
+      ], promos.map(function (p) { return [p.nombre, p.vin, p.color, p.lleno, p.web, p.piso, p.promo, p.ahorro] }))
+    }
+
+    var acc = datos.accesorios || []
+    if (acc.length) {
+      tablaSimple('ACC', C.negro, 'Accesorios', [
+        { titulo: 'ACCESORIO', peso: 4, izq: true }, { titulo: 'PRECIO', fuerte: true }
+      ], acc.map(function (a) { return [a.nombre, a.precio] }))
+    }
+
+    lugar(12)
+    texto('Precios en dólares estadounidenses. Lleno = lista + flete + patentamiento. Ante consultas de precio fuera de estos valores, contactar a gerencia.', MX, y, { tam: 7.5, color: C.gris, max: ANCHO })
+
+    // Marca de agua y pie en todas las hojas.
+    var hojas = pdf.getNumberOfPages()
+    for (var h = 1; h <= hojas; h++) {
+      pdf.setPage(h)
+      var suave = pdf.GState ? new pdf.GState({ opacity: 0.07 }) : null
+      if (suave) { pdf.saveGraphicsState(); pdf.setGState(suave); pdf.setTextColor(0, 0, 0) }
+      else pdf.setTextColor(236, 236, 236)
+      fuente(true, 20)
+      for (var fy = 40, n = 0; fy < AL + 60; fy += 46, n++) {
+        for (var fx = -40 + (n % 2) * 45; fx < AN; fx += 100) {
+          pdf.text('USO INTERNO · BYD YACOPINI', fx, fy, { angle: 28 })
+        }
+      }
+      if (suave) pdf.restoreGraphicsState()
+      pdf.setDrawColor(C.linea[0], C.linea[1], C.linea[2])
+      pdf.setLineWidth(0.3)
+      pdf.line(MX, AL - 11, AN - MX, AL - 11)
+      texto('BYD Yacopini · Lista de precios · Vigencia: ' + vigencia + ' · Generado el ' + generado, MX, AL - 6.5, { tam: 7, color: C.gris })
+      texto('Hoja ' + h + ' de ' + hojas, AN - MX, AL - 6.5, { tam: 7, color: C.gris, alinear: 'right' })
+    }
+
+    pdf.save('Lista de precios BYD Yacopini - vigencia ' + vigencia.replace(/[\\/:*?"<>|]/g, '-') + '.pdf')
+  }
+  // Para probarlo fuera del navegador.
+  window.__bydArmarListaPdf = armar
+
+  function boton() {
+    if (document.getElementById('bydPdfPrecios')) return
+    var bloque = document.querySelector('.title-block')
+    if (!bloque) return
+    var caja = document.createElement('div')
+    caja.style.cssText = 'display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px'
+    var b = document.createElement('button')
+    b.id = 'bydPdfPrecios'
+    b.type = 'button'
+    b.style.cssText = 'display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:999px;border:0;background:#0A0A0A;color:#fff;font-family:inherit;font-size:13.5px;font-weight:700;line-height:1;cursor:pointer'
+    b.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg><span>Descargar PDF</span>'
+    var aviso = document.createElement('span')
+    aviso.style.cssText = 'font-size:12px;color:#6b7178;line-height:1.4'
+    aviso.textContent = 'Sale con los precios y la vigencia guardados en este momento.'
+    caja.appendChild(b)
+    caja.appendChild(aviso)
+    bloque.appendChild(caja)
+
+    var ocupado = false
+    b.addEventListener('click', function () {
+      if (ocupado) return
+      ocupado = true
+      b.disabled = true
+      b.style.opacity = '0.6'
+      b.lastChild.textContent = 'Armando el PDF…'
+      aviso.style.color = '#6b7178'
+      aviso.textContent = 'Trayendo los últimos precios…'
+      var ocultos = api('getVinsOcultos').then(function (d) { return (d && d.vins) || [] }, function () { return [] })
+      Promise.all([api('listarListaPrecios'), ocultos, cargarJsPDF()])
+        .then(function (r) {
+          if (!r[0] || !r[0].modelos || !r[0].modelos.length) throw new Error('la lista vino vacía')
+          armar(r[0], r[1])
+          aviso.textContent = 'Listo: PDF con vigencia ' + (r[0].vigencia || 'sin fecha') + '.'
+        })
+        .catch(function (e) {
+          aviso.style.color = '#c0392b'
+          aviso.textContent = 'No se pudo armar el PDF (' + ((e && e.message) || 'sin conexión') + '). Revisá la conexión y probá de nuevo.'
+        })
+        .then(function () {
+          ocupado = false
+          b.disabled = false
+          b.style.opacity = ''
+          b.lastChild.textContent = 'Descargar PDF'
+        })
+    })
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boton)
+  else boton()
+})()
