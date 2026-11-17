@@ -1071,3 +1071,372 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boton)
   else boton()
 })()
+
+// Fotos de cada modelo en Fichas Técnicas (pedido de Lucía, 17/11).
+//
+// Las fotos están en la carpeta compartida de Drive "Modelos" (una subcarpeta
+// por modelo, con cada color, el interior y el baúl). La función fotos-modelos
+// de Supabase la lee y las devuelve ordenadas (src/lib/fotosModelos.ts); acá
+// se suma un botón "Fotos" a cada ficha que tenga carpeta, con una galería y
+// un visor para compartir o guardar cada foto, o todas juntas.
+//
+// Compartir pide el toque de la persona y el teléfono no lo acepta si pasa
+// mucho entre el toque y el compartir (lo mismo que con los PDF de arriba).
+// Por eso la foto se baja apenas se abre en el visor y el botón dice
+// "Preparando…" hasta que está lista. Si la función o Drive fallan, la página
+// queda como siempre, sin el botón.
+;(function () {
+  if (!/fichas_tecnicas\.html$/.test(location.pathname)) return
+
+  var FUNCION = 'https://mgicnwnvtfkrxmkmewnt.supabase.co/functions/v1/fotos-modelos'
+  var ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1naWNud252dGZrcnhta21ld250Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1Nzk5MDIsImV4cCI6MjEwNTE1NTkwMn0.GLWN_wI6Q_6Qu1EGi02oPNrL9wgTj-zbGsJCoIE-HQE'
+  var FONDO = '#121418', PANEL2 = '#272c33', BORDE = 'rgba(255,255,255,.08)'
+  var TINTA = '#f4f5f6', SUAVE = '#a3a9b1', TENUE = '#6f767f', CELESTE = '#45b6f7', LIMA = '#ccf656', SOBRE = '#1b1c1e'
+  var GRUPOS = { color: 'Colores', interior: 'Interior', baul: 'Baúl', galeria: 'Más fotos' }
+
+  var foto = function (id, ancho) { return 'https://lh3.googleusercontent.com/d/' + id + '=w' + ancho }
+  var pegado = function (s) { return String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '') }
+  var esc = function (t) {
+    return String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] })
+  }
+
+  var S = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+  var ICONO = {
+    fotos: S + '<rect x="3" y="5" width="18" height="15" rx="3"/><circle cx="9" cy="11" r="2"/><path d="M21 17l-5-5-9 8"/></svg>',
+    cerrar: S + '<path d="M6 6l12 12M18 6L6 18"/></svg>',
+    compartir: S + '<path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 002 2h10a2 2 0 002-2v-6"/></svg>',
+    guardar: S + '<path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>',
+    ant: S + '<path d="M15 6l-6 6 6 6"/></svg>',
+    sig: S + '<path d="M9 6l6 6-6 6"/></svg>',
+  }
+
+  var css = document.createElement('style')
+  css.textContent =
+    '.ficha-btn.fotos{border:0;background:' + PANEL2 + ';color:' + TINTA + ';cursor:pointer}' +
+    '.ficha-btn.fotos:hover{filter:brightness(1.15)}' +
+    '.ficha-btn.fotos b{font-weight:700;color:' + LIMA + '}' +
+    // Galería
+    '#galeriaModelo{position:fixed;inset:0;z-index:999990;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;' +
+    'background:' + FONDO + ';color:' + TINTA + ';font-family:Inter,system-ui,sans-serif;display:none}' +
+    '#galeriaModelo.ver{display:block}' +
+    '#galeriaModelo .cab{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:12px;padding:calc(12px + env(safe-area-inset-top)) 16px 12px;' +
+    'background:rgba(18,20,24,.92);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-bottom:1px solid ' + BORDE + '}' +
+    '#galeriaModelo .cab .tx{flex:1;min-width:0}' +
+    '#galeriaModelo .cab .marca{display:block;font-size:10.5px;font-weight:700;letter-spacing:.12em;color:' + LIMA + '}' +
+    '#galeriaModelo .cab h2{margin:0;font-size:19px;font-weight:600;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:' + TINTA + '}' +
+    '.gm-redondo{flex:none;display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;border:0;background:#fff;color:' + SOBRE + ';cursor:pointer}' +
+    '.gm-redondo svg{width:18px;height:18px}' +
+    '.gm-pastilla{flex:none;display:inline-flex;align-items:center;gap:7px;padding:10px 16px;border:0;border-radius:999px;font:600 13px Inter,system-ui,sans-serif;cursor:pointer;white-space:nowrap}' +
+    '.gm-pastilla svg{width:16px;height:16px;flex:none}' +
+    '.gm-pastilla.si{background:' + CELESTE + ';color:' + SOBRE + '}' +
+    '.gm-pastilla.no{background:rgba(255,255,255,.1);color:#fff}' +
+    '.gm-pastilla[disabled]{opacity:.65;cursor:progress}' +
+    '#galeriaModelo .cuerpo{max-width:1100px;margin:0 auto;padding:6px 16px calc(28px + env(safe-area-inset-bottom))}' +
+    '#galeriaModelo h3{display:flex;align-items:center;gap:8px;margin:20px 0 10px;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:' + SUAVE + '}' +
+    '#galeriaModelo h3 b{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:' + PANEL2 + ';color:' + TINTA + ';font-size:10.5px;letter-spacing:0}' +
+    '#galeriaModelo .grilla{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}' +
+    '@media (min-width:700px){#galeriaModelo .grilla{grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}}' +
+    '.gm-foto{display:block;width:100%;padding:0;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer;font:inherit}' +
+    '.gm-foto .marco{display:block;aspect-ratio:4/3;border-radius:16px;overflow:hidden;background:' + PANEL2 + ';border:1px solid ' + BORDE + '}' +
+    '.gm-foto img{display:block;width:100%;height:100%;object-fit:cover;transition:transform .35s ease}' +
+    '.gm-foto:hover img{transform:scale(1.04)}' +
+    '.gm-foto span.t{display:block;margin:7px 2px 0;font-size:12.5px;font-weight:600;color:' + TINTA + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
+    '.gm-aviso{margin:18px 0 0;font-size:12px;color:' + TENUE + '}' +
+    '@media (max-width:520px){#galeriaModelo .cab .todas .lg{display:none}}' +
+    // Visor
+    'html.gm-abierta #hubBackBtn{display:none !important}' +
+    '#visorFoto{position:fixed;inset:0;z-index:999995;display:none;flex-direction:column;background:#08090b;color:#fff;font-family:Inter,system-ui,sans-serif}' +
+    '#visorFoto.ver{display:flex}' +
+    '#visorFoto .arriba{display:flex;align-items:center;gap:12px;padding:calc(12px + env(safe-area-inset-top)) 16px 8px}' +
+    '#visorFoto .arriba .tx{flex:1;min-width:0}' +
+    '#visorFoto .arriba .t{margin:0;font-size:15px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
+    '#visorFoto .arriba .n{margin:2px 0 0;font-size:12px;color:' + SUAVE + '}' +
+    '#visorFoto .medio{position:relative;flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:0 8px}' +
+    '#visorFoto .medio img{max-width:100%;max-height:100%;object-fit:contain;border-radius:10px;user-select:none;-webkit-user-drag:none}' +
+    '#visorFoto .flecha{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;border:0;background:rgba(255,255,255,.12);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer}' +
+    '#visorFoto .flecha svg{width:20px;height:20px}' +
+    '#visorFoto .flecha.a{left:12px}#visorFoto .flecha.s{right:12px}' +
+    '#visorFoto .flecha[hidden]{display:none}' +
+    '@media (hover:none){#visorFoto .flecha{display:none}}' +
+    '#visorFoto .abajo{display:flex;gap:10px;justify-content:center;padding:12px 16px calc(16px + env(safe-area-inset-bottom))}' +
+    '#visorFoto .abajo .gm-pastilla{flex:1;max-width:220px;justify-content:center;padding:13px 16px;font-size:14px}'
+  document.head.appendChild(css)
+
+  // ---------------------------------------------------------------- datos
+  var modelos = []
+  var blobs = {} // id -> Blob ya bajado (para compartir en el mismo toque)
+  var bajando = {} // id -> Promise<Blob>
+
+  function traer(id) {
+    if (blobs[id]) return Promise.resolve(blobs[id])
+    if (!bajando[id]) {
+      bajando[id] = fetch(foto(id, 1600))
+        .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.blob() })
+        .then(function (b) { blobs[id] = b; return b })
+        .catch(function (e) { delete bajando[id]; throw e })
+    }
+    return bajando[id]
+  }
+
+  // "BYD ATTO 2 - Time Grey 2.jpg"
+  function nombreArchivo(modelo, f, blob) {
+    var ext = /png/.test(blob.type) ? 'png' : /webp/.test(blob.type) ? 'webp' : 'jpg'
+    var iguales = modelo.fotos.filter(function (o) { return o.titulo === f.titulo })
+    var n = iguales.length > 1 ? ' ' + (iguales.indexOf(f) + 1) : ''
+    return ('BYD ' + modelo.carpeta + ' - ' + f.titulo + n).replace(/[\\/:*?"<>|]/g, '') + '.' + ext
+  }
+  function archivoDe(modelo, f) {
+    var b = blobs[f.id]
+    return new File([b], nombreArchivo(modelo, f, b), { type: b.type || 'image/jpeg' })
+  }
+
+  function guardarArchivo(blob, nombre) {
+    var a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = nombre
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    setTimeout(function () { URL.revokeObjectURL(a.href) }, 60000)
+  }
+
+  function guardarVarios(archivos) {
+    archivos.forEach(function (f, i) { setTimeout(function () { guardarArchivo(f, f.name) }, i * 300) })
+  }
+
+  function compartirArchivos(archivos) {
+    if (navigator.canShare && navigator.share && navigator.canShare({ files: archivos })) {
+      navigator.share({ files: archivos }).catch(function (err) {
+        if (err && err.name === 'AbortError') return
+        guardarVarios(archivos)
+      })
+      return
+    }
+    // En la compu no hay compartir: se guardan.
+    guardarVarios(archivos)
+  }
+
+  // ------------------------------------------- capas y el botón "atrás"
+  // Cada capa abierta suma un paso al historial: el "atrás" del teléfono la
+  // cierra en vez de salir de Fichas.
+  var capas = []
+  function abrirCapa(el, alCerrar) {
+    capas.push({ el: el, alCerrar: alCerrar })
+    el.classList.add('ver')
+    document.documentElement.style.overflow = 'hidden'
+    document.documentElement.classList.add('gm-abierta')
+    try { history.pushState({ bydCapaFotos: capas.length }, '') } catch (e) {}
+  }
+  function cerrarTope() {
+    var c = capas.pop()
+    if (!c) return
+    c.el.classList.remove('ver')
+    if (c.alCerrar) c.alCerrar()
+    if (!capas.length) {
+      document.documentElement.style.overflow = ''
+      document.documentElement.classList.remove('gm-abierta')
+    }
+  }
+  function cerrarConAtras() { if (capas.length) history.back() }
+  window.addEventListener('popstate', function () { if (capas.length) cerrarTope() })
+  document.addEventListener('keydown', function (e) {
+    if (!capas.length) return
+    if (e.key === 'Escape') { e.preventDefault(); cerrarConAtras() }
+    if (visor.classList.contains('ver') && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) mover(e.key === 'ArrowLeft' ? -1 : 1)
+  })
+
+  // ------------------------------------------------------------- galería
+  var galeria = document.createElement('div')
+  galeria.id = 'galeriaModelo'
+  galeria.className = 'tema-conserva'
+  galeria.setAttribute('role', 'dialog')
+  galeria.setAttribute('aria-modal', 'true')
+  var actual = null // el modelo abierto
+  var pedidoTodas = 0
+
+  function abrirGaleria(modelo) {
+    actual = modelo
+    var porGrupo = {}
+    modelo.fotos.forEach(function (f, i) { (porGrupo[f.grupo] = porGrupo[f.grupo] || []).push(i) })
+    var html =
+      '<div class="cab"><button type="button" class="gm-redondo" data-a="cerrar" aria-label="Cerrar">' + ICONO.cerrar + '</button>' +
+      '<div class="tx"><span class="marca">BYD</span><h2>' + esc(modelo.carpeta) + '</h2></div>' +
+      '<button type="button" class="gm-pastilla si todas" data-a="todas">' + ICONO.compartir +
+      '<span class="et">Compartir <span class="lg">todas</span> (' + modelo.fotos.length + ')</span></button></div>' +
+      '<div class="cuerpo">'
+    ;['color', 'interior', 'baul', 'galeria'].forEach(function (g) {
+      if (!porGrupo[g]) return
+      html += '<h3>' + GRUPOS[g] + ' <b>' + porGrupo[g].length + '</b></h3><div class="grilla">'
+      porGrupo[g].forEach(function (i) {
+        var f = modelo.fotos[i]
+        html += '<button type="button" class="gm-foto" data-i="' + i + '"><span class="marco"><img src="' + foto(f.id, 500) +
+          '" alt="' + esc(modelo.carpeta + ' ' + f.titulo) + '" loading="lazy" decoding="async"></span>' +
+          '<span class="t">' + esc(f.titulo) + '</span></button>'
+      })
+      html += '</div>'
+    })
+    html += '<p class="gm-aviso">Tocá una foto para verla grande y compartirla. Salen de la carpeta de Drive de cada modelo.</p></div>'
+    galeria.innerHTML = html
+    galeria.scrollTop = 0
+    if (!galeria.isConnected) document.body.appendChild(galeria)
+    abrirCapa(galeria, function () { actual = null; pedidoTodas++ })
+  }
+
+  galeria.addEventListener('click', function (e) {
+    var b = e.target.closest('button')
+    if (!b || !actual) return
+    if (b.dataset.a === 'cerrar') return cerrarConAtras()
+    if (b.dataset.a === 'todas') return compartirTodas(b)
+    if (b.dataset.i != null) abrirVisor(Number(b.dataset.i))
+  })
+
+  // Todas juntas: se bajan con avance y, ya listas, un toque nuevo comparte.
+  function compartirTodas(btn) {
+    var modelo = actual
+    var total = modelo.fotos.length
+    if (modelo.fotos.every(function (f) { return blobs[f.id] })) {
+      return compartirArchivos(modelo.fotos.map(function (f) { return archivoDe(modelo, f) }))
+    }
+    var este = ++pedidoTodas
+    var hechas = 0
+    var et = btn.querySelector('.et')
+    btn.disabled = true
+    et.textContent = 'Preparando 0 de ' + total + '…'
+    Promise.all(modelo.fotos.map(function (f) {
+      return traer(f.id).then(function () {
+        hechas++
+        if (este === pedidoTodas) et.textContent = 'Preparando ' + hechas + ' de ' + total + '…'
+      })
+    })).then(function () {
+      if (este !== pedidoTodas) return
+      btn.disabled = false
+      et.textContent = 'Listas: compartir ' + total
+    }, function () {
+      if (este !== pedidoTodas) return
+      btn.disabled = false
+      et.textContent = 'Falló. Reintentar'
+    })
+  }
+
+  // --------------------------------------------------------------- visor
+  var visor = document.createElement('div')
+  visor.id = 'visorFoto'
+  visor.className = 'tema-conserva'
+  visor.setAttribute('role', 'dialog')
+  visor.setAttribute('aria-modal', 'true')
+  visor.innerHTML =
+    '<div class="arriba"><button type="button" class="gm-redondo" data-a="cerrar" aria-label="Volver a las fotos">' + ICONO.cerrar + '</button>' +
+    '<div class="tx"><p class="t"></p><p class="n"></p></div></div>' +
+    '<div class="medio"><button type="button" class="flecha a" data-a="ant" aria-label="Anterior">' + ICONO.ant + '</button>' +
+    '<img alt=""><button type="button" class="flecha s" data-a="sig" aria-label="Siguiente">' + ICONO.sig + '</button></div>' +
+    '<div class="abajo"><button type="button" class="gm-pastilla no" data-a="guardar">' + ICONO.guardar + '<span>Guardar</span></button>' +
+    '<button type="button" class="gm-pastilla si" data-a="compartir">' + ICONO.compartir + '<span>Compartir</span></button></div>'
+  var vi = 0
+
+  function botonesListos(listo, error) {
+    ;['guardar', 'compartir'].forEach(function (a) {
+      var b = visor.querySelector('[data-a="' + a + '"]')
+      b.disabled = !listo && !error
+      b.querySelector('span').textContent = error ? 'Reintentar' : listo ? (a === 'guardar' ? 'Guardar' : 'Compartir') : 'Preparando…'
+    })
+  }
+
+  function mostrarFoto() {
+    var modelo = actual
+    var f = modelo.fotos[vi]
+    visor.querySelector('.t').textContent = f.titulo
+    visor.querySelector('.n').textContent = 'BYD ' + modelo.carpeta + ' · ' + (vi + 1) + ' de ' + modelo.fotos.length
+    var img = visor.querySelector('img')
+    img.src = foto(f.id, 500) // la chica ya está bajada: se ve al instante
+    img.alt = modelo.carpeta + ' ' + f.titulo
+    var grande = new Image()
+    grande.onload = function () { if (actual === modelo && modelo.fotos[vi] === f) img.src = grande.src }
+    grande.src = foto(f.id, 1600)
+    visor.querySelector('.flecha.a').hidden = vi === 0
+    visor.querySelector('.flecha.s').hidden = vi === modelo.fotos.length - 1
+    var sigue = function () { return actual === modelo && modelo.fotos[vi] === f }
+    botonesListos(!!blobs[f.id])
+    traer(f.id).then(function () { if (sigue()) botonesListos(true) }, function () { if (sigue()) botonesListos(false, true) })
+    // La siguiente, de paso, así pasar y compartir es inmediato.
+    if (modelo.fotos[vi + 1]) traer(modelo.fotos[vi + 1].id).catch(function () {})
+  }
+
+  function abrirVisor(i) {
+    vi = i
+    if (!visor.isConnected) document.body.appendChild(visor)
+    mostrarFoto()
+    abrirCapa(visor)
+  }
+
+  function mover(d) {
+    var n = vi + d
+    if (!actual || n < 0 || n >= actual.fotos.length) return
+    vi = n
+    mostrarFoto()
+  }
+
+  visor.addEventListener('click', function (e) {
+    var b = e.target.closest('button')
+    if (!b || !actual) return
+    var a = b.dataset.a
+    if (a === 'cerrar') return cerrarConAtras()
+    if (a === 'ant') return mover(-1)
+    if (a === 'sig') return mover(1)
+    var f = actual.fotos[vi]
+    if (!blobs[f.id]) return mostrarFoto() // "Reintentar"
+    var archivo = archivoDe(actual, f)
+    if (a === 'compartir') compartirArchivos([archivo])
+    if (a === 'guardar') guardarArchivo(archivo, archivo.name)
+  })
+
+  // Deslizar el dedo para pasar de foto.
+  var x0 = null, y0 = null
+  visor.addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY }, { passive: true })
+  visor.addEventListener('touchend', function (e) {
+    if (x0 == null) return
+    var dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0
+    x0 = null
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) mover(dx < 0 ? 1 : -1)
+  }, { passive: true })
+
+  // ------------------------------------------- botón en cada ficha
+  // "BYD - Ti 7 DMP" va con la carpeta "Ti 7"; si dos encajan, la más larga.
+  function modeloDeFicha(nombre) {
+    var p = pegado(nombre)
+    var mejor = null
+    modelos.forEach(function (m) {
+      if (m.clave && p.indexOf(m.clave) !== -1 && (!mejor || m.clave.length > mejor.clave.length)) mejor = m
+    })
+    return mejor
+  }
+
+  function ponerBotones() {
+    document.querySelectorAll('#view-fichas .ficha-card').forEach(function (card) {
+      var acciones = card.querySelector('.ficha-actions')
+      if (!acciones || acciones.querySelector('.ficha-btn.fotos')) return
+      var ref = card.querySelector('[data-nombre]')
+      var nombre = ref ? ref.getAttribute('data-nombre') : (card.querySelector('.ficha-nombre') || {}).textContent
+      var modelo = nombre && modeloDeFicha(nombre)
+      if (!modelo) return
+      var b = document.createElement('button')
+      b.type = 'button'
+      b.className = 'ficha-btn fotos'
+      b.innerHTML = ICONO.fotos + '<span>Fotos <b>' + modelo.fotos.length + '</b></span>'
+      b.addEventListener('click', function (e) { e.preventDefault(); abrirGaleria(modelo) })
+      acciones.appendChild(b)
+    })
+  }
+
+  function arrancar() {
+    fetch(FUNCION, { headers: { Authorization: 'Bearer ' + ANON, apikey: ANON } })
+      .then(function (r) { return r.ok ? r.json() : null })
+      .then(function (d) {
+        if (!d || !d.modelos || !d.modelos.length) return
+        modelos = d.modelos
+        ponerBotones()
+      })
+      .catch(function () {})
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancar)
+  else arrancar()
+})()
