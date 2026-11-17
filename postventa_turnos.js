@@ -139,8 +139,8 @@
         return r(db.rpc('horarios_libres', { p_fecha: dia, p_minutos: minutos, p_excluir: excluir || null }))
       },
       darTurno: function (d) {
-        return r(db.rpc('dar_turno', {
-          p_cliente: d.cliente, p_vehiculo: d.vehiculo, p_servicio: d.servicio, p_inicio: d.inicio,
+        return r(db.rpc('dar_turno_servicios', {
+          p_cliente: d.cliente, p_vehiculo: d.vehiculo, p_servicios: d.servicios, p_inicio: d.inicio,
           p_minutos: d.minutos, p_origen: d.origen, p_observaciones: d.observaciones,
           p_sobreturno: d.sobreturno ? true : undefined,
         }))
@@ -151,10 +151,12 @@
         return r(db.rpc('reprogramar_turno', args))
       },
       editarTurno: function (id, d) {
-        return r(db.rpc('editar_turno', {
-          p_turno: id, p_cliente: d.cliente, p_vehiculo: d.vehiculo, p_servicio: d.servicio,
+        var args = {
+          p_turno: id, p_cliente: d.cliente, p_vehiculo: d.vehiculo, p_servicios: d.servicios,
           p_origen: d.origen, p_observaciones: d.observaciones,
-        }))
+        }
+        if (d.minutos) args.p_minutos = d.minutos
+        return r(db.rpc('editar_turno_servicios', args))
       },
       cambiarEstado: function (id, estado, motivo) {
         var cambios = { estado: estado }
@@ -415,6 +417,7 @@
     '.pt-chip small.uno{color:var(--pt-alerta)}',
     '.pt-chip.on{background:var(--pt-acento);color:var(--pt-sobre);box-shadow:var(--pt-sombra-acento);transform:translateY(-1px)}',
     '.pt-chip.on small{color:rgba(15,28,39,.72)}',
+    '.pt-servs .pt-chip{min-width:0;padding:9px 14px;font-size:14px;text-align:center}',
     '.pt-vacio{font-size:13.5px;color:var(--pt-tenue);padding:6px 0}',
     '.pt-resultados{border-radius:14px;margin-top:8px;max-height:240px;overflow:auto;box-shadow:var(--pt-anillo),0 16px 32px -16px rgba(16,24,40,.3);background:#fff}',
     '.pt-res{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--pt-linea);background:#fff;padding:11px 14px;font:inherit;font-size:14px;cursor:pointer;color:var(--pt-tinta)}',
@@ -1017,13 +1020,50 @@
     }
   }
 
-  // datos: { dia, hora, minutos, cliente:{...}, vehiculo:{...}, servicio }
+  // Varios servicios en un turno (Lucía, 16/11): se marcan como chips y la
+  // duración propuesta es la suma de lo que demora cada uno.
+  function servicioPorId(id) { return S.servicios.filter(function (s) { return s.id === id })[0] }
+  function sumaServicios(ids) {
+    var total = ids.reduce(function (a, id) { var s = servicioPorId(id); return a + (s ? s.duracion_minutos : 0) }, 0)
+    return Math.min(total, 720)
+  }
+  function htmlServicios(id, elegidos) {
+    return '<div class="pt-campo ancho" data-c="' + id + '"><label>Servicios * <span style="font-weight:600;color:var(--gris-medio)">(podés marcar varios)</span></label>' +
+      '<div id="pt-' + id + '" class="pt-chips pt-servs">' + S.servicios.map(function (s) {
+        return '<button type="button" class="pt-chip' + (elegidos.indexOf(s.id) >= 0 ? ' on' : '') + '" data-s="' + s.id + '" aria-pressed="' + (elegidos.indexOf(s.id) >= 0) + '">' +
+          esc(s.nombre) + '<small>' + duracionTexto(s.duracion_minutos) + '</small></button>'
+      }).join('') + '</div><div class="pt-ayuda" id="pt-' + id + '-total"></div></div>'
+  }
+  function armarServicios(el, id, elegidos, alCambiar) {
+    var lista = elegidos.slice()
+    var caja = $('#pt-' + id, el), total = $('#pt-' + id + '-total', el)
+    function pintar() {
+      total.textContent = lista.length > 1
+        ? lista.length + ' servicios · ' + duracionTexto(sumaServicios(lista)) + ' en total'
+        : ''
+    }
+    caja.addEventListener('click', function (e) {
+      var b = e.target.closest('.pt-chip'); if (!b) return
+      var i = lista.indexOf(b.dataset.s)
+      if (i >= 0) lista.splice(i, 1); else lista.push(b.dataset.s)
+      b.classList.toggle('on', i < 0); b.setAttribute('aria-pressed', String(i < 0))
+      pintar()
+      alCambiar(lista.slice())
+    })
+    pintar()
+    return {
+      ids: function () { return lista.slice() },
+      nombres: function () { return lista.map(function (x) { var s = servicioPorId(x); return s ? s.nombre : '' }).filter(Boolean).join(' + ') },
+    }
+  }
+
+  // datos: { dia, hora, minutos, cliente:{...}, vehiculo:{...}, servicio (id o lista de ids) }
   function abrirNuevo(datos) {
     if (!S.puedeEditar) return
     datos = datos || {}
     var c = datos.cliente || {}, v = datos.vehiculo || {}
-    var serv = datos.servicio ? S.servicios.filter(function (s) { return s.id === datos.servicio })[0] : null
-    var minutos = datos.minutos || (serv ? serv.duracion_minutos : 60)
+    var elegidos = [].concat(datos.servicio || []).filter(servicioPorId)
+    var minutos = datos.minutos || (elegidos.length ? sumaServicios(elegidos) : 60)
     var dia = datos.dia || hoyISO()
 
     var m = modal(
@@ -1042,10 +1082,7 @@
       '</div>' +
       '<div class="pt-seccion">Turno</div>' +
       '<div class="pt-grilla">' +
-      '<div class="pt-campo" data-c="servicio"><label for="pt-servicio">Servicio *</label><select id="pt-servicio"><option value="">Elegí…</option>' +
-      S.servicios.map(function (s) {
-        return '<option value="' + s.id + '"' + (serv && serv.id === s.id ? ' selected' : '') + '>' + esc(s.nombre) + '</option>'
-      }).join('') + '</select></div>' +
+      htmlServicios('servicio', elegidos) +
       '<div class="pt-campo" data-c="minutos"><label for="pt-minutos">¿Cuánto demora? *</label><select id="pt-minutos">' + opcionesDuracion(minutos) + '</select></div>' +
       '<div class="pt-campo" data-c="dia"><label for="pt-dia">Día *</label><input id="pt-dia" type="date" min="' + hoyISO() + '" value="' + dia + '"></div>' +
       '<div class="pt-campo" data-c="origen"><label for="pt-origen">Lo pidió por</label><select id="pt-origen">' +
@@ -1089,9 +1126,8 @@
     })
     $('#pt-dia', el).addEventListener('change', cargarHoras)
     $('#pt-minutos', el).addEventListener('change', cargarHoras)
-    $('#pt-servicio', el).addEventListener('change', function () {
-      var s = S.servicios.filter(function (x) { return x.id === this.value }, this)[0]
-      if (s) { $('#pt-minutos', el).innerHTML = opcionesDuracion(s.duracion_minutos); cargarHoras() }
+    var servs = armarServicios(el, 'servicio', elegidos, function (ids) {
+      if (ids.length) { $('#pt-minutos', el).innerHTML = opcionesDuracion(sumaServicios(ids)); cargarHoras() }
     })
     cargarHoras()
 
@@ -1163,7 +1199,7 @@
       if (pat && !/^([A-Z]{3}\d{3}|[A-Z]{2}\d{3}[A-Z]{2})$/.test(pat)) falta('patente', 'La patente tiene que ser como ABC123 o AB123CD.')
       var vin = val('vin').replace(/[^A-Za-z0-9]/g, '').toUpperCase()
       if (vin && vin.length !== 17) falta('vin', 'El chasis tiene 17 caracteres (tiene ' + vin.length + ').')
-      if (!val('servicio')) falta('servicio', 'Elegí el servicio.')
+      if (!servs.ids().length) falta('servicio', 'Elegí al menos un servicio.')
       if (!val('dia')) falta('dia', 'Elegí el día.')
       var esSobre = sobre.activo(), horaFinal = esSobre ? sobre.hora() : elegida
       if (!horaFinal) falta(esSobre ? 'sobre-n' : 'hora', esSobre ? 'Elegí la hora del sobreturno.' : 'Elegí un horario (o marcalo como sobreturno).')
@@ -1177,7 +1213,7 @@
           vin: vin, patente: pat, modelo: val('modelo'), fecha_entrega: fechaEntrega,
           titular_nombre: titulo(val('nombre')), titular_apellido: titulo(val('apellido')),
         } : null,
-        servicio: val('servicio'),
+        servicios: servs.ids(),
         inicio: val('dia') + 'T' + horaFinal + ':00-03:00',
         minutos: min,
         sobreturno: esSobre,
@@ -1186,12 +1222,11 @@
       }).then(function (r) {
         m.cerrar()
         refrescarTodo()
-        var serv = S.servicios.filter(function (s) { return s.id === val('servicio') })[0]
         avisoGuardado({
           numero: r.numero,
           cliente_nombre: val('nombre'), cliente_apellido: val('apellido'), cliente_telefono: val('telefono'),
           inicio: val('dia') + 'T' + horaFinal + ':00-03:00', fin: null, modelo: val('modelo'), patente: pat,
-          servicio: serv ? serv.nombre : '', minutos: min, sobreturno: esSobre,
+          servicio: servs.nombres(), minutos: min, sobreturno: esSobre,
         })
       }).catch(function (e) {
         boton.disabled = false; boton.textContent = 'Guardar turno'
@@ -1199,7 +1234,7 @@
         cargarHoras()
       })
     })
-    setTimeout(function () { (c.nombre ? $('#pt-servicio', el) : $('#pt-buscar', el)).focus() }, 50)
+    setTimeout(function () { (c.nombre ? $('#pt-servicio .pt-chip', el) : $('#pt-buscar', el)).focus() }, 50)
   }
 
   function sugerirDias(desde, min, caja, elegir) {
@@ -1404,6 +1439,7 @@
   // servicio, origen y observaciones. Día y hora, con "Reprogramar".
   function abrirEditar(t) {
     var origenes = [['whatsapp', 'WhatsApp'], ['telefono', 'Teléfono'], ['presencial', 'En persona'], ['mail', 'Mail'], ['otro', 'Otro']]
+    var antes = (t.servicio_ids && t.servicio_ids.length ? t.servicio_ids : [t.servicio_id]).filter(servicioPorId)
     var m = modal(
       '<h2>Editar turno' + (t.numero ? ' N.º ' + esc(t.numero) : '') + '</h2>' +
       '<p class="pt-sub">' + esc(diaCorto(t.inicio)) + ' a las ' + esc(hora(t.inicio)) + '. Para cambiar el día o la hora usá <b>Reprogramar</b>.</p>' +
@@ -1418,10 +1454,9 @@
       '</div>' +
       '<div class="pt-seccion">Turno</div>' +
       '<div class="pt-grilla">' +
-      '<div class="pt-campo" data-c="e-servicio"><label for="pt-e-servicio">Servicio *</label><select id="pt-e-servicio"><option value="">Elegí…</option>' +
-      S.servicios.map(function (sv) {
-        return '<option value="' + sv.id + '"' + (sv.id === t.servicio_id ? ' selected' : '') + '>' + esc(sv.nombre) + '</option>'
-      }).join('') + '</select></div>' +
+      htmlServicios('e-servicio', antes) +
+      '<div class="pt-campo" data-c="e-minutos"><label for="pt-e-minutos">¿Cuánto demora? *</label><select id="pt-e-minutos">' + opcionesDuracion(t.minutos) + '</select>' +
+      '<div class="pt-ayuda">Si la cambiás, el turno se alarga o se acorta desde la misma hora.</div></div>' +
       '<div class="pt-campo" data-c="e-origen"><label for="pt-e-origen">Lo pidió por</label><select id="pt-e-origen">' +
       origenes.map(function (o) { return '<option value="' + o[0] + '"' + (o[0] === t.origen ? ' selected' : '') + '>' + o[1] + '</option>' }).join('') +
       '</select></div>' +
@@ -1432,6 +1467,9 @@
       '<button type="button" class="pt-btn" id="pt-e-cancelar">Cancelar</button></div>'
     )
     var el = m.el
+    var servs = armarServicios(el, 'e-servicio', antes, function (ids) {
+      if (ids.length) $('#pt-e-minutos', el).innerHTML = opcionesDuracion(sumaServicios(ids))
+    })
     $('#pt-e-cancelar', el).addEventListener('click', m.cerrar)
     $('#pt-e-guardar', el).addEventListener('click', function () {
       var boton = this
@@ -1453,14 +1491,15 @@
       if (pat && !/^([A-Z]{3}\d{3}|[A-Z]{2}\d{3}[A-Z]{2})$/.test(pat)) falta('e-patente', 'La patente tiene que ser como ABC123 o AB123CD.')
       var vin = val('e-vin').replace(/[^A-Za-z0-9]/g, '').toUpperCase()
       if (vin && vin.length !== 17) falta('e-vin', 'El chasis tiene 17 caracteres (tiene ' + vin.length + ').')
-      if (!val('e-servicio')) falta('e-servicio', 'Elegí el servicio.')
+      if (!servs.ids().length) falta('e-servicio', 'Elegí al menos un servicio.')
       if (errores.length) { var c0 = $('[data-c="' + errores[0] + '"]', el); if (c0) c0.scrollIntoView({ block: 'center', behavior: 'smooth' }); return }
 
       boton.disabled = true; boton.textContent = 'Guardando…'
       api.editarTurno(t.id, {
         cliente: { nombre: titulo(val('e-nombre')), apellido: titulo(val('e-apellido')), telefono: val('e-telefono') },
         vehiculo: { vin: vin, patente: pat, modelo: val('e-modelo') },
-        servicio: val('e-servicio'),
+        servicios: servs.ids(),
+        minutos: +val('e-minutos') !== t.minutos ? +val('e-minutos') : null,
         origen: val('e-origen'),
         observaciones: val('e-obs'),
       }).then(function () {
@@ -1470,7 +1509,7 @@
       }).catch(function (e) {
         boton.disabled = false; boton.textContent = 'Guardar cambios'
         var texto = /function public\.editar_turno|could not find the function/i.test(String(e && e.message))
-          ? 'Falta actualizar la base de datos (migración 0044).' : textoError(e)
+          ? 'Falta actualizar la base de datos (migración 0062).' : textoError(e)
         $('#pt-e-error', el).innerHTML = '<div class="pt-aviso mal">' + esc(texto) + '</div>'
       })
     })
