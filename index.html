@@ -646,7 +646,8 @@
   // Desde el 20/10 todos se quedan en esta página (menos el taller, que sólo
   // ve los turnos): a cualquiera ya reconocido se le saca la puerta en el acto.
   var acceso = window.bydAcceso && window.bydAcceso.leer();
-  if (acceso && acceso.tipo !== 'taller') {
+  // La cuenta sólo de Cargas (0063) tampoco: tema.js ya la mandó a Cargas.
+  if (acceso && acceso.tipo !== 'taller' && acceso.tipo !== 'cargas') {
     var g = document.getElementById('bydGate'); if (g) g.remove();
     body.classList.remove('gate-locked');
     return;
@@ -771,7 +772,7 @@ async function filaEnLaPlanilla(nombre) {
   return null
 }
 
-const leerPerfil = (id) => db.from('perfiles').select('nombre,rol,activo').eq('id', id).maybeSingle()
+const leerPerfil = (id) => db.from('perfiles').select('nombre,rol,activo,solo_cargas').eq('id', id).maybeSingle()
 
 // Reconoce a la persona por su cuenta y la manda a su pantalla. Devuelve
 // { yendo } si se va de acá, { ok } si se queda, o { ok:false, mensaje }.
@@ -803,7 +804,10 @@ async function ubicar(user, opciones = {}) {
   // (ver la vista de administracion al final de esta pagina).
   // "Post Venta" / "Servicios Post Venta" en la planilla: postventa (da turnos).
   // "Taller" / "Técnico": taller, que sólo ve los turnos.
-  const tipo = perfil.rol === 'vendedor' ? 'vendedor'
+  // Con la marca solo_cargas (0063, Florencia Afranile): sólo Cargas y Fichas
+  // Técnicas (las fotos de los modelos), sea cual sea el rol.
+  const tipo = perfil.solo_cargas ? 'cargas'
+    : perfil.rol === 'vendedor' ? 'vendedor'
     : (['tecnico', 'taller'].includes(perfil.rol) || /taller|t[eé]cnico/i.test(fila?.rol || '')) ? 'taller'
     : /jefe/i.test(fila?.rol || '') ? 'jefe'
     : (/post.?venta|servicio/i.test(fila?.rol || '') || perfil.rol === 'asesor_servicio') ? 'postventa'
@@ -816,7 +820,7 @@ async function ubicar(user, opciones = {}) {
   // a su panel: acá está el Tablero con los números de todos. Desde el 29/10 tampoco se vuelve a
   // la página que se abrió con la cuenta ya guardada (un ícono, una pestaña
   // nueva, el Portal): cada vez que alguien entra, arranca acá.
-  const destino = { taller: 'postventa.html', vendedor: 'panel_ventas.html' }[tipo]
+  const destino = { taller: 'postventa.html', vendedor: 'panel_ventas.html', cargas: 'portal/#/cargas' }[tipo]
   if (destino) {
     try { sessionStorage.setItem('bydSalto', '1') } catch (e) {}
     location.replace('./' + destino)

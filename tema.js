@@ -91,6 +91,8 @@
   var MARCAS = ['bydGateOk', 'bydVendorOk', 'bydVendorNombre', 'bydJefeOk']
   // Páginas que nunca pidieron nada para entrar: siguen abiertas.
   var ABIERTAS = /\/(fichas_tecnicas|calculadora_carga|ranking_vendedores|tablero_control)\.html$/
+  // Lo único del hub que abre la cuenta sólo de Cargas (0063).
+  var SOLO_CARGAS_PUEDE = /\/(fichas_tecnicas|calculadora_carga)\.html$/
 
   var ruta = location.pathname
   if (ruta.indexOf('/portal/') !== -1) return // el Portal tiene su propio ingreso
@@ -165,6 +167,16 @@
   // Gerencia tiene el piso confidencial: el vendedor va a la suya (también si
   // llega por un enlace viejo); el jefe ya veía la de Gerencia.
   function herramientas(acceso) {
+    // Lucía, 17/11 (0063): la cuenta sólo de Cargas ve Cargas (en el Portal) y
+    // Fichas Técnicas, donde están las fotos de los modelos. Nada más: de
+    // cualquier otra página del hub se la manda a Cargas.
+    if (acceso.tipo === 'cargas') {
+      if (!SOLO_CARGAS_PUEDE.test(ruta)) {
+        document.documentElement.style.visibility = 'hidden'
+        location.replace(carpeta + 'portal/#/cargas')
+      }
+      return
+    }
     if (acceso.tipo !== 'vendedor') return
     if (/\/lista_precios\.html$/.test(ruta)) {
       document.documentElement.style.visibility = 'hidden'
@@ -473,6 +485,8 @@
   var anterior = -1
   for (var i = rastro.length - 2; i >= 0; i--) if (sirve(rastro[i])) { anterior = i; break }
   var destino = anterior >= 0 ? rastro[anterior] : (enSuInicio ? null : carpeta + inicio)
+  // La cuenta sólo de Cargas (0063) vuelve siempre a Cargas, en el Portal.
+  if (acceso && acceso.tipo === 'cargas') destino = carpeta + 'portal/#/cargas'
 
   function flechaVolver() {
     var btn = document.getElementById('hubBackBtn')
