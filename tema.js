@@ -65,6 +65,61 @@
   setInterval(function () { if (document.visibilityState === 'visible') anotar() }, 60000)
 })();
 
+// Fotos de los modelos (17/11). Fichas Técnicas con ?fotos=1 muestra sólo las
+// fotos: sin las solapas Comparar y Calculadora, sin los PDF y sin los
+// modelos que no tienen fotos; tocar la tapa abre la galería (visual.js mira
+// la clase solo-cargas). Es la vista de la tarjeta "Fotos de Modelos" para
+// todos, y la única que tiene la cuenta sólo de Cargas (Lucía: "que las demás
+// cosas ni siquiera le salgan"). Va antes de pintar para que no asome nada.
+var FOTOS_URL = './fichas_tecnicas.html?fotos=1'
+;(function () {
+  window.bydSoloFotos = function () {
+    var html = document.documentElement
+    if (html.classList.contains('solo-cargas')) return
+    html.classList.add('solo-cargas')
+    var css = document.createElement('style')
+    css.textContent =
+      'html.solo-cargas .tabs-switch,html.solo-cargas #view-comparar,html.solo-cargas #view-carga,' +
+      'html.solo-cargas .ficha-btn.ver,html.solo-cargas .ficha-btn.compartir,html.solo-cargas .fichas-cuenta,' +
+      'html.solo-cargas .ficha-card:not(.con-fotos){display:none !important}' +
+      'html.solo-cargas .ficha-cover::after{content:"FOTOS" !important}'
+    ;(document.head || html).appendChild(css)
+    var titulos = function () {
+      var h1 = document.querySelector('.title-block h1')
+      var p = document.querySelector('.title-block p')
+      if (h1) h1.textContent = 'Fotos de Modelos'
+      if (p) p.textContent = 'Tocá un modelo para ver sus fotos y compartirlas.'
+      document.title = 'Fotos de Modelos'
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', titulos)
+    else titulos()
+  }
+  if (/\/fichas_tecnicas\.html$/.test(location.pathname) && /[?&]fotos=1/.test(location.search)) window.bydSoloFotos()
+
+  // La tarjeta "Fotos de Modelos", al lado de la de Fichas en las Herramientas
+  // del inicio y de los paneles de ventas y del jefe (los paneles son de
+  // Nicolás y los regenera el sync: se agrega desde acá).
+  function tarjeta() {
+    var fichas = document.querySelector('a.card[href="./fichas_tecnicas.html"]')
+    if (!fichas || document.querySelector('a.card[href="' + FOTOS_URL + '"]')) return
+    var a = fichas.cloneNode(true)
+    a.setAttribute('href', FOTOS_URL)
+    var t = a.querySelector('.t'), d = a.querySelector('.d'), icono = a.querySelector('.icon')
+    if (t) t.textContent = 'Fotos de Modelos'
+    if (d) d.textContent = 'Fotos de cada color, interior y baúl para compartir'
+    if (icono) {
+      icono.className = 'icon'
+      icono.style.background = 'linear-gradient(135deg,#7B5CF0,#5338C4)'
+      icono.innerHTML = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="5" width="18" height="15" rx="3" stroke="#fff" stroke-width="2"/><circle cx="9" cy="11" r="2" stroke="#fff" stroke-width="2"/><path d="M21 17l-5-5-9 8" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg>'
+    }
+    fichas.parentNode.insertBefore(a, fichas.nextSibling)
+  }
+  if (/\/(index\.html|panel_ventas\.html|panel_jefe\.html)?$/.test(location.pathname)) {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', tarjeta)
+    else tarjeta()
+  }
+})();
+
 // Quién entró. Va en este archivo porque es el único que carga cada página del
 // hub en el <head>, antes de pintar, incluidas las que regenera la
 // sincronización (a esas se lo agrega sw.js).
@@ -91,8 +146,9 @@
   var MARCAS = ['bydGateOk', 'bydVendorOk', 'bydVendorNombre', 'bydJefeOk']
   // Páginas que nunca pidieron nada para entrar: siguen abiertas.
   var ABIERTAS = /\/(fichas_tecnicas|calculadora_carga|ranking_vendedores|tablero_control)\.html$/
-  // Lo único del hub que abre la cuenta sólo de Cargas (0063).
-  var SOLO_CARGAS_PUEDE = /\/(fichas_tecnicas|calculadora_carga)\.html$/
+  // Lo único del hub que abre la cuenta sólo de Cargas (0063): Fichas, y ahí
+  // nada más que las fotos (ver soloFotos más abajo).
+  var SOLO_CARGAS_PUEDE = /\/fichas_tecnicas\.html$/
 
   var ruta = location.pathname
   if (ruta.indexOf('/portal/') !== -1) return // el Portal tiene su propio ingreso
@@ -174,7 +230,9 @@
       if (!SOLO_CARGAS_PUEDE.test(ruta)) {
         document.documentElement.style.visibility = 'hidden'
         location.replace(carpeta + 'portal/#/cargas')
+        return
       }
+      soloFotos()
       return
     }
     if (acceso.tipo !== 'vendedor') return
@@ -194,12 +252,14 @@
     else sumarAlPanel()
   }
 
+  function soloFotos() { if (window.bydSoloFotos) window.bydSoloFotos() }
+
   // Lo que el vendedor tenía en el inicio y el panel no trae. La página es de
   // Nicolás y la regenera el sync: se agrega desde acá.
   var RAYO = '<path d="M13 2.5 4.5 13.5H11l-1 8 8.5-11H12z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>'
   function sumarAlPanel() {
-    var destinos = { calidad: './calidad.html', cargas: './portal/#/cargas', accesorios: './portal/#/accesorios' }
-    var nombres = { calidad: 'Mi Calidad', cargas: 'Cargas', accesorios: 'Accesorios' }
+    var destinos = { calidad: './calidad.html', cargas: './portal/#/cargas', accesorios: './portal/#/accesorios', fotos: FOTOS_URL }
+    var nombres = { calidad: 'Mi Calidad', cargas: 'Cargas', accesorios: 'Accesorios', fotos: 'Fotos de modelos' }
     var sel = document.getElementById('mainViewSelect')
     if (sel) {
       Object.keys(destinos).forEach(function (valor) {

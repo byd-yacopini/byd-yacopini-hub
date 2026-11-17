@@ -1424,18 +1424,41 @@
       b.innerHTML = ICONO.fotos + '<span>Fotos <b>' + modelo.fotos.length + '</b></span>'
       b.addEventListener('click', function (e) { e.preventDefault(); abrirGaleria(modelo) })
       acciones.appendChild(b)
+      card.classList.add('con-fotos')
+      // La cuenta sólo de Cargas (tema.js) no ve los PDF: la tapa abre las fotos.
+      var tapa = card.querySelector('.ficha-cover')
+      if (tapa) tapa.addEventListener('click', function (e) {
+        if (!soloCargas()) return
+        e.preventDefault()
+        abrirGaleria(modelo)
+      })
     })
+  }
+
+  var soloCargas = function () { return document.documentElement.classList.contains('solo-cargas') }
+
+  // Con la cuenta sólo de Cargas, si las fotos no llegan, la página quedaría
+  // vacía (las fichas se esconden): se avisa.
+  function avisarSinFotos() {
+    if (!soloCargas()) return
+    var grilla = document.querySelector('#view-fichas .ficha-grid')
+    if (!grilla || document.getElementById('sinFotos')) return
+    var p = document.createElement('p')
+    p.id = 'sinFotos'
+    p.style.cssText = 'margin:0 20px 24px;padding:16px;border-radius:18px;background:' + PANEL2 + ';color:' + TINTA + ';font:500 14px Inter,system-ui,sans-serif'
+    p.textContent = 'No pudimos cargar las fotos. Revisá la conexión y volvé a abrir la página.'
+    grilla.parentNode.insertBefore(p, grilla)
   }
 
   function arrancar() {
     fetch(FUNCION, { headers: { Authorization: 'Bearer ' + ANON, apikey: ANON } })
       .then(function (r) { return r.ok ? r.json() : null })
       .then(function (d) {
-        if (!d || !d.modelos || !d.modelos.length) return
+        if (!d || !d.modelos || !d.modelos.length) return avisarSinFotos()
         modelos = d.modelos
         ponerBotones()
       })
-      .catch(function () {})
+      .catch(avisarSinFotos)
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancar)
   else arrancar()
