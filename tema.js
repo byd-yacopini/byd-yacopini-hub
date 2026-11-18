@@ -226,6 +226,14 @@ var FOTOS_URL = './fichas_tecnicas.html?fotos=1'
     // Lucía, 17/11 (0063): la cuenta sólo de Cargas ve Cargas (en el Portal) y
     // Fichas Técnicas, donde están las fotos de los modelos. Nada más: de
     // cualquier otra página del hub se la manda a Cargas.
+    // Lucía, 18/11 (0064): la cuenta sólo de Accesorios (Rol "Visual",
+    // Mauricio Caillet) ve los accesorios con sus precios, en el Portal, y
+    // nada más: de cualquier página del hub va a Accesorios.
+    if (acceso.tipo === 'accesorios') {
+      document.documentElement.style.visibility = 'hidden'
+      location.replace(carpeta + 'portal/#/accesorios')
+      return
+    }
     if (acceso.tipo === 'cargas') {
       if (!SOLO_CARGAS_PUEDE.test(ruta)) {
         document.documentElement.style.visibility = 'hidden'
@@ -547,6 +555,7 @@ var FOTOS_URL = './fichas_tecnicas.html?fotos=1'
   var destino = anterior >= 0 ? rastro[anterior] : (enSuInicio ? null : carpeta + inicio)
   // La cuenta sólo de Cargas (0063) vuelve siempre a Cargas, en el Portal.
   if (acceso && acceso.tipo === 'cargas') destino = carpeta + 'portal/#/cargas'
+  if (acceso && acceso.tipo === 'accesorios') destino = carpeta + 'portal/#/accesorios'
 
   function flechaVolver() {
     var btn = document.getElementById('hubBackBtn')
