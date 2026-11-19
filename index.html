@@ -2851,7 +2851,7 @@ if (data.session) {
   var ultima = sel.value;
 
   sel.addEventListener('change', function (e) {
-    var destinos = { portal: './portal/', postventa: './postventa.html', accesorios: './portal/#/accesorios', cargas: './portal/#/cargas' };
+    var destinos = { portal: './portal/', postventa: './postventa.html', accesorios: './portal/#/accesorios', cargas: './portal/#/cargas', sim: './portal/#/sim' };
     if (!destinos[sel.value]) { ultima = sel.value; return; }
     e.stopImmediatePropagation();
     var destino = destinos[sel.value];
@@ -2860,6 +2860,69 @@ if (data.session) {
     sel.value = ultima;
     window.location.href = destino;
   }, true);
+})();
+</script>
+<script>
+// SIM (0047): Matías y quien tenga la marca ve_sim la tenían como pantalla de
+// entrada del Portal, pero desde el 29/10 todos arrancan acá y a SIM sólo se
+// llegaba metiéndose en "Portal de Calidad". Lucía, 19/11: "que Matías lo
+// vea". Se les suma SIM al desplegable y a Herramientas. Se arma desde acá (y
+// no con `hidden` en el HTML) porque el iPhone muestra igual las opciones
+// escondidas. Lo que cuida los datos sigue siendo la regla de la base.
+(function () {
+  var URL_BASE = 'https://mgicnwnvtfkrxmkmewnt.supabase.co';
+  var ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1naWNud252dGZrcnhta21ld250Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1Nzk5MDIsImV4cCI6MjEwNTE1NTkwMn0.GLWN_wI6Q_6Qu1EGi02oPNrL9wgTj-zbGsJCoIE-HQE';
+  var listo = false;
+
+  function mostrar() {
+    if (listo) return;
+    listo = true;
+    var sel = document.getElementById('mainViewSelect');
+    if (sel && !sel.querySelector('option[value="sim"]')) {
+      var o = document.createElement('option');
+      o.value = 'sim';
+      o.textContent = 'SIM';
+      var portal = sel.querySelector('option[value="portal"]');
+      sel.insertBefore(o, portal ? portal.nextSibling : null);
+    }
+    var molde = document.querySelector('#view-herramientas a.card[href="./portal/"]');
+    if (molde && !document.querySelector('#view-herramientas a.card[href="./portal/#/sim"]')) {
+      var a = molde.cloneNode(true);
+      a.setAttribute('href', './portal/#/sim');
+      a.querySelector('.t').textContent = 'SIM';
+      a.querySelector('.d').textContent = 'Cambios de chip pendientes y aviso al cliente por WhatsApp';
+      var icono = a.querySelector('.icon');
+      icono.style.background = 'linear-gradient(135deg,#E8742A,#B4521A)';
+      icono.innerHTML = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="7" y="2.5" width="10" height="19" rx="2" stroke="#fff" stroke-width="2"/><path d="M11 18h2" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>';
+      molde.parentNode.insertBefore(a, molde);
+    }
+  }
+
+  // El token guardado puede estar vencido justo al abrir, y quien recién entra
+  // con mail y código todavía no tiene la marca: se prueba cada 3 s durante
+  // 2 minutos.
+  function probar(intento) {
+    var cuenta = window.bydAcceso && window.bydAcceso.cuenta();
+    var acceso = window.bydAcceso && window.bydAcceso.leer();
+    if (!cuenta || !cuenta.token || !acceso || acceso.uid !== cuenta.id) {
+      if (intento < 40) setTimeout(function () { probar(intento + 1); }, 3000);
+      return;
+    }
+    fetch(URL_BASE + '/rest/v1/perfiles?select=ve_sim&id=eq.' + encodeURIComponent(cuenta.id), {
+      headers: { apikey: ANON, Authorization: 'Bearer ' + cuenta.token },
+    })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (filas) {
+        if (filas && filas[0] && filas[0].ve_sim) {
+          if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mostrar);
+          else mostrar();
+        }
+      })
+      .catch(function () {
+        if (intento < 40) setTimeout(function () { probar(intento + 1); }, 3000);
+      });
+  }
+  probar(0);
 })();
 </script>
 <script>
