@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BYD Yacopini &middot; Test Drive Exprés</title>
+<script src="tema.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --negro:#0A0A0A; --carbon:#2A2A2A; --gris-oscuro:#4A4A4A; --gris-medio:#8C8C8C; --gris-claro:#D4D4D4; --gris-fondo:#F2F2F2;
+    --blanco:#FFFFFF; --azul:#1565D8; --verde:#1B7F4C; --ambar:#D89614; --rojo:#C0392B;
+  }
+  /* Esta pantalla se ve siempre en claro: la firma y el deslinde tienen que verse como van a quedar. */
+  html[data-tema="oscuro"]{ filter:none !important; background:#fff !important; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--gris-fondo); color:var(--carbon); font-family:'Segoe UI', Arial, Helvetica, sans-serif; -webkit-text-size-adjust:100%; }
+  .app{ max-width:760px; margin:0 auto; padding:0 0 110px; }
+  .app-topbar{ background:var(--negro); padding:18px 20px; }
+  .app-topbar b{ color:#fff; font-size:15px; letter-spacing:.3px; }
+  .wrap{ padding:16px; }
+  h1{ font-size:21px; font-weight:800; margin:4px 0 4px; color:var(--negro); }
+  h2{ font-size:16px; font-weight:800; margin:0 0 10px; color:var(--negro); }
+  .sub{ font-size:12.5px; color:var(--gris-oscuro); margin:0 0 14px; line-height:1.5; }
+  .vista{ display:none; }
+  .vista.activa{ display:block; }
+
+  .btn{ display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:48px; padding:0 18px; border-radius:12px; border:1px solid var(--gris-claro); background:#fff; color:var(--carbon); font-family:inherit; font-size:15px; font-weight:700; cursor:pointer; }
+  .btn:disabled{ opacity:.5; cursor:default; }
+  .btn.principal{ background:var(--azul); border-color:var(--azul); color:#fff; }
+  .btn.oscuro{ background:var(--negro); border-color:var(--negro); color:#fff; }
+  .btn.verde{ background:#25D366; border-color:#25D366; color:#fff; }
+  .btn.grande{ min-height:56px; font-size:17px; width:100%; }
+  .btn.chico{ min-height:38px; padding:0 12px; font-size:13px; border-radius:10px; }
+  .btn.peligro{ color:var(--rojo); }
+  .acciones{ display:flex; gap:8px; flex-wrap:wrap; margin:0 0 14px; }
+
+  .card{ background:#fff; border:1px solid var(--gris-claro); border-radius:14px; padding:14px 16px; margin-bottom:10px; }
+  .ev{ display:flex; align-items:center; gap:12px; cursor:pointer; }
+  .ev .cuerpo{ flex:1; min-width:0; }
+  .ev .t{ font-size:16px; font-weight:800; color:var(--negro); }
+  .ev .d{ font-size:12.5px; color:var(--gris-oscuro); margin-top:2px; }
+  .ev .n{ font-size:22px; font-weight:800; color:var(--negro); text-align:right; line-height:1; }
+  .ev .n small{ display:block; font-size:10.5px; font-weight:700; color:var(--gris-medio); letter-spacing:.4px; text-transform:uppercase; margin-top:4px; }
+  .pill{ display:inline-block; font-size:10.5px; font-weight:800; letter-spacing:.4px; text-transform:uppercase; padding:3px 9px; border-radius:20px; margin-right:6px; }
+  .pill.abierto{ background:#E3F5EA; color:#1D6B40; }
+  .pill.cerrado{ background:#ECECEC; color:#6B6B6B; }
+  .grupo{ font-size:11px; font-weight:700; letter-spacing:.6px; text-transform:uppercase; color:var(--gris-medio); margin:20px 4px 8px; }
+  .vacio{ text-align:center; color:var(--gris-medio); font-size:13.5px; padding:26px 10px; }
+
+  label{ display:block; font-size:11px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; color:var(--gris-medio); margin:0 0 5px; }
+  input[type=text], input[type=tel], input[type=email], input[type=date]{ display:block; width:100%; min-height:50px; padding:0 14px; font-family:inherit; font-size:16px; border:1px solid var(--gris-claro); border-radius:12px; background:#fff; color:var(--negro); }
+  input:focus{ outline:2px solid var(--azul); outline-offset:1px; }
+  .campo{ margin-bottom:14px; }
+  .campo small{ display:block; font-size:12px; color:var(--gris-medio); margin-top:5px; }
+  .fila2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .dato-fijo{ background:#fff; border:1px dashed var(--gris-claro); border-radius:12px; padding:10px 14px; font-size:13.5px; color:var(--gris-oscuro); margin-bottom:14px; line-height:1.5; }
+  .dato-fijo b{ color:var(--negro); }
+
+  .aviso{ border-radius:10px; padding:10px 12px; font-size:13px; line-height:1.5; margin-bottom:12px; }
+  .aviso.mal{ background:#FBEAEA; border:1px solid #E7B8B8; color:#8A2020; }
+  .aviso.ok{ background:#E8F5E9; border:1px solid #BFE0C3; color:#1D6B40; }
+  .aviso.info{ background:#EEF4FF; border:1px solid #C9DAFB; color:#1F3F7A; }
+
+  /* Deslinde en pantalla */
+  .papel{ background:#fff; border:1px solid var(--gris-claro); border-radius:14px; padding:16px; max-height:46vh; overflow:auto; -webkit-overflow-scrolling:touch; margin-bottom:14px; }
+  .papel.entero{ max-height:none; }
+  .doc{ font-family:Arial, Helvetica, sans-serif; color:#111; font-size:12.5px; line-height:1.5; }
+  .doc .cab{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:16px; }
+  .doc .marca{ font-weight:900; font-size:17px; letter-spacing:.5px; }
+  .doc .marca span{ display:block; font-size:10.5px; font-weight:700; letter-spacing:1.6px; color:#555; }
+  .doc .num{ font-weight:800; font-size:12px; text-align:right; }
+  .doc .dir{ font-size:11.5px; color:#444; margin-bottom:14px; }
+  .doc h3{ text-align:center; font-size:16px; font-weight:800; margin:6px 0 14px; }
+  .doc h4{ font-size:12.5px; font-weight:800; margin:14px 0 4px; }
+  .doc p{ margin:0 0 8px; text-align:justify; }
+  .doc ol{ margin:0 0 8px 20px; padding:0; }
+  .doc .datos div{ margin:0 0 2px; }
+  .doc .firma{ margin-top:22px; display:flex; gap:28px; align-items:flex-end; }
+  .doc .firma .caja{ width:290px; }
+  .doc .firma img{ display:block; width:100%; height:100px; object-fit:contain; border-bottom:1.5px solid #111; }
+  .doc .firma .linea{ border-bottom:1.5px solid #111; height:100px; }
+  .doc .firma .cap{ font-size:11px; color:#555; padding-top:4px; }
+  .doc .pie{ margin-top:18px; padding-top:8px; border-top:1px solid #ddd; font-size:10px; color:#777; line-height:1.5; }
+  #pdfOculto{ position:fixed; left:-10000px; top:0; width:794px; background:#fff; padding:40px 52px; }
+  #pdfOculto .doc{ font-size:11.2px; line-height:1.4; }
+  #pdfOculto .doc h3{ font-size:15px; margin:4px 0 10px; }
+  #pdfOculto .doc h4{ font-size:11.5px; margin:10px 0 3px; }
+  #pdfOculto .doc p{ margin:0 0 6px; }
+  #pdfOculto .doc .cab{ margin-bottom:10px; }
+  #pdfOculto .doc .firma{ margin-top:14px; }
+  #pdfOculto .doc .firma img, #pdfOculto .doc .firma .linea{ height:84px; }
+
+  .firma-pad{ background:#fff; border:2px dashed var(--gris-claro); border-radius:14px; position:relative; margin-bottom:8px; }
+  .firma-pad canvas{ display:block; width:100%; height:230px; touch-action:none; cursor:crosshair; border-radius:12px; }
+  .firma-pad .guia{ position:absolute; left:16px; right:16px; bottom:46px; border-bottom:1px solid #C9C9C9; pointer-events:none; }
+  .firma-pad .rotulo{ position:absolute; left:0; right:0; bottom:18px; text-align:center; font-size:12px; color:#A0A0A0; pointer-events:none; }
+  label.check{ text-transform:none; letter-spacing:normal; font-weight:500; }
+  .check{ display:flex; gap:12px; align-items:flex-start; background:#fff; border:1px solid var(--gris-claro); border-radius:12px; padding:12px 14px; margin-bottom:14px; font-size:14px; line-height:1.45; color:var(--negro); cursor:pointer; }
+  .check input{ flex:none; width:22px; height:22px; margin-top:1px; accent-color:var(--azul); }
+
+  table.reg{ width:100%; border-collapse:collapse; font-size:13.5px; }
+  table.reg td{ padding:11px 8px; border-top:1px solid var(--gris-fondo); vertical-align:middle; }
+  table.reg tr:first-child td{ border-top:0; }
+  table.reg .nro{ width:44px; font-weight:800; color:var(--gris-medio); font-variant-numeric:tabular-nums; }
+  table.reg .nom b{ color:var(--negro); }
+  table.reg .nom span{ display:block; font-size:12px; color:var(--gris-oscuro); }
+
+  .listo{ text-align:center; padding:18px 6px 6px; }
+  .listo .tilde{ width:72px; height:72px; border-radius:50%; background:#E3F5EA; color:#1B7F4C; display:flex; align-items:center; justify-content:center; margin:0 auto 14px; font-size:38px; font-weight:800; }
+  .listo h1{ font-size:24px; }
+  .modal{ position:fixed; inset:0; background:rgba(10,10,10,.55); display:none; align-items:flex-end; justify-content:center; z-index:2000; }
+  .modal.abierto{ display:flex; }
+  .modal .hoja{ background:#fff; width:100%; max-width:560px; border-radius:20px 20px 0 0; padding:18px 18px 26px; }
+  #toast{ position:fixed; left:50%; bottom:84px; transform:translateX(-50%); background:#0A0A0A; color:#fff; font-size:13.5px; padding:11px 16px; border-radius:12px; z-index:3000; display:none; max-width:90%; text-align:center; }
+</style>
+</head>
+<body>
+<div class="app-topbar"><b>BYD Yacopini &middot; Test Drive Exprés</b></div>
+<div class="app"><div class="wrap">
+
+  <div id="aviso"></div>
+
+  <!-- 1. Eventos -->
+  <section class="vista activa" id="vEventos">
+    <h1>Test Drive Exprés</h1>
+    <p class="sub">Para eventos: elegí el evento donde estás. Cada cliente que prueba un vehículo firma el deslinde con el dedo en esta pantalla y queda registrado a tu nombre. No reemplaza al remito de salida del vehículo (eso sigue en "Remitos de Test Drive").</p>
+    <div class="acciones" id="accionesEventos" style="display:none;"><button type="button" class="btn principal" id="btnNuevoEvento">+ Nuevo evento</button></div>
+    <div id="listaEventos"><div class="vacio">Cargando…</div></div>
+  </section>
+
+  <!-- 2. Un evento -->
+  <section class="vista" id="vEvento">
+    <div class="acciones"><button type="button" class="btn chico" id="btnVolverEventos">&larr; Eventos</button></div>
+    <h1 id="evTitulo"></h1>
+    <p class="sub" id="evSub"></p>
+    <button type="button" class="btn principal grande" id="btnNuevoCliente" style="margin-bottom:14px;">+ Nuevo cliente</button>
+    <div class="acciones">
+      <button type="button" class="btn" id="btnExcel">Descargar Excel</button>
+      <button type="button" class="btn peligro" id="btnCerrarEvento" style="display:none;">Cerrar evento</button>
+      <button type="button" class="btn" id="btnReabrirEvento" style="display:none;">Reabrir evento</button>
+    </div>
+    <div class="grupo" id="evGrupo">Clientes cargados</div>
+    <div class="card" id="listaRegistros"><div class="vacio">Cargando…</div></div>
+  </section>
+
+  <!-- 3. Datos del cliente -->
+  <section class="vista" id="vDatos">
+    <div class="acciones"><button type="button" class="btn chico" id="btnCancelarDatos">&larr; Cancelar</button></div>
+    <h1>Datos del cliente</h1>
+    <p class="sub" id="datosSub"></p>
+    <form id="formDatos" autocomplete="off" novalidate>
+      <div class="fila2">
+        <div class="campo"><label for="fNombre">Nombre</label><input type="text" id="fNombre" autocapitalize="words" autocomplete="off"></div>
+        <div class="campo"><label for="fApellido">Apellido</label><input type="text" id="fApellido" autocapitalize="words" autocomplete="off"></div>
+      </div>
+      <div class="campo"><label for="fDni">DNI</label><input type="text" id="fDni" inputmode="numeric" placeholder="Sin puntos" autocomplete="off"></div>
+      <div class="campo"><label for="fTel">Teléfono</label><input type="tel" id="fTel" inputmode="tel" placeholder="Ej: 261 555 1234" autocomplete="off"></div>
+      <div class="campo"><label for="fMail">Mail (opcional)</label><input type="email" id="fMail" inputmode="email" autocapitalize="none" autocomplete="off"></div>
+      <div class="dato-fijo">Carga: <b id="datoVendedor"></b><br>Fecha de carga: <b id="datoFecha"></b></div>
+      <div id="avisoDatos"></div>
+      <button type="submit" class="btn principal grande">Continuar al deslinde</button>
+    </form>
+  </section>
+
+  <!-- 4. Deslinde y firma -->
+  <section class="vista" id="vFirma">
+    <div class="acciones"><button type="button" class="btn chico" id="btnVolverDatos">&larr; Volver a los datos</button></div>
+    <h1>Deslinde de responsabilidad</h1>
+    <p class="sub">Pasale el teléfono al cliente: que lea el deslinde y firme con el dedo en el recuadro.</p>
+    <div class="papel"><div class="doc" id="docPantalla"></div></div>
+    <label class="check" for="chkLic"><input type="checkbox" id="chkLic"><span>Verifiqué que el cliente presentó su <b>licencia de conducir vigente</b>.</span></label>
+    <label>Firma del cliente</label>
+    <div class="firma-pad"><canvas id="lienzo"></canvas><div class="guia"></div><div class="rotulo">Firmá acá con el dedo</div></div>
+    <div class="acciones"><button type="button" class="btn chico" id="btnBorrarFirma">Borrar firma</button></div>
+    <div id="avisoFirma"></div>
+    <button type="button" class="btn oscuro grande" id="btnRegistrar" disabled>Firmar y registrar</button>
+  </section>
+
+  <!-- 5. Listo -->
+  <section class="vista" id="vListo">
+    <div class="listo">
+      <div class="tilde">&#10003;</div>
+      <h1 id="listoTitulo">Registrado</h1>
+      <p class="sub" id="listoSub"></p>
+    </div>
+    <div id="avisoListo"></div>
+    <button type="button" class="btn verde grande" id="btnWaListo" style="margin-bottom:10px;">Enviar por WhatsApp</button>
+    <button type="button" class="btn grande" id="btnPdfListo" style="margin-bottom:10px;">Descargar PDF</button>
+    <button type="button" class="btn principal grande" id="btnOtroCliente" style="margin-bottom:10px;">Cargar otro cliente</button>
+    <button type="button" class="btn grande" id="btnAlEvento">Ver el evento</button>
+  </section>
+
+  <!-- 6. Ver un deslinde ya firmado -->
+  <section class="vista" id="vVer">
+    <div class="acciones"><button type="button" class="btn chico" id="btnVolverVer">&larr; Volver</button></div>
+    <h1 id="verTitulo">Deslinde firmado</h1>
+    <div id="avisoVer"></div>
+    <div class="acciones">
+      <button type="button" class="btn verde" id="btnWaVer">Enviar por WhatsApp</button>
+      <button type="button" class="btn" id="btnPdfVer">Descargar PDF</button>
+    </div>
+    <div class="papel entero"><div class="doc" id="docVer"><div class="vacio">Cargando…</div></div></div>
+  </section>
+
+</div></div>
+
+<!-- Nuevo evento -->
+<div class="modal" id="modalEvento">
+  <div class="hoja">
+    <h2>Nuevo evento</h2>
+    <div class="campo"><label for="eNombre">Nombre del evento</label><input type="text" id="eNombre" placeholder="Ej: Expo Mendoza" autocomplete="off"></div>
+    <div class="campo"><label for="eLugar">Lugar (opcional)</label><input type="text" id="eLugar" placeholder="Ej: Arístides Villanueva" autocomplete="off"></div>
+    <div class="campo"><label for="eFecha">Fecha</label><input type="date" id="eFecha"></div>
+    <div id="avisoEvento"></div>
+    <div class="acciones" style="margin:0;">
+      <button type="button" class="btn principal" id="btnCrearEvento" style="flex:1;">Crear evento</button>
+      <button type="button" class="btn" id="btnCancelarEvento">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div id="pdfOculto"></div>
+<div id="toast"></div>
+
+<script>
+(function(){
+  var SUPA_URL = 'https://mgicnwnvtfkrxmkmewnt.supabase.co';
+  var SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1naWNud252dGZrcnhta21ld250Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1Nzk5MDIsImV4cCI6MjEwNTE1NTkwMn0.GLWN_wI6Q_6Qu1EGi02oPNrL9wgTj-zbGsJCoIE-HQE';
+  var TZ = 'America/Argentina/Mendoza';
+  var TEXTO_VERSION = 'v1';
+  var MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+  function $(id){ return document.getElementById(id); }
+  function esc(s){ var d = document.createElement('div'); d.textContent = (s == null ? '' : String(s)); return d.innerHTML; }
+  function titulo(s){ return String(s || '').trim().toLowerCase().replace(/(^|[\s'-])(\S)/g, function(m, a, b){ return a + b.toUpperCase(); }); }
+  function pad(n){ return (n < 10 ? '0' : '') + n; }
+  function partes(fecha){
+    var p = {}; new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false })
+      .formatToParts(fecha).forEach(function(x){ p[x.type] = x.value; });
+    return { anio: +p.year, mes: +p.month, dia: +p.day, hora: pad(+p.hour % 24), min: p.minute };
+  }
+  function fechaHora(iso){ var p = partes(new Date(iso)); return pad(p.dia) + '/' + pad(p.mes) + '/' + p.anio + ' ' + p.hora + ':' + p.min; }
+  function soloFecha(iso){ var p = partes(new Date(iso)); return pad(p.dia) + '/' + pad(p.mes) + '/' + p.anio; }
+  function hoyISO(){ var p = partes(new Date()); return p.anio + '-' + pad(p.mes) + '-' + pad(p.dia); }
+  function fechaDeDia(s){ var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(s || '')); return m ? m[3] + '/' + m[2] + '/' + m[1] : ''; }
+
+  var toastT = null;
+  function toast(msg){ var t = $('toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(toastT); toastT = setTimeout(function(){ t.style.display = 'none'; }, 3200); }
+  function aviso(id, tipo, texto){ $(id).innerHTML = texto ? '<div class="aviso ' + tipo + '">' + esc(texto) + '</div>' : ''; }
+
+  function textoError(e){
+    var m = String(e && (e.message || e.details || e) || '');
+    if (/cerrado/i.test(m)) return 'El evento está cerrado: ya no se pueden cargar más clientes.';
+    if (/jwt|session|sesi[oó]n|not authenticated/i.test(m)) return 'Tu sesión venció. Volvé a entrar al hub.';
+    if (/row-level security|permission denied/i.test(m)) return 'Tu usuario no tiene permiso para hacer esto.';
+    if (/does not exist|schema cache|could not find/i.test(m)) return 'Falta crear las tablas de Test Drive Exprés en la base de datos.';
+    if (/Failed to fetch|NetworkError|Load failed/i.test(m)) return 'No hay conexión. Revisá la señal y probá de nuevo.';
+    return m || 'Ocurrió un error. Probá de nuevo.';
+  }
+
+  // ---------- Sesión y perfil ----------
+  var db = window.supabase ? window.supabase.createClient(SUPA_URL, SUPA_ANON) : null;
+  var YO = { uid: null, nombre: '', rol: '', gestiona: false };
+  var EVENTO = null;        // evento abierto en pantalla
+  var NUEVO = null;         // datos del cliente que se está cargando
+  var ULTIMO = null;        // último registro guardado (para la pantalla "Listo")
+  var VER = null;           // registro que se mira
+  var pdfs = {};            // id -> promesa del PDF
+
+  function mostrar(id){
+    ['vEventos','vEvento','vDatos','vFirma','vListo','vVer'].forEach(function(v){ $(v).classList.toggle('activa', v === id); });
+    aviso('aviso', '', '');
+    window.scrollTo(0, 0);
+  }
+
+  function iniciar(){
+    if (!db){ aviso('aviso', 'mal', 'No se pudo cargar el acceso del hub. Recargá la página.'); return; }
+    db.auth.getSession().then(function(r){
+      var ses = r && r.data && r.data.session;
+      if (!ses){ location.replace('./index.html?volver=test_drive_express.html'); throw new Error('sin sesión'); }
+      YO.uid = ses.user.id;
+      return db.from('perfiles').select('nombre,rol,activo').eq('id', YO.uid).maybeSingle();
+    }).then(function(r){
+      var p = r && r.data;
+      if (!p || !p.activo){ throw new Error('Tu usuario no está activo.'); }
+      YO.nombre = titulo(p.nombre);
+      YO.rol = p.rol;
+      var ac = null; try { ac = window.bydAcceso && window.bydAcceso.leer(); } catch (e) {}
+      var tipo = ac && ac.tipo;
+      // Crean eventos gerencia y jefe de ventas. La base lo exige también (gerencia / admin).
+      YO.gestiona = (p.rol === 'gerencia' || p.rol === 'admin') && (!tipo || tipo === 'gerencia' || tipo === 'jefe');
+      $('accionesEventos').style.display = YO.gestiona ? 'flex' : 'none';
+      return cargarEventos();
+    }).catch(function(e){
+      if (String(e && e.message) === 'sin sesión') return;
+      aviso('aviso', 'mal', textoError(e)); $('listaEventos').innerHTML = '';
+    });
+  }
+
+  // ---------- Eventos ----------
+  function cargarEventos(){
+    return db.from('td_eventos').select('id,nombre,lugar,fecha,estado,td_registros(count)')
+      .order('fecha', { ascending: false }).order('created_at', { ascending: false })
+      .then(function(r){
+        if (r.error) throw r.error;
+        dibujarEventos(r.data || []);
+      }).catch(function(e){ $('listaEventos').innerHTML = ''; aviso('aviso', 'mal', textoError(e)); });
+  }
+  function cuentaDe(ev){ return ev.td_registros && ev.td_registros[0] ? ev.td_registros[0].count : 0; }
+  function dibujarEventos(lista){
+    if (!lista.length){
+      $('listaEventos').innerHTML = '<div class="card vacio">' + (YO.gestiona ? 'Todavía no hay eventos. Creá el primero con "+ Nuevo evento".' : 'No hay eventos abiertos todavía. Cuando gerencia cree uno, aparece acá.') + '</div>';
+      return;
+    }
+    var abiertos = lista.filter(function(e){ return e.estado === 'abierto'; });
+    var cerrados = lista.filter(function(e){ return e.estado !== 'abierto'; });
+    function tarjeta(e){
+      return '<div class="card ev" data-id="' + esc(e.id) + '"><div class="cuerpo"><div class="t">' + esc(e.nombre) + '</div>' +
+        '<div class="d"><span class="pill ' + e.estado + '">' + (e.estado === 'abierto' ? 'Abierto' : 'Cerrado') + '</span>' + esc(fechaDeDia(e.fecha)) + (e.lugar ? ' · ' + esc(e.lugar) : '') + '</div></div>' +
+        '<div class="n">' + cuentaDe(e) + '<small>' + (YO.gestiona ? 'clientes' : 'tuyos') + '</small></div></div>';
+    }
+    $('listaEventos').innerHTML =
+      (abiertos.length ? '<div class="grupo" style="margin-top:6px;">Abiertos</div>' + abiertos.map(tarjeta).join('') : '<div class="card vacio">No hay eventos abiertos ahora.</div>') +
+      (cerrados.length ? '<div class="grupo">Cerrados</div>' + cerrados.map(tarjeta).join('') : '');
+    Array.prototype.forEach.call($('listaEventos').querySelectorAll('.ev'), function(el){
+      el.addEventListener('click', function(){
+        var ev = lista.filter(function(x){ return x.id === el.getAttribute('data-id'); })[0];
+        if (ev) abrirEvento(ev);
+      });
+    });
+  }
+
+  $('btnNuevoEvento').addEventListener('click', function(){
+    $('eNombre').value = ''; $('eLugar').value = ''; $('eFecha').value = hoyISO(); aviso('avisoEvento', '', '');
+    $('modalEvento').classList.add('abierto'); setTimeout(function(){ $('eNombre').focus(); }, 50);
+  });
+  $('btnCancelarEvento').addEventListener('click', function(){ $('modalEvento').classList.remove('abierto'); });
+  $('btnCrearEvento').addEventListener('click', function(){
+    var nombre = $('eNombre').value.trim(), lugar = $('eLugar').value.trim(), fecha = $('eFecha').value;
+    if (nombre.length < 2){ aviso('avisoEvento', 'mal', 'Poné el nombre del evento.'); return; }
+    if (!fecha){ aviso('avisoEvento', 'mal', 'Elegí la fecha.'); return; }
+    var btn = $('btnCrearEvento'); btn.disabled = true;
+    db.from('td_eventos').insert({ nombre: nombre, lugar: lugar || null, fecha: fecha }).select('id').single().then(function(r){
+      btn.disabled = false;
+      if (r.error){ aviso('avisoEvento', 'mal', textoError(r.error)); return; }
+      $('modalEvento').classList.remove('abierto');
+      toast('Evento creado. Ya lo ven los vendedores.');
+      cargarEventos();
+    }).catch(function(e){ btn.disabled = false; aviso('avisoEvento', 'mal', textoError(e)); });
+  });
+
+  // ---------- Un evento ----------
+  function abrirEvento(ev){
+    EVENTO = ev;
+    $('evTitulo').textContent = ev.nombre;
+    var abierto = ev.estado === 'abierto';
+    $('evSub').innerHTML = '<span class="pill ' + ev.estado + '">' + (abierto ? 'Abierto' : 'Cerrado') + '</span>' + esc(fechaDeDia(ev.fecha)) + (ev.lugar ? ' · ' + esc(ev.lugar) : '');
+    $('btnNuevoCliente').style.display = abierto ? 'flex' : 'none';
+    $('btnCerrarEvento').style.display = (YO.gestiona && abierto) ? '' : 'none';
+    $('btnReabrirEvento').style.display = (YO.gestiona && !abierto) ? '' : 'none';
+    $('evGrupo').textContent = YO.gestiona ? 'Clientes cargados (todos los vendedores)' : 'Tus clientes en este evento';
+    mostrar('vEvento');
+    cargarRegistros();
+  }
+  var REGISTROS = [];
+  function cargarRegistros(){
+    $('listaRegistros').innerHTML = '<div class="vacio">Cargando…</div>';
+    db.from('td_registros').select('id,numero,nombre,apellido,dni,telefono,email,vendedor_nombre,created_at')
+      .eq('evento_id', EVENTO.id).order('numero', { ascending: false }).then(function(r){
+        if (r.error) throw r.error;
+        REGISTROS = r.data || [];
+        if (!REGISTROS.length){ $('listaRegistros').innerHTML = '<div class="vacio">Todavía no hay clientes cargados.</div>'; return; }
+        $('listaRegistros').innerHTML = '<table class="reg"><tbody>' + REGISTROS.map(function(x){
+          return '<tr data-id="' + esc(x.id) + '"><td class="nro">' + x.numero + '</td><td class="nom"><b>' + esc(titulo(x.apellido) + ', ' + titulo(x.nombre)) + '</b><span>' +
+            (YO.gestiona ? esc(titulo(x.vendedor_nombre)) + ' · ' : '') + esc(fechaHora(x.created_at)) + '</span></td><td style="text-align:right;"><button type="button" class="btn chico">Ver</button></td></tr>';
+        }).join('') + '</tbody></table>';
+        Array.prototype.forEach.call($('listaRegistros').querySelectorAll('tr'), function(tr){
+          tr.addEventListener('click', function(){ verRegistro(tr.getAttribute('data-id')); });
+        });
+      }).catch(function(e){ $('listaRegistros').innerHTML = ''; aviso('aviso', 'mal', textoError(e)); });
+  }
+  $('btnVolverEventos').addEventListener('click', function(){ mostrar('vEventos'); cargarEventos(); });
+  $('btnAlEvento').addEventListener('click', function(){ abrirEvento(EVENTO); });
+
+  function cambiarEstado(estado){
+    var cambios = estado === 'cerrado' ? { estado: 'cerrado', cerrado_at: new Date().toISOString() } : { estado: 'abierto', cerrado_at: null };
+    db.from('td_eventos').update(cambios).eq('id', EVENTO.id).select('id').then(function(r){
+      if (r.error) throw r.error;
+      if (!r.data || !r.data.length) throw new Error('No tenés permiso para cambiar este evento.');
+      EVENTO.estado = estado; abrirEvento(EVENTO);
+      toast(estado === 'cerrado' ? 'Evento cerrado.' : 'Evento reabierto.');
+    }).catch(function(e){ aviso('aviso', 'mal', textoError(e)); });
+  }
+  $('btnCerrarEvento').addEventListener('click', function(){
+    if (confirm('¿Cerrar el evento? Los vendedores ya no van a poder cargar más clientes (podés reabrirlo después).')) cambiarEstado('cerrado');
+  });
+  $('btnReabrirEvento').addEventListener('click', function(){ cambiarEstado('abierto'); });
+
+  // ---------- Excel ----------
+  function nombreHoja(s, usados){
+    var base = String(s || 'Sin nombre').replace(/[\\\/\?\*\[\]:]/g, ' ').trim().slice(0, 28) || 'Hoja';
+    var n = base, i = 2; while (usados[n]){ n = base.slice(0, 26) + ' ' + i; i++; }
+    usados[n] = 1; return n;
+  }
+  function bajarExcel(){
+    if (!window.XLSX){ toast('No se pudo cargar el generador de Excel. Recargá la página.'); return; }
+    var btn = $('btnExcel'); btn.disabled = true;
+    db.from('td_registros').select('numero,nombre,apellido,dni,telefono,email,vendedor_nombre,created_at')
+      .eq('evento_id', EVENTO.id).order('numero', { ascending: true }).then(function(r){
+        btn.disabled = false;
+        if (r.error) throw r.error;
+        var filas = (r.data || []);
+        if (!filas.length){ toast('Todavía no hay clientes para descargar.'); return; }
+        function fila(x){ return { 'N°': x.numero, 'Nombre': titulo(x.nombre), 'Apellido': titulo(x.apellido), 'DNI': x.dni, 'Teléfono': x.telefono, 'Mail': x.email || '', 'Vendedor': titulo(x.vendedor_nombre), 'Fecha de carga': fechaHora(x.created_at), 'Evento': EVENTO.nombre }; }
+        var cols = [{ wch: 5 }, { wch: 18 }, { wch: 18 }, { wch: 12 }, { wch: 16 }, { wch: 30 }, { wch: 24 }, { wch: 17 }, { wch: 24 }];
+        var wb = XLSX.utils.book_new(), usados = {};
+        function hoja(nombre, datos){
+          var ws = XLSX.utils.json_to_sheet(datos.map(fila)); ws['!cols'] = cols;
+          XLSX.utils.book_append_sheet(wb, ws, nombreHoja(nombre, usados));
+        }
+        if (YO.gestiona){
+          hoja('Todos', filas);
+          var porVend = {}; filas.forEach(function(x){ (porVend[x.vendedor_nombre] = porVend[x.vendedor_nombre] || []).push(x); });
+          Object.keys(porVend).sort().forEach(function(v){ hoja(titulo(v), porVend[v]); });
+        } else {
+          hoja('Mis clientes', filas);
+        }
+        var archivo = 'TestDriveExpres_' + EVENTO.nombre.replace(/[^\w\-]+/g, '_').slice(0, 40) + '_' + EVENTO.fecha + '.xlsx';
+        XLSX.writeFile(wb, archivo);
+      }).catch(function(e){ btn.disabled = false; aviso('aviso', 'mal', textoError(e)); });
+  }
+  $('btnExcel').addEventListener('click', bajarExcel);
+
+  // ---------- Datos del cliente ----------
+  $('btnNuevoCliente').addEventListener('click', function(){
+    ['fNombre','fApellido','fDni','fTel','fMail'].forEach(function(id){ $(id).value = ''; });
+    aviso('avisoDatos', '', '');
+    $('datosSub').textContent = 'Evento: ' + EVENTO.nombre;
+    $('datoVendedor').textContent = YO.nombre;
+    $('datoFecha').textContent = fechaHora(new Date().toISOString());
+    mostrar('vDatos'); setTimeout(function(){ $('fNombre').focus(); }, 60);
+  });
+  $('btnCancelarDatos').addEventListener('click', function(){ abrirEvento(EVENTO); });
+  $('btnVolverDatos').addEventListener('click', function(){ mostrar('vDatos'); });
+
+  $('formDatos').addEventListener('submit', function(ev){
+    ev.preventDefault();
+    var d = {
+      nombre: $('fNombre').value.trim(), apellido: $('fApellido').value.trim(),
+      dni: $('fDni').value.replace(/\D/g, ''), telefono: $('fTel').value.trim(), email: $('fMail').value.trim()
+    };
+    var falta = null;
+    if (!d.nombre) falta = 'Falta el nombre.';
+    else if (!d.apellido) falta = 'Falta el apellido.';
+    else if (!/^\d{6,9}$/.test(d.dni)) falta = 'El DNI tiene que tener entre 6 y 9 números, sin puntos.';
+    else if (d.telefono.replace(/\D/g, '').length < 8) falta = 'Revisá el teléfono: tiene que tener al menos 8 números.';
+    else if (d.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email)) falta = 'El mail no parece válido. Si no lo sabe, dejalo vacío.';
+    if (falta){ aviso('avisoDatos', 'mal', falta); return; }
+    d.email = d.email.toLowerCase();
+    d.nombre = titulo(d.nombre); d.apellido = titulo(d.apellido);
+    NUEVO = d;
+    prepararFirma();
+  });
+
+  // ---------- Texto del deslinde ----------
+  function deslindeHtml(r){
+    var fd = (r.fecha instanceof Date) ? r.fecha : new Date(r.fecha || Date.now());
+    var f = partes(fd);
+    var dia = f.dia, mes = MESES[f.mes - 1], anio = f.anio;
+    var fechaTxt = dia + ' días del mes de ' + mes + ' del ' + anio;
+    var participante = titulo(r.nombre) + ' ' + titulo(r.apellido);
+    var cuerpo =
+      '<div class="cab"><div class="marca">YACOPINI BYD<span>CONCESIONARIO OFICIAL</span></div><div class="num">TEST DRIVE EXPRÉS Nº ' + (r.numero != null ? esc(r.numero) : '—') + '</div></div>' +
+      '<div class="dir">San Martin Sur 600</div>' +
+      '<h3>RESPONSABILIDAD CIVIL PARA TEST DRIVE</h3>' +
+      '<p>En Mendoza, a los ' + fechaTxt + ', entre ' + esc(titulo(r.vendedor)) + ', en adelante denominado EL ORGANIZADOR de la prueba de manejo de un vehículo BYD y el Sr./Sra. ' + esc(participante) + ', DNI ' + esc(r.dni) + ', en adelante denominado PARTICIPANTE, convienen en celebrar el presente convenio de responsabilidad civil, conforme con las siguientes pautas aceptadas y concordadas de mutuo acuerdo:</p>' +
+      '<h4>PRIMERO</h4>' +
+      '<p>El Test Drive está previsto para el día ' + fechaTxt + '. El Test Drive puede implicar una actividad de riesgo por lo cual el participante manifiesta haber sido informado detalladamente acerca del mismo, asumiendo las consecuencias que puedan surgir. La mera participación en el Test Drive implica la aceptación de los riesgos que dicha participación implica, deslindando al ORGANIZADOR, salvo dolo, de todo reclamo por tal motivo. El ORGANIZADOR en ningún caso se responsabiliza por los daños que pudiera sufrir (i) el participante, (ii) sus acompañantes o (iii) terceros, tanto en su persona como en sus pertenencias con motivo o en ocasión del uso de los vehículos en el marco del Test Drive, sean causados por dolo o culpa del conductor o por riesgo o vicio de la cosa. El Participante manifiesta que el vehículo que esté utilizando no necesariamente será del mismo modelo y/o equipamiento que el vehículo que podría adquirir en el futuro.</p>' +
+      '<h4>SEGUNDO</h4>' +
+      '<p>La actividad es gratuita. El participante se compromete a aceptar, respetar y cumplir todas las normas de seguridad que a continuación se detallan, asumiendo toda responsabilidad CIVIL de toda consecuencia causada a raíz del incumplimiento de estas normas y/o actos de irresponsabilidad.</p>' +
+      '<ol><li>Colocar el cinturón de seguridad.</li><li>Activar las luces de posición y las balizas.</li><li>Revisar y ajustar el asiento y los espejos retrovisores a la posición más confortable.</li><li>No adelantarse a ningún vehículo durante el recorrido del circuito.</li><li>Seguir las indicaciones de los instructores y el recorrido del circuito.</li><li>No sobrepasar los límites de velocidad permitidos.</li></ol>' +
+      '<h4>TERCERO</h4>' +
+      '<p>Para poder participar del Test Drive, el participante deberá presentar previamente el carnet de conductor. El participante declara que su carnet lo habilita a conducir automotores y/o vehículos 4x2 o 4x4.</p>' +
+      '<h4>CUARTO</h4>' +
+      '<p>El participante autoriza a Yacopini BYD a contactarlo por los medios informados para brindarle información comercial, conforme a la Ley 25.326 de Protección de Datos Personales. Puede solicitar la baja de sus datos en cualquier momento.</p>' +
+      '<h4>DATOS NECESARIOS</h4>' +
+      '<div class="datos"><div>Nombre y apellido: ' + esc(participante) + '</div><div>DNI: ' + esc(r.dni) + '</div><div>Teléfono: ' + esc(r.telefono) + '</div>' + (r.email ? '<div>Email: ' + esc(r.email) + '</div>' : '') + '</div>' +
+      '<p style="margin-top:10px;">En Mendoza, a los ' + fechaTxt + '.</p>' +
+      '<div class="firma"><div class="caja">' + (r.firma ? '<img src="' + r.firma + '" alt="Firma del participante">' : '<div class="linea"></div>') +
+        '<div class="cap">Firma del participante</div><div class="cap" style="color:#111;font-weight:700;">' + esc(participante) + ' · DNI ' + esc(r.dni) + '</div></div></div>' +
+      '<div class="pie">Registro digital' + (r.id ? ' Nº ' + esc(String(r.id).slice(0, 8).toUpperCase()) : '') + ' · Evento: ' + esc(r.evento) + ' · Cargado por: ' + esc(titulo(r.vendedor)) + ' · ' + esc(fechaHora((r.fecha instanceof Date ? r.fecha.toISOString() : r.fecha) || new Date().toISOString())) + '</div>';
+    return cuerpo;
+  }
+
+  // ---------- Firma ----------
+  var lienzo = $('lienzo'), ctx = null, trazos = 0, dibujando = false, ult = null;
+  function ajustarLienzo(){
+    var r = lienzo.getBoundingClientRect(), dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    lienzo.width = Math.round(r.width * dpr); lienzo.height = Math.round(r.height * dpr);
+    ctx = lienzo.getContext('2d'); ctx.scale(dpr, dpr);
+    ctx.lineWidth = 2.6; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#0A0A0A';
+    trazos = 0; actualizarRegistrar();
+  }
+  function punto(e){ var r = lienzo.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
+  lienzo.addEventListener('pointerdown', function(e){
+    e.preventDefault(); dibujando = true; ult = punto(e);
+    try { lienzo.setPointerCapture(e.pointerId); } catch (x) {}
+    ctx.beginPath(); ctx.arc(ult.x, ult.y, 1.3, 0, Math.PI * 2); ctx.fillStyle = '#0A0A0A'; ctx.fill();
+  });
+  lienzo.addEventListener('pointermove', function(e){
+    if (!dibujando) return; e.preventDefault();
+    var p = punto(e); ctx.beginPath(); ctx.moveTo(ult.x, ult.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+    trazos += Math.abs(p.x - ult.x) + Math.abs(p.y - ult.y); ult = p; actualizarRegistrar();
+  });
+  function soltar(){ dibujando = false; }
+  lienzo.addEventListener('pointerup', soltar); lienzo.addEventListener('pointercancel', soltar); lienzo.addEventListener('pointerleave', soltar);
+  function firmaValida(){ return trazos > 120; }   // una firma real recorre bastante más que un toque
+  function actualizarRegistrar(){ $('btnRegistrar').disabled = !(firmaValida() && $('chkLic').checked); }
+  $('chkLic').addEventListener('change', actualizarRegistrar);
+  $('btnBorrarFirma').addEventListener('click', function(){ ajustarLienzo(); });
+
+  function prepararFirma(){
+    var dueno = { id: null, numero: null, vendedor: YO.nombre, nombre: NUEVO.nombre, apellido: NUEVO.apellido, dni: NUEVO.dni, telefono: NUEVO.telefono, email: NUEVO.email, fecha: new Date(), evento: EVENTO.nombre, firma: null };
+    $('docPantalla').innerHTML = deslindeHtml(dueno);
+    $('chkLic').checked = false; aviso('avisoFirma', '', '');
+    mostrar('vFirma');
+    setTimeout(ajustarLienzo, 30);
+  }
+
+  $('btnRegistrar').addEventListener('click', function(){
+    if (!firmaValida() || !$('chkLic').checked) return;
+    var btn = $('btnRegistrar'); btn.disabled = true; btn.textContent = 'Registrando…'; aviso('avisoFirma', '', '');
+    var firma = lienzo.toDataURL('image/png');
+    db.from('td_registros').insert({
+      evento_id: EVENTO.id, nombre: NUEVO.nombre, apellido: NUEVO.apellido, dni: NUEVO.dni, telefono: NUEVO.telefono,
+      email: NUEVO.email || null, licencia_verificada: true, firma_png: firma, texto_version: TEXTO_VERSION
+    }).select('id,numero,vendedor_nombre,created_at').single().then(function(r){
+      btn.textContent = 'Firmar y registrar';
+      if (r.error) throw r.error;
+      ULTIMO = { id: r.data.id, numero: r.data.numero, vendedor: r.data.vendedor_nombre, nombre: NUEVO.nombre, apellido: NUEVO.apellido, dni: NUEVO.dni,
+        telefono: NUEVO.telefono, email: NUEVO.email, fecha: r.data.created_at, evento: EVENTO.nombre, firma: firma };
+      NUEVO = null;
+      $('listoTitulo').textContent = 'Registrado: Nº ' + ULTIMO.numero;
+      $('listoSub').textContent = titulo(ULTIMO.nombre) + ' ' + titulo(ULTIMO.apellido) + ' · ' + ULTIMO.evento;
+      aviso('avisoListo', '', '');
+      mostrar('vListo');
+      prepararPdf(ULTIMO);       // se arma ya, así "Enviar por WhatsApp" responde al instante
+    }).catch(function(e){
+      btn.textContent = 'Firmar y registrar'; actualizarRegistrar();
+      aviso('avisoFirma', 'mal', textoError(e) + ' Tu firma sigue acá: probá de nuevo.');
+    });
+  });
+  $('btnOtroCliente').addEventListener('click', function(){ $('btnNuevoCliente').click(); });
+
+  // ---------- PDF y WhatsApp ----------
+  function armarPdf(reg){
+    var oculto = $('pdfOculto');
+    oculto.innerHTML = '<div class="doc">' + deslindeHtml(reg) + '</div>';
+    var imgs = oculto.querySelectorAll('img');
+    var esperar = Array.prototype.map.call(imgs, function(i){ return i.complete ? Promise.resolve() : new Promise(function(ok){ i.onload = i.onerror = ok; }); });
+    return Promise.all(esperar).then(function(){
+      return window.html2canvas(oculto, { scale: 2, backgroundColor: '#ffffff', useCORS: true, x: 0, y: 0, scrollX: 0, scrollY: 0, windowWidth: 900,
+        onclone: function(doc){ var el = doc.getElementById('pdfOculto'); if (el){ el.style.position = 'static'; el.style.left = '0'; } } });
+    }).then(function(canvas){
+      oculto.innerHTML = '';
+      var JsPDF = window.jspdf.jsPDF, pdf = new JsPDF({ unit: 'pt', format: 'a4' });
+      var w = pdf.internal.pageSize.getWidth(), h = pdf.internal.pageSize.getHeight();
+      var altoImg = canvas.height * w / canvas.width, datos = canvas.toDataURL('image/jpeg', 0.92), paginas = Math.max(1, Math.ceil(altoImg / h - 0.02));
+      for (var i = 0; i < paginas; i++){ if (i) pdf.addPage(); pdf.addImage(datos, 'JPEG', 0, -i * h, w, altoImg); }
+      var nombre = 'Deslinde_TestDriveExpres_' + String(reg.apellido).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w]+/g, '') + '_' + reg.dni + '.pdf';
+      return { blob: pdf.output('blob'), nombre: nombre };
+    });
+  }
+  function prepararPdf(reg){
+    if (!pdfs[reg.id]) pdfs[reg.id] = armarPdf(reg).catch(function(e){ delete pdfs[reg.id]; throw e; });
+    return pdfs[reg.id];
+  }
+  function descargar(blob, nombre){
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nombre; document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+  }
+  // Mismo criterio que la agenda de post venta para dejar el teléfono listo para wa.me (Mendoza: 261).
+  function telefonoWa(tel){
+    var d = String(tel || '').replace(/\D/g, '');
+    if (!d) return null;
+    if (d.indexOf('00') === 0) d = d.slice(2);
+    if (d.indexOf('54') === 0){ d = d.slice(2); if (d.charAt(0) === '9') d = d.slice(1); }
+    if (d.charAt(0) === '0') d = d.slice(1);
+    if (d.length <= 9){ if (d.indexOf('15') === 0) d = d.slice(2); d = '261' + d; }
+    else { for (var largo = 2; largo <= 4; largo++){ if (d.length === 12 && d.substr(largo, 2) === '15'){ d = d.slice(0, largo) + d.slice(largo + 2); break; } } }
+    return d.length === 10 ? '549' + d : null;
+  }
+  function enviarWhatsapp(reg, idAviso){
+    var texto = 'Hola ' + titulo(reg.nombre) + ', gracias por probar un BYD en ' + reg.evento + '. Te dejo la copia del deslinde de responsabilidad que firmaste. Cualquier consulta, escribime. ' + titulo(reg.vendedor) + ' · Yacopini BYD';
+    aviso(idAviso, 'info', 'Preparando el PDF…');
+    return prepararPdf(reg).then(function(pdf){
+      aviso(idAviso, '', '');
+      var archivo = new File([pdf.blob], pdf.nombre, { type: 'application/pdf' });
+      if (navigator.canShare && navigator.canShare({ files: [archivo] })){
+        return navigator.share({ files: [archivo], title: 'Deslinde de responsabilidad', text: texto }).catch(function(e){
+          if (e && e.name === 'AbortError') return;
+          throw e;
+        });
+      }
+      throw new Error('sin-compartir');
+    }).catch(function(e){
+      if (e && e.message !== 'sin-compartir' && e.name !== 'NotAllowedError' && e.name !== 'TypeError'){ aviso(idAviso, 'mal', 'No se pudo armar el PDF. Probá de nuevo.'); return; }
+      // Sin "compartir archivo" (computadora o navegador viejo): se descarga el PDF y se abre el chat con el mensaje.
+      return prepararPdf(reg).then(function(pdf){
+        descargar(pdf.blob, pdf.nombre);
+        var tel = telefonoWa(reg.telefono);
+        window.open('https://wa.me/' + (tel || '') + '?text=' + encodeURIComponent(texto), '_blank');
+        aviso(idAviso, 'info', 'Se descargó el PDF. Adjuntalo en el chat de WhatsApp que se abrió.');
+      }).catch(function(){ aviso(idAviso, 'mal', 'No se pudo armar el PDF. Probá de nuevo.'); });
+    });
+  }
+  function bajarPdf(reg, idAviso){
+    aviso(idAviso, 'info', 'Preparando el PDF…');
+    return prepararPdf(reg).then(function(pdf){ aviso(idAviso, '', ''); descargar(pdf.blob, pdf.nombre); })
+      .catch(function(){ aviso(idAviso, 'mal', 'No se pudo armar el PDF. Probá de nuevo.'); });
+  }
+  $('btnWaListo').addEventListener('click', function(){ if (ULTIMO) enviarWhatsapp(ULTIMO, 'avisoListo'); });
+  $('btnPdfListo').addEventListener('click', function(){ if (ULTIMO) bajarPdf(ULTIMO, 'avisoListo'); });
+
+  // ---------- Ver un deslinde ya firmado ----------
+  function verRegistro(id){
+    VER = null; $('docVer').innerHTML = '<div class="vacio">Cargando…</div>'; aviso('avisoVer', '', '');
+    $('verTitulo').textContent = 'Deslinde firmado';
+    mostrar('vVer');
+    db.from('td_registros').select('id,numero,nombre,apellido,dni,telefono,email,vendedor_nombre,created_at,firma_png').eq('id', id).single().then(function(r){
+      if (r.error) throw r.error;
+      var x = r.data;
+      VER = { id: x.id, numero: x.numero, vendedor: x.vendedor_nombre, nombre: x.nombre, apellido: x.apellido, dni: x.dni, telefono: x.telefono, email: x.email,
+        fecha: x.created_at, evento: EVENTO.nombre, firma: x.firma_png };
+      $('verTitulo').textContent = 'Nº ' + x.numero + ' · ' + titulo(x.nombre) + ' ' + titulo(x.apellido);
+      $('docVer').innerHTML = deslindeHtml(VER);
+      prepararPdf(VER);
+    }).catch(function(e){ $('docVer').innerHTML = ''; aviso('avisoVer', 'mal', textoError(e)); });
+  }
+  $('btnVolverVer').addEventListener('click', function(){ abrirEvento(EVENTO); });
+  $('btnWaVer').addEventListener('click', function(){ if (VER) enviarWhatsapp(VER, 'avisoVer'); });
+  $('btnPdfVer').addEventListener('click', function(){ if (VER) bajarPdf(VER, 'avisoVer'); });
+
+  iniciar();
+})();
+</script>
+</body>
+</html>
