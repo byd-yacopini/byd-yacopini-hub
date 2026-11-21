@@ -52,7 +52,7 @@
   .vacio{ text-align:center; color:var(--gris-medio); font-size:13.5px; padding:26px 10px; }
 
   label{ display:block; font-size:11px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; color:var(--gris-medio); margin:0 0 5px; }
-  input[type=text], input[type=tel], input[type=email], input[type=date]{ display:block; width:100%; min-height:50px; padding:0 14px; font-family:inherit; font-size:16px; border:1px solid var(--gris-claro); border-radius:12px; background:#fff; color:var(--negro); }
+  input[type=text], input[type=tel], input[type=email], input[type=date], select{ display:block; width:100%; min-height:50px; padding:0 14px; font-family:inherit; font-size:16px; border:1px solid var(--gris-claro); border-radius:12px; background:#fff; color:var(--negro); }
   input:focus{ outline:2px solid var(--azul); outline-offset:1px; }
   .campo{ margin-bottom:14px; }
   .campo small{ display:block; font-size:12px; color:var(--gris-medio); margin-top:5px; }
@@ -160,6 +160,7 @@
       <div class="campo"><label for="fDni">DNI</label><input type="text" id="fDni" inputmode="numeric" placeholder="Sin puntos" autocomplete="off"></div>
       <div class="campo"><label for="fTel">Teléfono</label><input type="tel" id="fTel" inputmode="tel" placeholder="Ej: 261 555 1234" autocomplete="off"></div>
       <div class="campo"><label for="fMail">Mail (opcional)</label><input type="email" id="fMail" inputmode="email" autocapitalize="none" autocomplete="off"></div>
+      <div class="campo"><label for="fVehiculo">Vehículo que prueba</label><select id="fVehiculo"></select><input type="text" id="fVehiculoOtro" placeholder="Escribí el modelo" autocomplete="off" style="display:none;margin-top:8px;"></div>
       <div class="dato-fijo">Carga: <b id="datoVendedor"></b><br>Fecha de carga: <b id="datoFecha"></b></div>
       <div id="avisoDatos"></div>
       <button type="submit" class="btn principal grande">Continuar al deslinde</button>
@@ -305,6 +306,7 @@
     return llamar('tdEventos').then(function(j){
       YO.nombre = titulo(j.yo.nombre);
       YO.rol = j.yo.rol;
+      VEHICULOS = j.vehiculos || [];
       var ac = null; try { ac = window.bydAcceso && window.bydAcceso.leer(); } catch (e) {}
       var tipo = ac && ac.tipo;
       // Crean eventos gerencia y jefe de ventas (el servidor exige gerencia o admin).
@@ -374,6 +376,7 @@
     cargarRegistros();
   }
   var REGISTROS = [];
+  var VEHICULOS = [];       // modelos para el desplegable (vienen del servidor)
   function cargarRegistros(){
     $('listaRegistros').innerHTML = '<div class="vacio">Cargando…</div>';
     llamar('tdRegistros', { eventoId: EVENTO.id }).then(function(r){
@@ -381,7 +384,7 @@
         if (!REGISTROS.length){ $('listaRegistros').innerHTML = '<div class="vacio">Todavía no hay clientes cargados.</div>'; return; }
         $('listaRegistros').innerHTML = '<table class="reg"><tbody>' + REGISTROS.map(function(x){
           return '<tr data-id="' + esc(x.id) + '"><td class="nro">' + x.numero + '</td><td class="nom"><b>' + esc(titulo(x.apellido) + ', ' + titulo(x.nombre)) + '</b><span>' +
-            (YO.gestiona ? esc(titulo(x.vendedor_nombre)) + ' · ' : '') + esc(fechaHora(x.created_at)) + '</span></td><td style="text-align:right;"><button type="button" class="btn chico">Ver</button></td></tr>';
+            esc(x.vehiculo || '') + (x.vehiculo ? ' · ' : '') + (YO.gestiona ? esc(titulo(x.vendedor_nombre)) + ' · ' : '') + esc(fechaHora(x.created_at)) + '</span></td><td style="text-align:right;"><button type="button" class="btn chico">Ver</button></td></tr>';
         }).join('') + '</tbody></table>';
         Array.prototype.forEach.call($('listaRegistros').querySelectorAll('tr'), function(tr){
           tr.addEventListener('click', function(){ verRegistro(tr.getAttribute('data-id')); });
@@ -415,8 +418,8 @@
         btn.disabled = false;
         var filas = (r.registros || []).slice().sort(function(a, b){ return a.numero - b.numero; });
         if (!filas.length){ toast('Todavía no hay clientes para descargar.'); return; }
-        function fila(x){ return { 'N°': x.numero, 'Nombre': titulo(x.nombre), 'Apellido': titulo(x.apellido), 'DNI': x.dni, 'Teléfono': x.telefono, 'Mail': x.email || '', 'Vendedor': titulo(x.vendedor_nombre), 'Fecha de carga': fechaHora(x.created_at), 'Evento': EVENTO.nombre }; }
-        var cols = [{ wch: 5 }, { wch: 18 }, { wch: 18 }, { wch: 12 }, { wch: 16 }, { wch: 30 }, { wch: 24 }, { wch: 17 }, { wch: 24 }];
+        function fila(x){ return { 'N°': x.numero, 'Nombre': titulo(x.nombre), 'Apellido': titulo(x.apellido), 'DNI': x.dni, 'Teléfono': x.telefono, 'Mail': x.email || '', 'Vehículo': x.vehiculo || '', 'Vendedor': titulo(x.vendedor_nombre), 'Fecha de carga': fechaHora(x.created_at), 'Evento': EVENTO.nombre }; }
+        var cols = [{ wch: 5 }, { wch: 18 }, { wch: 18 }, { wch: 12 }, { wch: 16 }, { wch: 30 }, { wch: 22 }, { wch: 24 }, { wch: 17 }, { wch: 24 }];
         var wb = XLSX.utils.book_new(), usados = {};
         function hoja(nombre, datos){
           var ws = XLSX.utils.json_to_sheet(datos.map(fila)); ws['!cols'] = cols;
@@ -436,8 +439,21 @@
   $('btnExcel').addEventListener('click', bajarExcel);
 
   // ---------- Datos del cliente ----------
+  // Lista de modelos: sale de la lista de precios (la manda el servidor con los eventos). "Otro…" deja escribir uno que no esté.
+  function llenarVehiculos(){
+    var sel = $('fVehiculo');
+    sel.innerHTML = '<option value="">Elegí el modelo…</option>' + VEHICULOS.map(function(v){ return '<option value="' + esc(v) + '">' + esc(v) + '</option>'; }).join('') +
+      '<option value="__otro">' + (VEHICULOS.length ? 'Otro…' : 'Escribir el modelo…') + '</option>';
+    $('fVehiculoOtro').style.display = 'none';
+  }
+  $('fVehiculo').addEventListener('change', function(){
+    var otro = $('fVehiculo').value === '__otro';
+    $('fVehiculoOtro').style.display = otro ? 'block' : 'none';
+    if (otro) $('fVehiculoOtro').focus();
+  });
   $('btnNuevoCliente').addEventListener('click', function(){
-    ['fNombre','fApellido','fDni','fTel','fMail'].forEach(function(id){ $(id).value = ''; });
+    ['fNombre','fApellido','fDni','fTel','fMail','fVehiculoOtro'].forEach(function(id){ $(id).value = ''; });
+    llenarVehiculos();
     aviso('avisoDatos', '', '');
     $('datosSub').textContent = 'Evento: ' + EVENTO.nombre;
     $('datoVendedor').textContent = YO.nombre;
@@ -451,7 +467,8 @@
     ev.preventDefault();
     var d = {
       nombre: $('fNombre').value.trim(), apellido: $('fApellido').value.trim(),
-      dni: $('fDni').value.replace(/\D/g, ''), telefono: $('fTel').value.trim(), email: $('fMail').value.trim()
+      dni: $('fDni').value.replace(/\D/g, ''), telefono: $('fTel').value.trim(), email: $('fMail').value.trim(),
+      vehiculo: ($('fVehiculo').value === '__otro' ? $('fVehiculoOtro').value : $('fVehiculo').value).trim()
     };
     var falta = null;
     if (!d.nombre) falta = 'Falta el nombre.';
@@ -459,6 +476,7 @@
     else if (!/^\d{6,9}$/.test(d.dni)) falta = 'El DNI tiene que tener entre 6 y 9 números, sin puntos.';
     else if (d.telefono.replace(/\D/g, '').length < 8) falta = 'Revisá el teléfono: tiene que tener al menos 8 números.';
     else if (d.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email)) falta = 'El mail no parece válido. Si no lo sabe, dejalo vacío.';
+    else if (d.vehiculo.length < 2) falta = 'Elegí el vehículo que prueba el cliente.';
     if (falta){ aviso('avisoDatos', 'mal', falta); return; }
     d.email = d.email.toLowerCase();
     d.nombre = titulo(d.nombre); d.apellido = titulo(d.apellido);
@@ -477,7 +495,7 @@
       '<div class="cab"><div class="marca">YACOPINI BYD<span>CONCESIONARIO OFICIAL</span></div><div class="num">TEST DRIVE EXPRÉS Nº ' + (r.numero != null ? esc(r.numero) : '—') + '</div></div>' +
       '<div class="dir">San Martin Sur 600</div>' +
       '<h3>RESPONSABILIDAD CIVIL PARA TEST DRIVE</h3>' +
-      '<p>En Mendoza, a los ' + fechaTxt + ', entre ' + esc(titulo(r.vendedor)) + ', en adelante denominado EL ORGANIZADOR de la prueba de manejo de un vehículo BYD y el Sr./Sra. ' + esc(participante) + ', DNI ' + esc(r.dni) + ', en adelante denominado PARTICIPANTE, convienen en celebrar el presente convenio de responsabilidad civil, conforme con las siguientes pautas aceptadas y concordadas de mutuo acuerdo:</p>' +
+      '<p>En Mendoza, a los ' + fechaTxt + ', entre ' + esc(titulo(r.vendedor)) + ', en adelante denominado EL ORGANIZADOR de la prueba de manejo ' + (r.vehiculo ? 'del vehículo ' + esc(r.vehiculo) : 'de un vehículo BYD') + ' y el Sr./Sra. ' + esc(participante) + ', DNI ' + esc(r.dni) + ', en adelante denominado PARTICIPANTE, convienen en celebrar el presente convenio de responsabilidad civil, conforme con las siguientes pautas aceptadas y concordadas de mutuo acuerdo:</p>' +
       '<h4>PRIMERO</h4>' +
       '<p>El Test Drive está previsto para el día ' + fechaTxt + '. El Test Drive puede implicar una actividad de riesgo por lo cual el participante manifiesta haber sido informado detalladamente acerca del mismo, asumiendo las consecuencias que puedan surgir. La mera participación en el Test Drive implica la aceptación de los riesgos que dicha participación implica, deslindando al ORGANIZADOR, salvo dolo, de todo reclamo por tal motivo. El ORGANIZADOR en ningún caso se responsabiliza por los daños que pudiera sufrir (i) el participante, (ii) sus acompañantes o (iii) terceros, tanto en su persona como en sus pertenencias con motivo o en ocasión del uso de los vehículos en el marco del Test Drive, sean causados por dolo o culpa del conductor o por riesgo o vicio de la cosa. El Participante manifiesta que el vehículo que esté utilizando no necesariamente será del mismo modelo y/o equipamiento que el vehículo que podría adquirir en el futuro.</p>' +
       '<h4>SEGUNDO</h4>' +
@@ -488,7 +506,7 @@
       '<h4>CUARTO</h4>' +
       '<p>El participante autoriza a Yacopini BYD a contactarlo por los medios informados para brindarle información comercial, conforme a la Ley 25.326 de Protección de Datos Personales. Puede solicitar la baja de sus datos en cualquier momento.</p>' +
       '<h4>DATOS NECESARIOS</h4>' +
-      '<div class="datos"><div>Nombre y apellido: ' + esc(participante) + '</div><div>DNI: ' + esc(r.dni) + '</div><div>Teléfono: ' + esc(r.telefono) + '</div>' + (r.email ? '<div>Email: ' + esc(r.email) + '</div>' : '') + '</div>' +
+      '<div class="datos"><div>Nombre y apellido: ' + esc(participante) + '</div><div>DNI: ' + esc(r.dni) + '</div><div>Teléfono: ' + esc(r.telefono) + '</div>' + (r.email ? '<div>Email: ' + esc(r.email) + '</div>' : '') + (r.vehiculo ? '<div>Vehículo: ' + esc(r.vehiculo) + '</div>' : '') + '</div>' +
       '<p style="margin-top:10px;">En Mendoza, a los ' + fechaTxt + '.</p>' +
       '<div class="firma"><div class="caja">' + (r.firma ? '<img src="' + r.firma + '" alt="Firma del participante">' : '<div class="linea"></div>') +
         '<div class="cap">Firma del participante</div><div class="cap" style="color:#111;font-weight:700;">' + esc(participante) + ' · DNI ' + esc(r.dni) + '</div></div></div>' +
@@ -524,7 +542,7 @@
   $('btnBorrarFirma').addEventListener('click', function(){ ajustarLienzo(); });
 
   function prepararFirma(){
-    var dueno = { id: null, numero: null, vendedor: YO.nombre, nombre: NUEVO.nombre, apellido: NUEVO.apellido, dni: NUEVO.dni, telefono: NUEVO.telefono, email: NUEVO.email, fecha: new Date(), evento: EVENTO.nombre, firma: null };
+    var dueno = { id: null, numero: null, vendedor: YO.nombre, nombre: NUEVO.nombre, apellido: NUEVO.apellido, dni: NUEVO.dni, telefono: NUEVO.telefono, email: NUEVO.email, vehiculo: NUEVO.vehiculo, fecha: new Date(), evento: EVENTO.nombre, firma: null };
     $('docPantalla').innerHTML = deslindeHtml(dueno);
     $('chkLic').checked = false; aviso('avisoFirma', '', '');
     mostrar('vFirma');
@@ -540,11 +558,11 @@
       email: NUEVO.email || '', licencia: true, firmaPng: firma
     }).then(function(r){
       btn.textContent = 'Firmar y registrar';
-      ULTIMO = { id: r.id, numero: r.numero, vendedor: r.vendedor, nombre: NUEVO.nombre, apellido: NUEVO.apellido, dni: NUEVO.dni,
+      ULTIMO = { id: r.id, numero: r.numero, vendedor: r.vendedor, nombre: NUEVO.nombre, apellido: NUEVO.apellido, dni: NUEVO.dni, vehiculo: NUEVO.vehiculo,
         telefono: NUEVO.telefono, email: NUEVO.email, fecha: r.creado, evento: EVENTO.nombre, firma: firma };
       NUEVO = null;
       $('listoTitulo').textContent = 'Registrado: Nº ' + ULTIMO.numero;
-      $('listoSub').textContent = titulo(ULTIMO.nombre) + ' ' + titulo(ULTIMO.apellido) + ' · ' + ULTIMO.evento;
+      $('listoSub').textContent = titulo(ULTIMO.nombre) + ' ' + titulo(ULTIMO.apellido) + ' · ' + ULTIMO.vehiculo + ' · ' + ULTIMO.evento;
       aviso('avisoListo', '', '');
       mostrar('vListo');
       guardarPdfEnDrive(ULTIMO); // se arma ya (así "Enviar por WhatsApp" responde al instante) y se archiva en la carpeta del evento
@@ -645,7 +663,7 @@
     llamar('tdVerRegistro', { id: id }).then(function(r){
       var x = r.registro;
       VER = { id: x.id, numero: x.numero, vendedor: x.vendedor_nombre, nombre: x.nombre, apellido: x.apellido, dni: x.dni, telefono: x.telefono, email: x.email,
-        fecha: x.created_at, evento: EVENTO.nombre, firma: x.firma_png };
+        vehiculo: x.vehiculo, fecha: x.created_at, evento: EVENTO.nombre, firma: x.firma_png };
       $('verTitulo').textContent = 'Nº ' + x.numero + ' · ' + titulo(x.nombre) + ' ' + titulo(x.apellido);
       $('docVer').innerHTML = deslindeHtml(VER);
       prepararPdf(VER);
