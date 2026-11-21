@@ -555,7 +555,7 @@
     var firma = lienzo.toDataURL('image/png');
     llamar('tdRegistrar', {
       eventoId: EVENTO.id, nombre: NUEVO.nombre, apellido: NUEVO.apellido, dni: NUEVO.dni, telefono: NUEVO.telefono,
-      email: NUEVO.email || '', licencia: true, firmaPng: firma
+      email: NUEVO.email || '', vehiculo: NUEVO.vehiculo, licencia: true, firmaPng: firma
     }).then(function(r){
       btn.textContent = 'Firmar y registrar';
       ULTIMO = { id: r.id, numero: r.numero, vendedor: r.vendedor, nombre: NUEVO.nombre, apellido: NUEVO.apellido, dni: NUEVO.dni, vehiculo: NUEVO.vehiculo,
