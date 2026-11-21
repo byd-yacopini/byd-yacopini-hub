@@ -1036,11 +1036,22 @@
     document.addEventListener("visibilitychange", function(){ if (!document.hidden && Date.now() - ultimaCargaPanel > 3 * 60 * 1000) loadPanelData(); });
 
     // ---- Navegación: vista principal ----
+    // Se acuerda de en qué vista estabas (Tablero o Herramientas) y hasta dónde habías bajado: al volver con la
+    // flecha desde una herramienta, queda donde estaba y no arranca siempre en el Tablero.
     var mainSelect = document.getElementById('mainViewSelect');
-    mainSelect.addEventListener('change', function(){
-      document.querySelectorAll('.mainview').forEach(function(v){ v.classList.remove('active'); });
-      document.getElementById('view-' + mainSelect.value).classList.add('active');
-    });
+    function setVista(v){
+      mainSelect.value = v;
+      document.querySelectorAll('.mainview').forEach(function(x){ x.classList.toggle('active', x.id === 'view-' + v); });
+      try { sessionStorage.setItem('bydMainView', v); } catch (e) {}
+    }
+    mainSelect.addEventListener('change', function(){ setVista(mainSelect.value); });
+    var vistaGuardada = null; try { vistaGuardada = sessionStorage.getItem('bydMainView'); } catch (e) {}
+    if (vistaGuardada && document.getElementById('view-' + vistaGuardada)){
+      setVista(vistaGuardada);
+      var yGuardado = 0; try { yGuardado = Number(sessionStorage.getItem('bydScrollPanel') || 0); } catch (e) {}
+      if (yGuardado) setTimeout(function(){ window.scrollTo(0, yGuardado); }, 80);
+    }
+    window.addEventListener('pagehide', function(){ try { sessionStorage.setItem('bydScrollPanel', String(window.scrollY)); } catch (e) {} });
 
     // ---- Instalar como app ----
     var isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
