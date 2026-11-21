@@ -230,6 +230,9 @@
 (function(){
   var SUPA_URL = 'https://mgicnwnvtfkrxmkmewnt.supabase.co';
   var SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1naWNud252dGZrcnhta21ld250Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1Nzk5MDIsImV4cCI6MjEwNTE1NTkwMn0.GLWN_wI6Q_6Qu1EGi02oPNrL9wgTj-zbGsJCoIE-HQE';
+  // Los datos viven en Drive (04- MARKETING / eventos) y los maneja el Apps Script: acá solo se entra con la cuenta del hub.
+  var APPS_URL = 'https://script.google.com/macros/s/AKfycbzTYBoM56BBMj2B-8hUG_MIuOh7r5qG4qq2sGlTRM-y6QyFm0XHqgE6XUG5OQB022iy/exec';
+  var APPS_KEY = 'i4uH92SO1sFyNYi8PJ2dsGb9LDM-Xoq3';
   var TZ = 'America/Argentina/Mendoza';
   var TEXTO_VERSION = 'v1';
   var MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -256,14 +259,29 @@
     var m = String(e && (e.message || e.details || e) || '');
     if (/cerrado/i.test(m)) return 'El evento está cerrado: ya no se pueden cargar más clientes.';
     if (/jwt|session|sesi[oó]n|not authenticated/i.test(m)) return 'Tu sesión venció. Volvé a entrar al hub.';
-    if (/row-level security|permission denied/i.test(m)) return 'Tu usuario no tiene permiso para hacer esto.';
-    if (/does not exist|schema cache|could not find/i.test(m)) return 'Falta crear las tablas de Test Drive Exprés en la base de datos.';
+    if (/unauthorized/i.test(m)) return 'El servidor rechazó el pedido. Probá de nuevo en un momento.';
+    if (/Acci[oó]n desconocida/i.test(m)) return 'El servidor todavía no tiene esta herramienta activada. Avisá a gerencia.';
     if (/Failed to fetch|NetworkError|Load failed/i.test(m)) return 'No hay conexión. Revisá la señal y probá de nuevo.';
     return m || 'Ocurrió un error. Probá de nuevo.';
   }
 
   // ---------- Sesión y perfil ----------
-  var db = window.supabase ? window.supabase.createClient(SUPA_URL, SUPA_ANON) : null;
+  var db = window.supabase ? window.supabase.createClient(SUPA_URL, SUPA_ANON) : null;   // solo para saber quién entró
+
+  // Pide una acción al Apps Script con la sesión del hub. Devuelve la respuesta o lanza el error que mande el servidor.
+  function llamar(accion, extra){
+    if (!db) return Promise.reject(new Error('No se pudo cargar el acceso del hub.'));
+    return db.auth.getSession().then(function(r){
+      var ses = r && r.data && r.data.session;
+      if (!ses){ location.replace('./index.html?volver=test_drive_express.html'); throw new Error('sin sesión'); }
+      var cuerpo = { key: APPS_KEY, action: accion, token: ses.access_token };
+      Object.keys(extra || {}).forEach(function(k){ cuerpo[k] = extra[k]; });
+      return fetch(APPS_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(cuerpo) });
+    }).then(function(r){ return r.json(); }).then(function(j){
+      if (!j || j.error) throw new Error(j && j.error ? j.error : 'El servidor no devolvió datos.');
+      return j;
+    });
+  }
   var YO = { uid: null, nombre: '', rol: '', gestiona: false };
   var EVENTO = null;        // evento abierto en pantalla
   var NUEVO = null;         // datos del cliente que se está cargando
@@ -279,38 +297,26 @@
 
   function iniciar(){
     if (!db){ aviso('aviso', 'mal', 'No se pudo cargar el acceso del hub. Recargá la página.'); return; }
-    db.auth.getSession().then(function(r){
-      var ses = r && r.data && r.data.session;
-      if (!ses){ location.replace('./index.html?volver=test_drive_express.html'); throw new Error('sin sesión'); }
-      YO.uid = ses.user.id;
-      return db.from('perfiles').select('nombre,rol,activo').eq('id', YO.uid).maybeSingle();
-    }).then(function(r){
-      var p = r && r.data;
-      if (!p || !p.activo){ throw new Error('Tu usuario no está activo.'); }
-      YO.nombre = titulo(p.nombre);
-      YO.rol = p.rol;
-      var ac = null; try { ac = window.bydAcceso && window.bydAcceso.leer(); } catch (e) {}
-      var tipo = ac && ac.tipo;
-      // Crean eventos gerencia y jefe de ventas. La base lo exige también (gerencia / admin).
-      YO.gestiona = (p.rol === 'gerencia' || p.rol === 'admin') && (!tipo || tipo === 'gerencia' || tipo === 'jefe');
-      $('accionesEventos').style.display = YO.gestiona ? 'flex' : 'none';
-      return cargarEventos();
-    }).catch(function(e){
-      if (String(e && e.message) === 'sin sesión') return;
-      aviso('aviso', 'mal', textoError(e)); $('listaEventos').innerHTML = '';
-    });
+    cargarEventos();
   }
 
   // ---------- Eventos ----------
   function cargarEventos(){
-    return db.from('td_eventos').select('id,nombre,lugar,fecha,estado,td_registros(count)')
-      .order('fecha', { ascending: false }).order('created_at', { ascending: false })
-      .then(function(r){
-        if (r.error) throw r.error;
-        dibujarEventos(r.data || []);
-      }).catch(function(e){ $('listaEventos').innerHTML = ''; aviso('aviso', 'mal', textoError(e)); });
+    return llamar('tdEventos').then(function(j){
+      YO.nombre = titulo(j.yo.nombre);
+      YO.rol = j.yo.rol;
+      var ac = null; try { ac = window.bydAcceso && window.bydAcceso.leer(); } catch (e) {}
+      var tipo = ac && ac.tipo;
+      // Crean eventos gerencia y jefe de ventas (el servidor exige gerencia o admin).
+      YO.gestiona = !!j.yo.gestiona && (!tipo || tipo === 'gerencia' || tipo === 'jefe');
+      $('accionesEventos').style.display = YO.gestiona ? 'flex' : 'none';
+      dibujarEventos(j.eventos || []);
+    }).catch(function(e){
+      if (String(e && e.message) === 'sin sesión') return;
+      $('listaEventos').innerHTML = ''; aviso('aviso', 'mal', textoError(e));
+    });
   }
-  function cuentaDe(ev){ return ev.td_registros && ev.td_registros[0] ? ev.td_registros[0].count : 0; }
+  function cuentaDe(ev){ return ev.cantidad || 0; }
   function dibujarEventos(lista){
     if (!lista.length){
       $('listaEventos').innerHTML = '<div class="card vacio">' + (YO.gestiona ? 'Todavía no hay eventos. Creá el primero con "+ Nuevo evento".' : 'No hay eventos abiertos todavía. Cuando gerencia cree uno, aparece acá.') + '</div>';
@@ -344,9 +350,10 @@
     if (nombre.length < 2){ aviso('avisoEvento', 'mal', 'Poné el nombre del evento.'); return; }
     if (!fecha){ aviso('avisoEvento', 'mal', 'Elegí la fecha.'); return; }
     var btn = $('btnCrearEvento'); btn.disabled = true;
-    db.from('td_eventos').insert({ nombre: nombre, lugar: lugar || null, fecha: fecha }).select('id').single().then(function(r){
+    aviso('avisoEvento', 'info', 'Creando el evento…');
+    llamar('tdCrearEvento', { nombre: nombre, lugar: lugar, fecha: fecha }).then(function(){
       btn.disabled = false;
-      if (r.error){ aviso('avisoEvento', 'mal', textoError(r.error)); return; }
+      aviso('avisoEvento', '', '');
       $('modalEvento').classList.remove('abierto');
       toast('Evento creado. Ya lo ven los vendedores.');
       cargarEventos();
@@ -369,10 +376,8 @@
   var REGISTROS = [];
   function cargarRegistros(){
     $('listaRegistros').innerHTML = '<div class="vacio">Cargando…</div>';
-    db.from('td_registros').select('id,numero,nombre,apellido,dni,telefono,email,vendedor_nombre,created_at')
-      .eq('evento_id', EVENTO.id).order('numero', { ascending: false }).then(function(r){
-        if (r.error) throw r.error;
-        REGISTROS = r.data || [];
+    llamar('tdRegistros', { eventoId: EVENTO.id }).then(function(r){
+        REGISTROS = r.registros || [];
         if (!REGISTROS.length){ $('listaRegistros').innerHTML = '<div class="vacio">Todavía no hay clientes cargados.</div>'; return; }
         $('listaRegistros').innerHTML = '<table class="reg"><tbody>' + REGISTROS.map(function(x){
           return '<tr data-id="' + esc(x.id) + '"><td class="nro">' + x.numero + '</td><td class="nom"><b>' + esc(titulo(x.apellido) + ', ' + titulo(x.nombre)) + '</b><span>' +
@@ -387,10 +392,7 @@
   $('btnAlEvento').addEventListener('click', function(){ abrirEvento(EVENTO); });
 
   function cambiarEstado(estado){
-    var cambios = estado === 'cerrado' ? { estado: 'cerrado', cerrado_at: new Date().toISOString() } : { estado: 'abierto', cerrado_at: null };
-    db.from('td_eventos').update(cambios).eq('id', EVENTO.id).select('id').then(function(r){
-      if (r.error) throw r.error;
-      if (!r.data || !r.data.length) throw new Error('No tenés permiso para cambiar este evento.');
+    llamar('tdEstadoEvento', { id: EVENTO.id, estado: estado }).then(function(){
       EVENTO.estado = estado; abrirEvento(EVENTO);
       toast(estado === 'cerrado' ? 'Evento cerrado.' : 'Evento reabierto.');
     }).catch(function(e){ aviso('aviso', 'mal', textoError(e)); });
@@ -409,11 +411,9 @@
   function bajarExcel(){
     if (!window.XLSX){ toast('No se pudo cargar el generador de Excel. Recargá la página.'); return; }
     var btn = $('btnExcel'); btn.disabled = true;
-    db.from('td_registros').select('numero,nombre,apellido,dni,telefono,email,vendedor_nombre,created_at')
-      .eq('evento_id', EVENTO.id).order('numero', { ascending: true }).then(function(r){
+    llamar('tdRegistros', { eventoId: EVENTO.id }).then(function(r){
         btn.disabled = false;
-        if (r.error) throw r.error;
-        var filas = (r.data || []);
+        var filas = (r.registros || []).slice().sort(function(a, b){ return a.numero - b.numero; });
         if (!filas.length){ toast('Todavía no hay clientes para descargar.'); return; }
         function fila(x){ return { 'N°': x.numero, 'Nombre': titulo(x.nombre), 'Apellido': titulo(x.apellido), 'DNI': x.dni, 'Teléfono': x.telefono, 'Mail': x.email || '', 'Vendedor': titulo(x.vendedor_nombre), 'Fecha de carga': fechaHora(x.created_at), 'Evento': EVENTO.nombre }; }
         var cols = [{ wch: 5 }, { wch: 18 }, { wch: 18 }, { wch: 12 }, { wch: 16 }, { wch: 30 }, { wch: 24 }, { wch: 17 }, { wch: 24 }];
@@ -535,20 +535,19 @@
     if (!firmaValida() || !$('chkLic').checked) return;
     var btn = $('btnRegistrar'); btn.disabled = true; btn.textContent = 'Registrando…'; aviso('avisoFirma', '', '');
     var firma = lienzo.toDataURL('image/png');
-    db.from('td_registros').insert({
-      evento_id: EVENTO.id, nombre: NUEVO.nombre, apellido: NUEVO.apellido, dni: NUEVO.dni, telefono: NUEVO.telefono,
-      email: NUEVO.email || null, licencia_verificada: true, firma_png: firma, texto_version: TEXTO_VERSION
-    }).select('id,numero,vendedor_nombre,created_at').single().then(function(r){
+    llamar('tdRegistrar', {
+      eventoId: EVENTO.id, nombre: NUEVO.nombre, apellido: NUEVO.apellido, dni: NUEVO.dni, telefono: NUEVO.telefono,
+      email: NUEVO.email || '', licencia: true, firmaPng: firma
+    }).then(function(r){
       btn.textContent = 'Firmar y registrar';
-      if (r.error) throw r.error;
-      ULTIMO = { id: r.data.id, numero: r.data.numero, vendedor: r.data.vendedor_nombre, nombre: NUEVO.nombre, apellido: NUEVO.apellido, dni: NUEVO.dni,
-        telefono: NUEVO.telefono, email: NUEVO.email, fecha: r.data.created_at, evento: EVENTO.nombre, firma: firma };
+      ULTIMO = { id: r.id, numero: r.numero, vendedor: r.vendedor, nombre: NUEVO.nombre, apellido: NUEVO.apellido, dni: NUEVO.dni,
+        telefono: NUEVO.telefono, email: NUEVO.email, fecha: r.creado, evento: EVENTO.nombre, firma: firma };
       NUEVO = null;
       $('listoTitulo').textContent = 'Registrado: Nº ' + ULTIMO.numero;
       $('listoSub').textContent = titulo(ULTIMO.nombre) + ' ' + titulo(ULTIMO.apellido) + ' · ' + ULTIMO.evento;
       aviso('avisoListo', '', '');
       mostrar('vListo');
-      prepararPdf(ULTIMO);       // se arma ya, así "Enviar por WhatsApp" responde al instante
+      guardarPdfEnDrive(ULTIMO); // se arma ya (así "Enviar por WhatsApp" responde al instante) y se archiva en la carpeta del evento
     }).catch(function(e){
       btn.textContent = 'Firmar y registrar'; actualizarRegistrar();
       aviso('avisoFirma', 'mal', textoError(e) + ' Tu firma sigue acá: probá de nuevo.');
@@ -578,6 +577,18 @@
   function prepararPdf(reg){
     if (!pdfs[reg.id]) pdfs[reg.id] = armarPdf(reg).catch(function(e){ delete pdfs[reg.id]; throw e; });
     return pdfs[reg.id];
+  }
+  // El PDF firmado se sube a Drive en segundo plano: si falla, no frena al vendedor (se puede volver a armar desde "Ver").
+  function guardarPdfEnDrive(reg){
+    prepararPdf(reg).then(function(pdf){
+      return new Promise(function(ok, mal){
+        var lector = new FileReader();
+        lector.onload = function(){ ok(String(lector.result).split(',')[1]); };
+        lector.onerror = mal;
+        lector.readAsDataURL(pdf.blob);
+      });
+    }).then(function(b64){ return llamar('tdGuardarPdf', { id: reg.id, pdfBase64: b64 }); })
+      .catch(function(){ /* sin conexión o servidor ocupado: el registro ya quedó guardado */ });
   }
   function descargar(blob, nombre){
     var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nombre; document.body.appendChild(a); a.click();
@@ -631,9 +642,8 @@
     VER = null; $('docVer').innerHTML = '<div class="vacio">Cargando…</div>'; aviso('avisoVer', '', '');
     $('verTitulo').textContent = 'Deslinde firmado';
     mostrar('vVer');
-    db.from('td_registros').select('id,numero,nombre,apellido,dni,telefono,email,vendedor_nombre,created_at,firma_png').eq('id', id).single().then(function(r){
-      if (r.error) throw r.error;
-      var x = r.data;
+    llamar('tdVerRegistro', { id: id }).then(function(r){
+      var x = r.registro;
       VER = { id: x.id, numero: x.numero, vendedor: x.vendedor_nombre, nombre: x.nombre, apellido: x.apellido, dni: x.dni, telefono: x.telefono, email: x.email,
         fecha: x.created_at, evento: EVENTO.nombre, firma: x.firma_png };
       $('verTitulo').textContent = 'Nº ' + x.numero + ' · ' + titulo(x.nombre) + ' ' + titulo(x.apellido);
