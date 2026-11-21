@@ -261,6 +261,7 @@
   .kpi .n{ font-size:24px; font-weight:800; color:var(--negro); }
   .kpi .l{ font-size:11px; color:var(--gris-medio); font-weight:600; margin-top:2px; }
   .kpi .kpi-usd{ font-size:11.5px; color:var(--gris-oscuro); font-weight:700; margin-top:6px; }
+  .kpi .kpi-origen{ font-size:11px; color:var(--gris-medio); margin-top:4px; line-height:1.35; }
   .utilidad-acumulado-row{ display:flex; align-items:flex-end; justify-content:space-between; gap:10px; margin-bottom:14px; }
   .utilidad-acumulado-val{ font-size:30px; font-weight:800; color:var(--negro); line-height:1.1; }
 
@@ -1067,9 +1068,9 @@ if (data.session) {
         <div class="tcard">
           <h2>Autos en trámite (compras a fábrica)</h2>
           <div class="kpi-grid" style="margin-bottom:0;">
-            <div class="kpi"><div class="n" id="kpiStockSinPagarGen">–</div><div class="l">Sin pagar</div><div class="kpi-usd" id="kpiStockSinPagarGenUsd"></div></div>
-            <div class="kpi"><div class="n" id="kpiStockEsperandoGen">–</div><div class="l">Pagadas, esperando arribo</div><div class="kpi-usd" id="kpiStockEsperandoGenUsd"></div></div>
-            <div class="kpi"><div class="n" id="kpiStockLlegadosGen">–</div><div class="l">Pagadas, arribadas, sin entregar</div><div class="kpi-usd" id="kpiStockLlegadosGenUsd"></div></div>
+            <div class="kpi"><div class="n" id="kpiStockSinPagarGen">–</div><div class="l">Sin pagar</div><div class="kpi-usd" id="kpiStockSinPagarGenUsd"></div><div class="kpi-origen">Tradicional: BYD no las envía hasta que se paguen</div></div>
+            <div class="kpi"><div class="n" id="kpiStockEsperandoGen">–</div><div class="l">En camino (todavía no llegaron)</div><div class="kpi-usd" id="kpiStockEsperandoGenUsd"></div><div class="kpi-origen" id="kpiStockEsperandoGenOrigen"></div></div>
+            <div class="kpi"><div class="n" id="kpiStockLlegadosGen">–</div><div class="l">Arribadas, ya las tenemos (sin entregar)</div><div class="kpi-usd" id="kpiStockLlegadosGenUsd"></div><div class="kpi-origen" id="kpiStockLlegadosGenOrigen"></div></div>
           </div>
           <p class="note" id="stockComprasNoteGen"></p>
           <div id="stockLlegadosLibresBlock"></div>
@@ -1226,8 +1227,16 @@ if (data.session) {
             <select class="filter-select" id="stockEstadoFilter">
               <option value="">Todos</option>
               <option value="SinPagar">Sin pagar</option>
-              <option value="Esperando">Pagadas, esperando arribo</option>
-              <option value="Llegados">Pagadas, arribadas, sin entregar</option>
+              <option value="Esperando">En camino (todavía no llegaron)</option>
+              <option value="Llegados">Arribadas, ya las tenemos (sin entregar)</option>
+            </select>
+          </div>
+          <div class="filter-row">
+            <label for="stockOrigenFilter">Origen</label>
+            <select class="filter-select" id="stockOrigenFilter">
+              <option value="">Todos</option>
+              <option value="tradicional">Tradicional (BYD nos factura)</option>
+              <option value="consignacion">Consignación (BYD factura al cliente)</option>
             </select>
           </div>
           <div class="filter-row">
@@ -1235,9 +1244,9 @@ if (data.session) {
             <select class="filter-select" id="stockModeloFilter"><option value="">Todos</option></select>
           </div>
           <div class="kpi-grid" style="margin-bottom:0;" id="stockComprasKpiGrid">
-            <div class="kpi" id="kpiCardSinPagar"><div class="n" id="kpiStockSinPagar">–</div><div class="l">Sin pagar</div><div class="kpi-usd" id="kpiStockSinPagarUsd"></div></div>
-            <div class="kpi" id="kpiCardEsperando"><div class="n" id="kpiStockEsperando">–</div><div class="l">Pagadas, esperando arribo</div><div class="kpi-usd" id="kpiStockEsperandoUsd"></div></div>
-            <div class="kpi" id="kpiCardLlegados"><div class="n" id="kpiStockLlegados">–</div><div class="l">Pagadas, arribadas, sin entregar</div><div class="kpi-usd" id="kpiStockLlegadosUsd"></div></div>
+            <div class="kpi" id="kpiCardSinPagar"><div class="n" id="kpiStockSinPagar">–</div><div class="l">Sin pagar</div><div class="kpi-usd" id="kpiStockSinPagarUsd"></div><div class="kpi-origen">Tradicional: BYD no las envía hasta que se paguen</div></div>
+            <div class="kpi" id="kpiCardEsperando"><div class="n" id="kpiStockEsperando">–</div><div class="l">En camino (todavía no llegaron)</div><div class="kpi-usd" id="kpiStockEsperandoUsd"></div><div class="kpi-origen" id="kpiStockEsperandoOrigen"></div></div>
+            <div class="kpi" id="kpiCardLlegados"><div class="n" id="kpiStockLlegados">–</div><div class="l">Arribadas, ya las tenemos (sin entregar)</div><div class="kpi-usd" id="kpiStockLlegadosUsd"></div><div class="kpi-origen" id="kpiStockLlegadosOrigen"></div></div>
           </div>
           <p class="note" id="stockComprasNote"></p>
         </div>
@@ -1840,11 +1849,33 @@ if (data.session) {
   // a partir del detalle por modelo que ya manda el backend.
   var currentStockCompras = { SinPagar: null, Esperando: null, Llegados: null };
 
-  function totalParaModelo(bloque, modelo){
-    if (!bloque) return { total: 0, monto: 0 };
-    if (!modelo) return { total: bloque.total, monto: bloque.montoTotal || 0 };
-    var entry = (bloque.detalle || []).find(function(x){ return x.modelo === modelo; });
+  // La planilla de stock tiene dos solapas: Tradicional (BYD nos factura y no envía hasta que pagamos) y
+  // Consignación (BYD factura al cliente y nos la envía sin pagar). Cada bloque trae el total y el detalle
+  // por origen en bloque.porTipo.{tradicional,consignacion}; "origen" vacío = ambos.
+  function bloqueDeOrigen(bloque, origen){
+    if (!bloque) return null;
+    if (!origen) return bloque;
+    if (bloque.porTipo) return bloque.porTipo[origen] || null;
+    return origen === 'tradicional' ? bloque : null; // versión vieja del servidor: todo era Tradicional
+  }
+
+  function totalParaModelo(bloque, modelo, origen){
+    var b = bloqueDeOrigen(bloque, origen);
+    if (!b) return { total: 0, monto: 0 };
+    if (!modelo) return { total: b.total, monto: b.montoTotal || 0 };
+    var entry = (b.detalle || []).find(function(x){ return x.modelo === modelo; });
     return entry ? { total: entry.total, monto: entry.monto || 0 } : { total: 0, monto: 0 };
+  }
+
+  function textoOrigen(bloque, modelo){
+    if (!bloque || !bloque.porTipo) return '';
+    return 'Tradicional ' + totalParaModelo(bloque, modelo, 'tradicional').total +
+      ' · Consignación ' + totalParaModelo(bloque, modelo, 'consignacion').total;
+  }
+
+  function etiquetaOrigenUnidad(u){
+    return u && u.tipo === 'Consignación' ?
+      ' <span style="display:inline-block;margin-left:4px;padding:1px 6px;border-radius:8px;background:#E8F1FB;color:#1F5FA8;font-size:10px;font-weight:700;vertical-align:1px;">Consignación</span>' : '';
   }
 
   function populateStockModeloFilter(){
@@ -1865,18 +1896,34 @@ if (data.session) {
   function updateStockComprasView(){
     var estadoSel = document.getElementById('stockEstadoFilter').value;
     var modeloSel = document.getElementById('stockModeloFilter').value;
+    var origenSel = document.getElementById('stockOrigenFilter').value;
 
     ['SinPagar', 'Esperando', 'Llegados'].forEach(function(idPrefix){
-      var visible = !estadoSel || estadoSel === idPrefix;
+      // "Sin pagar" solo existe en Tradicional: en Consignación no hay pago.
+      var visible = (!estadoSel || estadoSel === idPrefix) && !(idPrefix === 'SinPagar' && origenSel === 'consignacion');
       document.getElementById('kpiCard' + idPrefix).style.display = visible ? '' : 'none';
       if (!visible) return;
-      var r = totalParaModelo(currentStockCompras[idPrefix], modeloSel);
+      var bloque = currentStockCompras[idPrefix];
+      var r = totalParaModelo(bloque, modeloSel, origenSel);
       document.getElementById('kpiStock' + idPrefix).textContent = r.total;
-      document.getElementById('kpiStock' + idPrefix + 'Usd').textContent = fmtUSD_K(r.monto);
+      // En Consignación BYD factura al cliente: no hay monto de compra para nosotros.
+      document.getElementById('kpiStock' + idPrefix + 'Usd').textContent = origenSel === 'consignacion' ? '' : fmtUSD_K(r.monto);
+      var og = document.getElementById('kpiStock' + idPrefix + 'Origen');
+      if (og) og.textContent = origenSel ? '' : textoOrigen(bloque, modeloSel);
     });
   }
   document.getElementById('stockEstadoFilter').addEventListener('change', updateStockComprasView);
   document.getElementById('stockModeloFilter').addEventListener('change', updateStockComprasView);
+  document.getElementById('stockOrigenFilter').addEventListener('change', updateStockComprasView);
+
+  function notaStockCompras(d){
+    var txt = 'Datos en vivo desde la planilla de stock (solapas Tradicional y Consignación) — actualizado ' + d.stockComprasFecha + '. ' +
+      'El monto en USD es solo de Tradicional: en Consignación BYD factura directo al cliente.';
+    if (Array.isArray(d.stockComprasAvisos) && d.stockComprasAvisos.length){
+      txt += '<br><b>Revisar en la planilla:</b> ' + d.stockComprasAvisos.map(function(t){ return String(t).replace(/</g, '&lt;'); }).join(' ');
+    }
+    return txt;
+  }
 
   function renderStockComprasKpis(d){
     if (d.stockComprasError){
@@ -1885,13 +1932,13 @@ if (data.session) {
         document.getElementById('kpiStock' + idPrefix).textContent = '–';
         document.getElementById('kpiStock' + idPrefix + 'Usd').textContent = '';
       });
-      document.getElementById('stockComprasNote').innerHTML = 'No se pudo leer la planilla de compras: ' + d.stockComprasError;
+      document.getElementById('stockComprasNote').innerHTML = 'No se pudo leer la planilla de stock: ' + d.stockComprasError;
       return;
     }
     currentStockCompras = { SinPagar: d.stockSinPagar, Esperando: d.stockEsperando, Llegados: d.stockLlegados };
     populateStockModeloFilter();
     updateStockComprasView();
-    document.getElementById('stockComprasNote').innerHTML = 'Datos en vivo desde la planilla de compras — actualizado ' + d.stockComprasFecha + '.';
+    document.getElementById('stockComprasNote').innerHTML = notaStockCompras(d);
   }
 
   // Mismas 3 tarjetas, versión fija (sin filtros) para el Tablero General.
@@ -1901,7 +1948,7 @@ if (data.session) {
         document.getElementById('kpiStock' + idPrefix).textContent = '–';
         document.getElementById('kpiStock' + idPrefix + 'Usd').textContent = '';
       });
-      document.getElementById('stockComprasNoteGen').innerHTML = 'No se pudo leer la planilla de compras: ' + d.stockComprasError;
+      document.getElementById('stockComprasNoteGen').innerHTML = 'No se pudo leer la planilla de stock: ' + d.stockComprasError;
       document.getElementById('stockLlegadosLibresBlock').innerHTML = '';
       return;
     }
@@ -1910,8 +1957,10 @@ if (data.session) {
       var bloque = map[idPrefix];
       document.getElementById('kpiStock' + idPrefix).textContent = bloque ? bloque.total : '–';
       document.getElementById('kpiStock' + idPrefix + 'Usd').textContent = bloque ? fmtUSD_K(bloque.montoTotal || 0) : '';
+      var og = document.getElementById('kpiStock' + idPrefix + 'Origen');
+      if (og) og.textContent = bloque ? textoOrigen(bloque, '') : '';
     });
-    document.getElementById('stockComprasNoteGen').innerHTML = 'Datos en vivo desde la planilla de compras — actualizado ' + d.stockComprasFecha + '.';
+    document.getElementById('stockComprasNoteGen').innerHTML = notaStockCompras(d);
     renderStockLlegadosLibres(d.stockLlegadosLibres);
   }
 
@@ -1966,12 +2015,12 @@ if (data.session) {
     if (!el) return;
     if (!list || !list.length){
       el.innerHTML = '<h3 style="font-size:12px;text-transform:uppercase;letter-spacing:0.4px;color:var(--gris-oscuro);margin:16px 0 6px;">Sin cliente asociado — disponibles para ofrecer ya</h3>' +
-        '<p class="note">No hay unidades pagadas y arribadas sin cliente — todo lo que llegó ya tiene un destino cargado en Solicitudes.</p>';
+        '<p class="note">No hay unidades arribadas sin cliente — todo lo que llegó ya tiene un destino cargado en Solicitudes.</p>';
       return;
     }
     var rows = list.map(function(u){
       return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--gris-fondo);font-size:13px;">' +
-        '<div><b>' + u.modelo + '</b>' + (u.color ? ' · ' + u.color : '') +
+        '<div><b>' + u.modelo + '</b>' + (u.color ? ' · ' + u.color : '') + etiquetaOrigenUnidad(u) +
         '<div style="color:var(--gris-medio);font-size:11px;">VIN …' + u.vin.slice(-6) + '</div></div>' +
         '<div style="text-align:right;color:var(--gris-medio);font-size:11.5px;white-space:nowrap;">' + (u.fechaArribo ? 'Llegó ' + u.fechaArribo : '') + '</div>' +
         '</div>';
@@ -1982,7 +2031,7 @@ if (data.session) {
     el.innerHTML = '<h3 style="font-size:12px;text-transform:uppercase;letter-spacing:0.4px;color:var(--gris-oscuro);margin:16px 0 6px;">Sin cliente asociado — disponibles para ofrecer ya (' + list.length + ')</h3>' +
       '<p style="margin:0 0 6px;font-size:12px;color:var(--gris-oscuro);">' + resumen + '</p>' +
       '<div class="solo-pantalla">' + rows + '</div>' +
-      '<p class="note" style="margin-top:8px;">Cruce por VIN entre "stock 2026" y "Solicitudes": estas unidades pagadas y arribadas no aparecen en ninguna solicitud cargada.</p>';
+      '<p class="note" style="margin-top:8px;">Cruce por VIN entre "stock 2026" (Tradicional y Consignación) y "Solicitudes": estas unidades arribadas no aparecen en ninguna solicitud cargada.</p>';
   }
 
   // ---- Snapshot de referencia (se usa si todavía no está conectado el Apps Script,
